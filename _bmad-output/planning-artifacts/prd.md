@@ -67,6 +67,7 @@ Bubble is an enterprise-grade **Agentic Workflow Engine** delivered via a **"Sto
 ### Vision (Future)
 *   Workflow Marketplace
 *   AI-suggested workflows
+*   **Conversational Intelligence:** Chat with Report (Scoped RAG) and Chat with Company Knowledge (Global RAG).
 
 ## User Journeys
 
@@ -229,7 +230,7 @@ Requirements are tagged by implementation phase:
 
 - FR7: [Prototype] Creator can browse available admin-defined workflows in the Storefront.
 - FR8: [Prototype] Creator can initiate a new workflow run from the Storefront.
-- FR9: [Prototype] Creator can upload required files (supporting .txt, .csv, .md, .docx, .pdf) for a run.
+- FR9: [Prototype] Creator can upload required files (supporting .txt, .csv, .md, .docx, .pdf) for a run, including support for **Batch/Array inputs** (e.g., 20 files at once).
 - FR10: [Prototype] Creator can select necessary Company Assets (e.g., Codebooks, Knowledge Files) to bind to the run.
 - FR11: [Prototype] Creator can provide text responses to mandatory custom form questions.
 - FR46: [Prototype] System validates all mandatory inputs (Files, Forms) are present before allowing Workflow submission.
@@ -263,6 +264,8 @@ Requirements are tagged by implementation phase:
 - FR25: [Future] Bubble Admin can revert the Knowledge Graph to a previous version/snapshot ("Last Known Good State").
 - FR50: [Future] Bubble Admin can execute "Right to be Forgotten" commands to scrub specific user PII from Logs and Knowledge Graph.
 - FR44: [Future] Bubble Admin can configure data retention policies (e.g., "Auto-archive runs older than 1 year").
+- FR52: [Future] Creator can "Chat with Report" to query specific insights and raw data within a run context (Scoped RAG).
+- FR53: [Future] Creator can "Chat with Company" to query the entire Tenant Knowledge Graph (Global RAG).
 
 ### User & System Administration
 
@@ -270,7 +273,7 @@ Requirements are tagged by implementation phase:
 - FR51: [Prototype] System initializes new Tenants with a set of "Template Workflows" and "Sample Assets" to aid onboarding.
 - FR27: [Prototype] Customer Admin can invite and manage users within their tenant.
 - FR28: [Prototype] System enforces unique IDs for all interactive elements to support automated testing.
-- FR29: [Prototype] Bubble Admin can configure LLM provider settings per workflow or tenant.
+- FR29: [Future] Bubble Admin can configure LLM provider settings per workflow or tenant via UI (Advanced Multi-Provider).
 - FR38: [Prototype] Customer Admin can view full execution traces (Input -> Prompt -> Raw Output) for debugging purposes.
 - FR49: [MVP] System displays "Service Status" banners for downstream dependencies (e.g., "LLM Provider API Degraded").
 
