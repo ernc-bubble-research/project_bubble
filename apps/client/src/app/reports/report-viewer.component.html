@@ -1,0 +1,143 @@
+<div class="flex h-full bg-background">
+    <!-- Main Content (70%) -->
+    <div class="flex-1 overflow-auto">
+        <div class="max-w-4xl mx-auto p-8">
+            <!-- Warning Banner -->
+            <div
+                class="bg-status-warning/10 border border-status-warning/30 text-gray-800 px-4 py-3 rounded-lg mb-6 flex items-start">
+                <svg class="w-5 h-5 text-status-warning mr-2 flex-shrink-0 mt-0.5" fill="currentColor"
+                    viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clip-rule="evenodd"></path>
+                </svg>
+                <span class="text-sm font-medium">Validation log: {{ assumptions.length }} assumptions made</span>
+            </div>
+
+            <!-- Meta Pills -->
+            <div class="flex flex-wrap gap-2 mb-6">
+                <span
+                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                    Workflow: SPICED Discovery
+                </span>
+                <span
+                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                    Inputs: 18 interviews
+                </span>
+                <span
+                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                    Codebook: ICP v1.2
+                </span>
+            </div>
+
+            <!-- Report Title -->
+            <h1 class="text-3xl font-display font-bold text-text mb-6">
+                Beacon Analytics: SPICED Discovery Report
+            </h1>
+
+            <!-- Report Content -->
+            <div class="prose prose-slate max-w-none">
+                <p class="text-text mb-4">
+                    Our analysis of the 18 customer interviews reveals significant opportunities for Beacon Analytics in
+                    the enterprise PMM workflow automation space. The discussion reveals two primary pain points related
+                    to Beacon Analytics' current data workflow, specifically regarding how they integrate various data
+                    sources and define their Ideal Customer Profile (ICP)<sup
+                        class="text-primary cursor-help">[1]</sup>.
+                </p>
+
+                <h2 class="text-2xl font-semibold text-text mt-8 mb-4">Key Findings</h2>
+
+                <p class="text-text mb-4">
+                    One of the primary concerns highlighted by multiple participants is the challenge in pinpointing the
+                    critical event for value realization within their quarterly business review (QBR) window<sup
+                        class="text-primary cursor-help">[1]</sup>.
+                    There is considerable debate around whether this event occurs immediately upon data integration or
+                    during the subsequent analysis phase. Furthermore, the current ICP definition appears to lack the
+                    necessary contextual nuance to effectively segment their target market<sup
+                        class="text-primary cursor-help">[2]</sup>,
+                    leading to potential inefficiencies in resource allocation.
+                </p>
+
+                <p class="text-text mb-4">
+                    Participants expressed a strong need for a more robust system to validate these definitions against
+                    real-world scenarios<sup class="text-primary cursor-help">[3]</sup>. The analysis suggests that
+                    addressing
+                    these ambiguities could significantly improve Beacon Analytics' go-to-market strategy and customer
+                    targeting effectiveness.
+                </p>
+
+                <h2 class="text-2xl font-semibold text-text mt-8 mb-4">Strategic Recommendations</h2>
+
+                <p class="text-text mb-4">
+                    Based on the feedback synthesis, we recommend that Beacon Analytics prioritize clarifying their
+                    value realization timeline and refining their ICP criteria with the input of cross-functional
+                    stakeholders.
+                    This will enable more precise targeting and resource optimization in their sales and marketing
+                    efforts.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel (30%) -->
+    <aside class="w-[400px] bg-panel border-l border-border overflow-auto p-6">
+        <!-- Validation Log Card -->
+        <div class="bg-surface rounded-xl border border-border p-6 mb-6">
+            <h3 class="text-lg font-semibold text-text mb-4">Validation Log</h3>
+
+            <div class="space-y-4 mb-4">
+                @for (assumption of assumptions; track assumption.id) {
+                <div class="border border-border rounded-lg p-3">
+                    <div class="flex items-start mb-2">
+                        <span class="text-lg mr-2">{{ getAssumptionIcon(assumption.type) }}</span>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-text">{{ getAssumptionLabel(assumption.type) }}: {{
+                                assumption.description }}</p>
+                            <p class="text-xs text-text-muted mt-1">What I assumed: {{ assumption.assumption }}</p>
+                        </div>
+                    </div>
+                </div>
+                }
+            </div>
+
+            <div class="flex gap-2 mb-4">
+                <button
+                    class="flex-1 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
+                    Update (4 cr)
+                </button>
+                <button
+                    class="flex-1 border-2 border-border text-text px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                    Correct
+                </button>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-text mb-2">General Feedback</label>
+                <textarea placeholder="Enter additional notes or feedback here..."
+                    class="w-full p-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                    rows="3"></textarea>
+            </div>
+        </div>
+
+        <!-- Evidence Drawer Card -->
+        <div class="bg-surface rounded-xl border border-border p-6">
+            <h3 class="text-lg font-semibold text-text mb-4">Evidence Drawer</h3>
+
+            <div class="text-sm text-text-muted mb-3">Citations</div>
+            <div class="space-y-3">
+                @for (citation of citations; track citation.id) {
+                <div class="border-l-2 border-primary pl-3 py-2 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div class="flex items-center mb-1">
+                        <span
+                            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-xs font-bold mr-2">
+                            {{ citation.number }}
+                        </span>
+                        <span class="text-xs font-medium text-text truncate">{{ citation.fileName }}</span>
+                    </div>
+                    <p class="text-xs text-text-muted italic line-clamp-2">"{{ citation.excerpt }}"</p>
+                </div>
+                }
+            </div>
+        </div>
+    </aside>
+</div>

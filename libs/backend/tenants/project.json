@@ -1,0 +1,9 @@
+{
+  "name": "tenants",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/backend/tenants/src",
+  "projectType": "library",
+  "tags": ["scope:backend"],
+  "// targets": "to see all targets run: nx show project tenants --web",
+  "targets": {}
+}

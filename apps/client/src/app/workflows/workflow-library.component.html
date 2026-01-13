@@ -1,0 +1,35 @@
+<div class="p-8 max-w-7xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-display font-bold text-text mb-2">Workflow Library</h1>
+        <p class="text-text-muted">Browse and run AI-powered research workflows</p>
+    </div>
+
+    <!-- Workflow Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        @for (workflow of workflows; track workflow.id) {
+        <div class="bg-surface rounded-xl border border-border p-6 hover:shadow-lg transition-shadow group relative">
+            <!-- Workflow Header -->
+            <div class="mb-4">
+                <h3 class="text-xl font-semibold text-text mb-2 pr-24">{{ workflow.name }}</h3>
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                    {{ workflow.category }}
+                </span>
+            </div>
+
+            <!-- Description -->
+            <p class="text-sm text-text-muted mb-4 line-clamp-3">
+                {{ workflow.description }}
+            </p>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-end pt-4 border-t border-border">
+                <button
+                    class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors group-hover:shadow-md">
+                    Run Workflow
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+</div>
