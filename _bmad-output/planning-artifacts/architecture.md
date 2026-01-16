@@ -12,6 +12,27 @@ date: '2026-01-12'
 
 # Architecture Decision Document
 
+## Roadmap & Evolution Strategy
+
+**Phase 1 (Prototype): The Vector Foundation**
+*   **Goal:** Fast semantic search (RAG).
+*   **Store:** PostgreSQL (`pgvector`).
+*   **Structure:** Flat list of chunked vectors.
+
+**Phase 1 Component: Asset Ingestion Service (The Library)**
+*   **Goal:** High-performance storage and retrieval of raw user files (Text/PDF only for MVP).
+*   **Pipeline:**
+    *   **Structure:** Shared "Tenant Drive" model.
+    *   **Concurrency:** **Parallel Processing** (BullMQ) to handle batched text uploads.
+    *   **Deletion:** **Soft Delete / Archive Pattern**. Deleted files are moved to a 'Trash/Archive' state for X days (Configurable), then purged. No complex Reference Counting.
+
+**Phase 2 Component: The Knowledge Graph Engine (The Brain)**
+*   **Source of Truth:** The Graph is built primarily from **Generated Reports** and **Validated Insights** (Story 2.4). It is NOT just a dump of uploaded files.
+*   **Distinction:** The "Library" (Phase 1) is for raw files. The "Brain" (Phase 2) is for connected knowledge derived from successful Workflows.
+*   **Evolution:**
+    *   **MVP:** Vector context (RAG) scoped to current run.
+    *   **Phase 2:** Hybrid Traversal (Nodes + Edges) to find patterns across Reports.
+
 ## Project Context Analysis
 
 ### Requirements Overview
@@ -100,14 +121,31 @@ We will implement a **Command-Query Responsibility Segregation (CQRS)-lite** sty
 *   **Schema Design:**
     *   **Single Schema:** No `schema_per_tenant` complexity.
     *   **Tenant Discriminator:** Every table has `tenant_id`.
-    *   **RLS Policies:** Enabled on ALL Tables.
+    *   **RLS Policies:** Enabled on ALL Tables (Entities & Vectors).
 *   **Vector Strategy:**
-    *   `embedding` column (vector(1536)) on `knowledge_nodes` table.
-    *   Hybrid Search Query: `SELECT * FROM nodes WHERE tenant_id = $1 ORDER BY embedding <=> $2`.
+    *   `embedding` column (vector(1536)) on `knowledge_vectors` table (formerly `knowledge_nodes`).
+    *   Hybrid Search Query: `SELECT * FROM knowledge_vectors WHERE tenant_id = $1 ORDER BY embedding <=> $2`.
+    *   **Platform Note:** The schema is designed to be *content-agnostic*. Whether the workflow processes "Transcripts" or "Sales Emails", they are just `Assets` to the engine.
+
+### Workflow Definition & Versioning Strategy
+*   **Immutable Snapshots:**
+    *   Workflows are **Versioned Entities**. Every save creates a new record in `workflow_versions`.
+    *   The `workflows` table acts as a "Container" pointing to `current_version_id`.
+    *   **Locking:** Active Runs link to the `workflow_version_id` they started with. If the Admin updates the workflow (creating v2), the running instance continues safely on v1.
+*   **Graph Definition (JSON):**
+    *   Stored in `workflow_versions.graph_json`.
+    *   Includes `nodes[]`, `edges[]`, and `input_schema` (JSON Schema).
+*   **Form-Based UI Support:**
+    *   The Backend exposes a `validateTopology(json)` endpoint to support the Admin Wizard.
+    *   The "Input Schema" drives the Storefront UI generation (Dynamic Forms).
 
 ### Authentication & Security
 *   **Auth Provider:** Supabase Auth / custom JWT (to be finalized in Implementation).
 *   **RLS Enforcement:** `TransactionInterceptor` in NestJS injects `SET LOCAL app.current_tenant`.
+*   **Bubble Admin (Super Admin) Strategy:**
+    *   **Role Definition:** "Bubble Employees" who manage the platform (as defined in Validation Phase).
+    *   **Access Pattern:** They possess a `bypass_rls` privilege or a special "Global Tenant ID" (`0000...`) that Policies recognize to allow cross-tenant visibility for support/provisioning.
+    *   *Constraint:* This power is strictly logged (Audit Trail).
 *   **API Security:** Standard Helmet/CORS + Rate Limiting (ThrottlerGuard).
 
 ### API & Communication Patterns
@@ -126,10 +164,14 @@ We will implement a **Command-Query Responsibility Segregation (CQRS)-lite** sty
 **Implementation Sequence:**
 1.  **Repo Setup:** Initialize Nx Workspace + Shared Libs + Linters.
 2.  **Core Module:** Build `DatabaseModule` with RLS Interceptor (The Foundation).
-3.  **Identity:** Implement Auth + User/Tenant Management.
-4.  **Async Engine:** Setup BullMQ + Worker Service structure.
-5.  **Domain:** Implement the "Graph Execution" logic.
-6.  **UI:** Connect Angular Frontend.
+3.  **Identity (Phase 1):** Implement Auth + Manual User/Tenant Management (Admin-only).
+4.  **Identity (Phase 2):** Integrate Email Provider (SendGrid/SES) for Invitations & Password Reset flows.
+5.  **Async Engine:**
+    *   **Tech:** BullMQ + Worker Service.
+    *   **Security:** MUST use `AsyncLocalStorage` (ALS) to propagate Tenant Context from Job Payload to the `TransactionInterceptor`. (Fixes Singleton RLS gap).
+6.  **Domain:** Implement the "Graph Execution" logic.
+7.  **UI:** Connect Angular Frontend.
+    *   **Pattern:** **Schema-Driven UI.** Forms are not hardcoded; they are generated dynamically from the Workflow's JSON Input Schema.
 
 **Cross-Component Dependencies:**
 *   The **Shared DTO Library** is the critical dependency. API and Worker cannot start until the DTOs (e.g., `WorkflowPayload`) are defined.

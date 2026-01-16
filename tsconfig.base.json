@@ -22,6 +22,10 @@
       "@project_bubble/backend/assets": ["libs/backend/assets/src/index.ts"],
       "@project_bubble/backend/ingestion": [
         "libs/backend/ingestion/src/index.ts"
+      ],
+      "@project-bubble/shared": ["libs/shared/src/index.ts"],
+      "@project-bubble/backend/workflows": [
+        "libs/backend/workflows/src/index.ts"
       ]
     }
   },

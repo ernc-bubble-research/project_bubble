@@ -109,26 +109,27 @@ Bubble is an enterprise-grade **Agentic Workflow Engine** delivered via a **"Sto
 
 **1. The "Strategic Flywheel" (Cumulative Value)**
 Most AI tools are transactional (Input → Output → Forget). Bubble is cumulative:
-*   **Usage Generates Memory:** Every validated interaction (e.g., verifying an assumption) enters the **Knowledge Graph**.
-*   **Smarter Methodology:** The next time a workflow runs, it checks the Graph first. "Based on last quarter's correction, I know 'Project Alpha' is the new UI."
+*   **Usage Generates Memory:** Every validated interaction (e.g., verifying an assumption) enters the **Knowledge Base (Vector Store)**.
+*   **Smarter Methodology:** The next time a workflow runs, it checks the Knowledge Base first. "Based on last quarter's correction, I know 'Project Alpha' is the new UI."
 *   **Result:** The product gets harder to leave the more it is used (Data Moat).
 
 **2. Context-Aware Memory with "Hygiene Layer"**
-We don't just dump data. We implement a **"Gatekeeper Protocol"**:
+We don’t just dump data. We implement a **"Gatekeeper Protocol"**:
 *   **Assessment:** New inputs are checked against known facts. Contradictions trigger a "Human Verification" request.
-*   **Versioning:** The Graph supports snapshots. If a bad batch of data corrupts the brain, we can **"Revert to Last Known Good State."**
-*   **Consensus Logic:** Storing conflicting truths with context (e.g., "Sales says Price is High" vs "Finance says Price is Low" - both are true in their context).
+*   **Dynamic Theme Discovery:** If the system detects new recurring themes (e.g., "Customers keeping mentioning 'Sustainability'"), it suggests adding this as a new code/node to the Codebook.
+*   **Versioning:** The Knowledge Base supports snapshots.
+*   **Consensus Logic:** Storing conflicting truths with context.
 
-**3. The "Methodology Engine" (Feature as Asset)**
-We do not sell "AI Generation"; we sell **"Virtual Senior Analysts."**
-*   Users don't prompt; they select a vetted methodology (e.g., "QDA Dual-Stream").
-*   The system enforces rigor (e.g., mandatory dual-stream verification) that a generic chatbot would skip.
+**3. The "Methodology Engine" (Platform as Asset)**
+Bubble is the **Infrastructure Platform** that allows Admins to build "Virtual Senior Analysts" (Workflows).
+*   **Flexibility:** The platform supports defining any graph topology—some workflows may require Codebooks, others may query the Knowledge Base, others may just need raw text.
 *   **Innovation:** Democratizing Senior PMM expertise into executable software assets.
 
 ### Market Context & Competitive Landscape
 *   **status_quo:** PMMs use generic LLMs (ChatGPT/Claude) for one-off tasks.
 *   **gap:** These tools lack "Institutional Memory" and "Methodology Enforcement." They hallucinate citations and forget context between sessions.
 *   **threats:** Ops-heavy platforms (e.g., Dovetail) have great data management but weak "Agentic Reasoning." Bubble uniquely combines **Deep Reasoning** with **Structured Memory**.
+*   **Differentiation:** Bubble is not a single tool; it is the *Factory* for building specialized Agentic Workflows.
 
 ### Validation Approach
 *   **Trust Metrics:** Measure "Citation Click Rate" and "Assumption Correction Rate." High interaction = High Trust.
@@ -136,7 +137,7 @@ We do not sell "AI Generation"; we sell **"Virtual Senior Analysts."**
 *   **Flywheel tracking:** Track "Insight Quality Score" over time (Month 1 vs Month 6) to prove cumulative intelligence.
 
 ### Risk Mitigation
-*   **Graph Corruption:** Mitigated via "Graph Snapshots" and "Revert" functionality.
+*   **Graph Corruption:** Mitigated via "Knowledge Base Snapshots" and "Revert" functionality.
 *   **Complexity Overload:** Mitigated by hiding the logic (JSON) behind a clean "Storefront" UI that speaks the user's language.
 
 ## SaaS B2B Specific Requirements
@@ -190,11 +191,15 @@ We are building the **Engine** (Bubble) separately from the **Fuel** (Workflows)
 *   **Output:** Interactive Report with Evidence Drawer + Human Feedback Loop.
 *   **Governance:** **Simple Admin UI** (Form-based) for defining workflow parameters (not just YAML).
 
-### Phase 2: The Integrated MVP
-**Focus:** Friction Reduction / Data Connection
+### Phase 2: The Integrated MVP & Graph Evolution
+**Focus:** Friction Reduction / Data Connection / **The "Moat" (Hybrid Graph)**
 *   **Connectors:** HubSpot, Google Drive, OneDrive.
-*   **Input Normalization Layer:** Vision Agent that ingests graphical docs (PPTs/Charts) and converts them to Normalized Text for workflow consumption.
-*   **Expansion:** Seed Library expands to Sales/Onboarding workflows using CRM data.
+*   **Knowledge Graph Upgrade:** Evolution from "Flat Vector Store" (Phase 1) to **"Hybrid Knowledge Graph"**.
+    *   **Edges:** Explicitly linking nodes (e.g., "Concept A" *supports* "Concept B").
+    *   **Traversal:** Agents query not just by similarity, but by relationship hops (2-3 degrees of separation).
+    *   **Visual Explorer:** UI for users to visualize connections between their assets.
+*   **Input Normalization Layer:** Vision Agent for graphical docs.
+*   **Expansion:** Seed Library expands to Sales/Onboarding workflows.
 
 ### Phase 3: The "Orchestration" Vision
 **Focus:** Composable Workflows (Zapier-style)
@@ -217,11 +222,14 @@ Requirements are tagged by implementation phase:
 
 ### Workflow Administration (The Architect)
 
-- FR1: [Prototype] Bubble Admin can define workflow graph topology using nodes and edges.
-- FR2: [Prototype] Bubble Admin can configure specific node types (Scanner, Doer, Reviewer) with execution instructions.
+### Workflow Administration (The Architect)
+- FR1: [Prototype] Bubble Admin can define workflow graph topology using a **Form-Based Wizard** (No-Code).
+- FR2: [Prototype] Bubble Admin can configure specific node types (Scanner, Doer, Reviewer) with execution instructions and **Markdown Prompts**.
+- FR_Versioning: [Prototype] System enforces **Immutable Versioning** for workflows; editing a workflow creates a new version (`v2`) to protect active runs.
 - FR42: [MVP] System soft-deletes Admin objects (Workflows, Assets) allowing restoration within a grace period (e.g., 30 days).
 - FR3: [Prototype] Bubble Admin can define strict input allow-lists (e.g., "only .txt, .docx") and max file size limits; System rejects non-compliant files at upload.
-- FR4: [Prototype] Bubble Admin can create custom form inputs (text fields, multiple choice) for workflow initialization.
+- FR4: [Prototype] Bubble Admin can define a strictly typed `InputSchema` (Text, File Array, Asset Selection, Dropdown/Enum) for each workflow.
+- FR4_UI: [Prototype] Storefront UI dynamically renders input forms (Modals) based strictly on the Workflow's Input Schema (No hardcoded forms).
 - FR5: [Prototype] Bubble Admin can define output report schemas mapping analysis results to UI components.
 - FR6: [Prototype] Bubble Admin can update validation rules for "Gatekeeper Protocol" within workflows.
 - FR35: [Prototype] Bubble Admin can configure retry policies (count, backoff) for specific node types.
@@ -230,7 +238,7 @@ Requirements are tagged by implementation phase:
 
 - FR7: [Prototype] Creator can browse available admin-defined workflows in the Storefront.
 - FR8: [Prototype] Creator can initiate a new workflow run from the Storefront.
-- FR9: [Prototype] Creator can upload required files (supporting .txt, .csv, .md, .docx, .pdf) for a run, including support for **Batch/Array inputs** (e.g., 20 files at once).
+- FR9: [Prototype] Creator can upload required files (supporting .txt, .csv, .md, .docx, .pdf) as defined by the `InputSchema`, including support for **Batch/Array inputs**.
 - FR10: [Prototype] Creator can select necessary Company Assets (e.g., Codebooks, Knowledge Files) to bind to the run.
 - FR11: [Prototype] Creator can provide text responses to mandatory custom form questions.
 - FR46: [Prototype] System validates all mandatory inputs (Files, Forms) are present before allowing Workflow submission.
@@ -256,22 +264,31 @@ Requirements are tagged by implementation phase:
 
 ### Knowledge & Asset Management (Strategic Flywheel)
 
-- FR21: [Prototype] System stores validated interaction data (corrections, verified assumptions) into the Knowledge Graph.
-- FR48: [Prototype] System ingests and indexes Company Assets (text extraction + embedding) upon upload for retrieval.
-- FR22: [Prototype] Workflow execution queries Knowledge Graph for historical context before processing new inputs.
+- FR48: [Prototype] System ingests and indexes Company Assets (text extraction + embedding). **MVP restricted to Text/PDF**.
+- FR48_Library: [Prototype] System provides a **Shared Tenant Drive** with Folders. All assets are visible to the Tenant.
+- FR_Archive: [Prototype] Deleted assets support **Soft Delete / Archive** with configurable retention (Admin Policy) before physical purge.
+- FR48_Parallel: [Prototype] System processes multiple file uploads concurrently (Parallel Ingestion).
+- FR_Ingest: [Phase 2] System upgrades to "Smart Normalization" (Vision, Splitters).
+- FR21: [Prototype] Knowledge Base ("The Brain") stores validated interaction data / insights separately from raw assets.
 - FR23: [Prototype] Customer Admin can manage Company Assets (Codebooks, Knowledge Files) available to the tenant.
-- FR24: [Future] System creates versioned snapshots of the Knowledge Graph state.
-- FR25: [Future] Bubble Admin can revert the Knowledge Graph to a previous version/snapshot ("Last Known Good State").
-- FR50: [Future] Bubble Admin can execute "Right to be Forgotten" commands to scrub specific user PII from Logs and Knowledge Graph.
+- FR_Graph_1: [Phase 2] System upgrades Vector Store to **Hybrid Knowledge Graph**, storing explicit relationships (edges) between information nodes.
+- FR_Graph_2: [Phase 2] System supports "Multi-Hop" reasoning (traversing edges) to answer complex queries across disparate documents.
+- FR24: [Future] System creates versioned snapshots of the Knowledge Base/Graph state.
+- FR25: [Future] Bubble Admin can revert the Knowledge Base to a previous version/snapshot ("Last Known Good State").
+- FR50: [Future] Bubble Admin can execute "Right to be Forgotten" commands to scrub specific user PII from Logs and Knowledge Base.
 - FR44: [Future] Bubble Admin can configure data retention policies (e.g., "Auto-archive runs older than 1 year").
 - FR52: [Future] Creator can "Chat with Report" to query specific insights and raw data within a run context (Scoped RAG).
 - FR53: [Future] Creator can "Chat with Company" to query the entire Tenant Knowledge Graph (Global RAG).
 
 ### User & System Administration
 
-- FR26: [Prototype] Bubble Admin can provision new tenants and configure tenant-level settings.
-- FR51: [Prototype] System initializes new Tenants with a set of "Template Workflows" and "Sample Assets" to aid onboarding.
-- FR27: [Prototype] Customer Admin can invite and manage users within their tenant.
+- FR26: [Prototype] Bubble Admin can provision new tenants via API.
+- FR_Admin_Lobby: [Prototype] Bubble Admin has a **"Super Admin Dashboard" (Lobby)** to view all tenants, user counts, and status.
+- FR_Impersonate: [Prototype] Bubble Admin can **Impersonate** a specific tenant for support (Option B), with visual warnings and strict audit logging.
+- FR_Entitlements: [Prototype] Bubble Admin can configure **Credit Quotas**, **Workflow Allow-Lists**, and **Asset Retention Policy** (Days) per Tenant.
+- FR51: [Prototype] System initializes new Tenants with "Template Workflows".
+- FR27: [Prototype] Customer Admin can manually create users within their tenant (Admin sets initial credentials).
+- FR27_INVITE: [Phase 2] Customer Admin can invite users via email (Self-service onboarding).
 - FR28: [Prototype] System enforces unique IDs for all interactive elements to support automated testing.
 - FR29: [Future] Bubble Admin can configure LLM provider settings per workflow or tenant via UI (Advanced Multi-Provider).
 - FR38: [Prototype] Customer Admin can view full execution traces (Input -> Prompt -> Raw Output) for debugging purposes.
@@ -285,6 +302,8 @@ Requirements are tagged by implementation phase:
 - FR33: [Prototype] System authenticates users based on assigned roles (Bubble Admin, Customer Admin, Creator).
 - FR43: [MVP] System applies a watermark (User Email + Timestamp) to all PDF exports.
 - FR45: [Prototype] System sanitizes and validates all user text inputs (Feedback, Forms) to prevent prompt injection attacks.
+- FR_Sec_Sanit: [Prototype] System sanitizes (DOMPurify) all Admin-uploaded Markdown content before rendering to prevent Stored XSS.
+- FR_QA_TestID: [Prototype] System generates stable `data-testid` attributes for all dynamic form fields to enable E2E testing.
 
 ## Non-Functional Requirements
 

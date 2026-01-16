@@ -119,18 +119,51 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** the Global LLM API Key (Gemini) should be loadable from environment variables
 **And** the project structure should match the Architecture definition (apps/libs split)
 
-#### Story 1.2: Tenant Provisioning (Bubble Admin)
+#### Story 1.2: Tenant Provisioning (API)
 **As a** Bubble Admin,
-**I want** to provision new Tenants via an API,
-**So that** I can onboard new customers with a secure, isolated workspace.
+**I want** to provision new Tenants via an API/UI,
+**So that** I can onboard new customers.
 
 **Acceptance Criteria:**
-
 **Given** a valid Admin API Key
 **When** I POST to `/admin/tenants` with a name
 **Then** a new Tenant record is created with a unique UUID
-**And** the default Region is set to 'EU' (Frankfurt)
-**And** default settings are initialized (inheriting Global Gemini config)
+
+#### Story 1.2b: Bubble Admin Dashboard ("The Lobby")
+**As a** Bubble Admin,
+**I want** a "Super Admin" landing page that lists all active tenants,
+**So that** I can see who is on the platform and manage them.
+
+**Acceptance Criteria:**
+**Given** I log in with `role: bubble_admin`
+**Then** I am redirected to `/ops` (or `/super-admin`)
+**And** I see a table of Tenants (Name, ID, User Count, Status)
+**And** I see a "Create Tenant" button (triggers Story 1.2)
+
+#### Story 1.2c: Impersonation Action
+**As a** Bubble Admin,
+**I want** to click "Manage" on a tenant in the Lobby,
+**So that** I can log in as them (Option B) to support them.
+
+**Acceptance Criteria:**
+**Given** I click "Manage Acme Corp"
+**Then** the system issues a temporary token scoped to `tenant_id: acme_corp`
+**And** the UI reloads showing the Acme Corp Dashboard
+**And** a **Prominent "Viewing as Acme Corp" Banner** persists at the top (Red/Safety Orange)
+**And** after 60 minutes of inactivity, the session reverts to the Admin Lobby (does not logout, just exits impersonation)
+
+#### Story 1.2d: Tenant Configuration (Credits & Entitlements)
+**As a** Bubble Admin,
+**I want** to configure a tenant's limits and available workflows,
+**So that** I can enforce pricing tiers (e.g., "Tier 1: 50 runs, QDA Workflow only").
+
+**Acceptance Criteria:**
+**Given** I am on the Tenant Detail page (in The Lobby)
+**When** I edit "Settings"
+**Then** I can set `max_monthly_runs` (Integer)
+**And** I can set **`asset_retention_days`** (Integer, default: 30) for the Soft Delete Archive policy
+**And** I can select which `WorkflowIDs` are enabled for this tenant (Entitlement List)
+**And** system deducts credits **Upfront** (at Run Request); if request fails validation, credit is refunded immediately.
 
 #### Story 1.3: User Authentication & RBAC
 **As a** User,
@@ -150,146 +183,182 @@ This document provides the complete epic and story breakdown for project_bubble,
 **So that** data isolation is guaranteed by the database engine and developers cannot accidentally bypass it.
 
 **Acceptance Criteria:**
-
-**Given** a database transaction
+**Given** a database transaction (HTTP Request OR Background Job)
 **When** a query is executed
 **Then** the `TransactionInterceptor` must automatically inject `SET LOCAL app.current_tenant`
-**And** a Linter Rule or Code Guard must exist that flags/prevents injection of `Repository` directly into Services (must use `TransactionManager`)
+**And** for Background Jobs (BullMQ), the Worker must reconstitute the Tenant Context from the Job Payload before opening the transaction
+**And** a Code Guard must prevent direct Repository access
 
-#### Story 1.5: User Management (Customer Admin)
-**As a** Customer Admin,
-**I want** to invite colleagues to my workspace,
-**So that** we can collaborate on the same data.
+#### Story 1.5: User Management (Admin Creation) - [Prototype]
+**As a** Customer Admin (managing my team) OR Bubble Admin (providing support),
+**I want** to create a new user directly in the system,
+**So that** I can onboard team members without relying on an external email service.
 
 **Acceptance Criteria:**
+**Given** I am a **Customer Admin**
+**When** I create a user
+**Then** the user is strictly bound to *my* `tenant_id`
 
-**Given** I am a Customer Admin
-**When** I invite a user by email
-**Then** the user is created and bound strictly to my `tenant_id`
-**And** they are assigned the default `Creator` role
+**Given** I am a **Bubble Admin** (Super User)
+**When** I create a user
+**Then** I must specify which `tenant_id` this user belongs to (or assign them to the 'Admin' tenant)
+**And** the password is securely hashed immediately
+
+#### Story 1.6: User Invitations (Email Flow) - [Phase 2]
+**As a** Customer Admin,
+**I want** to invite colleagues via email,
+**So that** they can set their own passwords and onboard themselves.
+
+**Acceptance Criteria:**
+**Given** I invite `bob@example.com`
+**Then** an email is sent via (SendGrid/AWS SES) with a magic token
+**And** Bob can click the link to set his password
+**And** he is added to my Tenant
 
 ### Epic 2: Asset & Knowledge Management
-**Goal:** Enable tenants to manage their proprietary data and ingest them into the "Memory" for the AI agents.
-**Strategy:** We distinguish between **Reference Assets** (Vectorized -> Graph) and **Instructional Assets** (Raw Text -> Prompt).
-**Technical Note:** Implementation using PostgreSQL (`pgvector` + Relational Tables) as a **Hybrid Graph**. Migration to Neo4j explicitly deferred to Future Roadmap.
+**Goal:** Enable tenants to manage their proprietary data and ingest them into the "Company Brain" (Vector Knowledge Base).
+**Strategy:** We distinguish between **Reference Assets** (Vectorized for RAG) and **Instruction Assets** (Codebooks/Dictionaries - Injected or Vectorized based on size).
+**Technical Note:** Implementation using PostgreSQL (`pgvector`) as a **Vector Store**. "Full Knowledge Graph" (Nodes & Edges) is deferred to MVP v2.
 
-#### Story 2.1: Asset Management API (CRUD & Classification)
-**As a** Customer Admin,
-**I want** to upload and classify "Company Assets" (Codebooks, Knowledge Files),
-**So that** the system knows how to treat them (Vectorize vs Raw).
+#### Story 2.1: Asset Management (Tenant Shared Drive)
+**As a** Customer Admin or User,
+**I want** to upload and manage files in a shared Tenant Library,
+**So that** my team has a central repository of inputs.
 
 **Acceptance Criteria:**
+**Given** I upload a file (Text/PDF only for MVP)
+**Then** it is stored in the **Tenant Library** (accessible to all tenant users)
+**And** the system supports **Parallel Uploads**
+**And** I can organize it into **Folders**
+**And** the system calculates a **SHA-256 Hash** to prevent duplicate uploads (Warning: "File exists")
+**And** I can **Delete** a file:
+*   *Action:* File is moved to **"Archive/Trash"** status (Soft Delete).
+*   *Retention:* File remains recoverable for [N] days (Admin Configurable), then is physically purged.
+*   *Warning:* Deletion removes it for *everyone* in the tenant (Shared Drive model).
 
-**Given** I am authenticated as a Customer Admin
-**When** I upload a file
-**Then** I must specify the `AssetType`: `REFERENCE` (Facts/History) or `INSTRUCTION` (Codebooks/Rules)
-**And** the file is stored in Secure Object Storage
-**And** an `Asset` record is created in Postgres with this classification
-
-#### Story 2.2: Hybrid Graph Ingestion (Reference Assets)
+#### Story 2.2: Vector Ingestion (Reference Assets)
 **As a** System Architect,
-**I want** `REFERENCE` assets to be processed into the Hybrid Knowledge Graph,
-**So that** they are available for semantic search.
+**I want** `REFERENCE` assets to be processed into the Vector Knowledge Base,
+**So that** they are available for semantic search (RAG).
 
 **Acceptance Criteria:**
 
 **Given** a new Asset of type `REFERENCE`
 **When** the Ingestion Worker runs
 **Then** it extracts, chunks, and embeds the text
-**And** stores it in the `knowledge_nodes` table (Vectors)
-**And** creates relational edges in `node_relationships` table (Hybrid Graph approach)
-**And** `INSTRUCTION` assets are skipped (stored as Raw Text only)
+**And** stores it in the `knowledge_vectors` table (pgvector)
+**And** `INSTRUCTION` assets (like Codebooks) are stored as raw text (or vectorized if > Token Limit)
+**Note:** For MVP v1, we focus on pure vector retrieval.
 
-#### Story 2.3: Semantic Search Service (Hybrid Traversal)
+#### Story 2.3: Semantic Search Service (Vector RAG)
 **As a** Workflow Developer,
-**I want** a service to query the Hybrid Graph,
-**So that** agents can find context.
+**I want** a service to query the Knowledge Base,
+**So that** agents can find context (e.g., "Find mentions of 'Trust' in the transcripts").
 
 **Acceptance Criteria:**
 
 **Given** a query string
 **When** I call `KnowledgeService.search()`
 **Then** it performs a Vector Similarity Search in `pgvector`
-**And** allows for relational traversal (e.g., "Find nodes related to this node") in the future
+**And** the query is strictly scoped to `WHERE tenant_id = :current_tenant` (Global Search)
+**And** it ignores "Owner" checks (all Knowledge is Public within Tenant)
 **And** returns relevant text chunks with metadata
 
-#### Story 2.4: Knowledge Graph Write-Back (The Flywheel)
+#### Story 2.4: Validated Insight Storage (Memory)
 **As a** Product Strategist,
-**I want** validated user feedback to be saved as high-priority nodes,
-**So that** the system learns from corrections.
+**I want** validated user feedback/findings to be saved back to the Knowledge Base,
+**So that** the system learns (e.g., "User confirmed X is true").
 
 **Acceptance Criteria:**
 
 **Given** validated feedback from Epic 5
 **When** the "Feedback Event" is received
-**Then** a new `knowledge_node` is created with `is_verified=true`
-**And** the Search Service is updated to boost `is_verified` nodes over raw document nodes
+**Then** a new entry is created in `knowledge_vectors` with `is_verified=true`
+**And** the Search Service boosts these verified chunks in future queries
 
 ### Epic 3: Workflow Definition (The Architect)
-**Goal:** Provide "Architects" (Admins) with a powerful tool to define the "Mind" of the agent—configuring graph layouts, node logic, and validation rules.
+**Goal:** Provide "Architects" (Admins) with a user-friendly "Form-Based" tool to define the agents.
+**Approach:** **"Low-Code/No-Code Wizard"**. The Admin uses dropdowns and forms to generate the underlying JSON. No raw code editing required.
 **FRs covered:** FR1, FR2, FR4, FR5, FR6, FR35, FR42
 
-#### Story 3.1: Workflow Graph Editor (Admin UI)
+#### Story 3.1: Form-Based Workflow Builder
 **As a** Bubble Admin,
-**I want** to define the workflow topology (nodes and edges), supporting both linear flows and "Retry Loops" (Cycles),
-**So that** I can build complex agentic behaviors like "Draft -> Review -> Fix -> Approval".
+**I want** to define the workflow steps using a simple list interface (Add Step -> Select Type),
+**So that** I can build agents without writing code or connecting complex graph nodes.
 
 **Acceptance Criteria:**
+**Given** I am in the Admin Panel -> "Create Workflow"
+**When** I click "Add Step"
+**Then** I can select a Node Type (e.g., "Agent", "Tool", "Reviewer") from a simple dropdown
+**And** the system visualizes the workflow as a linear list or simple sequence
+**And** complex cycles (loops) are handled via pre-defined "Retry/Loop" patterns in the dropdown, not manual edge drawing.
 
-**Given** I am in the Workflow Editor
-**When** I connect Node A (Reviewer) back to Node B (Doer)
-**Then** the system accepts this cycle (Loop)
-**And** validates the graph structure is valid for LangGraph execution
-**And** saves the topology as a JSON structure in Postgres
-
-#### Story 3.2: Node Configuration Strategy
+#### Story 3.2: Node Configuration Form
 **As a** Bubble Admin,
-**I want** to configure the internal logic of each node (System Prompt, Model, Tools),
-**So that** I can specialize agents (e.g., "You are a Legal Analyst").
+**I want** to configure each step using a standard form, with the option to upload Markdown files for complex prompt instructions,
+**So that** I don't have to copy-paste massive text blocks.
 
 **Acceptance Criteria:**
+**Given** I select a step (Node)
+**When** the Configuration Panel opens
+**Then** I see structured fields:
+*   **System Prompt:** A large text area for instructions.
+*   **Knowledge Context:** A "File Upload" button to attach a `.md` file. The system reads this file and injects it into the prompt.
+*   **Model:** A dropdown to select `Gemini 1.5 Pro` or `Flash`.
+*   **Tools:** A multi-select checklist to enable capabilities.
+**And** the system **Sanitizes (DOMPurify)** any Markdown content rendered in the UI to prevent XSS.
 
-**Given** a selected node
-**When** I update its configuration
-**Then** I can set the `SystemPrompt`, `Model` (Gemini Pro/Flash), and `Temperature`
-**And** I can bind specific Tools/Capabilities (e.g., "Search Knowledge Graph")
-
-#### Story 3.3: Input Schema & Global Validation
+#### Story 3.3: Input Schema Wizard (The Dynamic Form Builder)
 **As a** Bubble Admin,
-**I want** to define the required inputs for the workflow, including support for "Arrays of Files",
-**So that** the Storefront UI automatically generates the correct form for the user.
+**I want** to define the inputs using a "Field Builder" (like Typeform),
+**So that** the Storefront knows exactly which Modal fields to render for the user.
 
 **Acceptance Criteria:**
+**Given** the "Input Settings" tab
+**When** I configure a field (e.g., "Label: Project Name", "Type: Text", "Required: True")
+**Then** the system generates a standard JSON Schema: `{ "project_name": { "type": "string" } }`
+**And** I can select specialized types (File, Asset Picker).
+**And** the system generates a stable `data-testid` attribute (e.g., `data-testid="input-project-name"`) for every field to enable robust E2E testing.
+**And** this schema is saved to the Workflow Definition.
 
-**Given** a workflow definition
-**When** I define `InputSchema`
-**Then** I can specify fields like `client_name` (Text) or `transcripts` (File[])
-**And** I can set validation rules (e.g., "Min 1 file", "Max 50MB")
-
-#### Story 3.4: The Gatekeeper (Validation & Self-Correction)
+#### Story 3.4: Logic Rule Builder (The Gatekeeper)
 **As a** Workflow Designer,
-**I want** to define "Conditional Edges" based on agent output,
-**So that** the workflow can automatically route to a "Fix it" node if the Quality Score is low.
+**I want** to define conditional logic using a "Rule Builder" interface,
+**So that** I can route bad results to a fixer node without writing JavaScript.
 
 **Acceptance Criteria:**
+**Given** I want to add a check (e.g., "If Quality is Low")
+**When** I configure the "Next Step" logic
+**Then** I see a **Rule Builder UI**:
+*   **If:** [Dropdown: Metric] (e.g., `Quality_Score`)
+*   **Operator:** [Dropdown] (e.g., `Less Than`)
+*   **Value:** [Input] (e.g., `0.8`)
+*   **Then Go To:** [Dropdown: Step Name] (e.g., `Fixer_Node`)
+*   **Else Go To:** [Dropdown: Step Name] (e.g., `End`)
 
-**Given** a Node Output (e.g., `{ quality: 0.5 }`)
-**When** the Gatekeeper evaluates the condition `quality < 0.8`
-**Then** the execution routes to the "Correction Node" instead of the "End Node"
-**And** this logic is configurable via the Admin UI
-
-#### Story 3.5: Advanced Patterns (Map-Reduce)
+#### Story 3.5: Parallel Execution (Easy Mode)
 **As a** Power User,
-**I want** to configure a "Map" step that runs an agent in parallel for every item in an input list,
-**So that** I can process 20 files simultaneously and then "Reduce" (consolidate) them into one report.
+**I want** to enable parallel processing by selecting a collection variable,
+**So that** I don't have to configure complex Map-Reduce graphs.
 
 **Acceptance Criteria:**
+**Given** a step that receives a List/Array variable (e.g., `files[]`)
+**When** I check **"Run in Parallel"** and select **"Map over: files"**
+**Then** the system automatically configures the Map-Reduce pattern
+**And** I see a configuration for "Max Concurrency" (e.g., 5 items at a time)
 
-**Given** an input array of 20 files
-**When** the workflow enters the "Map Node"
-**Then** the system spawns 20 parallel execution branches (one per file)
-**And** waits for all to complete before triggering the "Reduce Node"
-**And** the Reduce Node receives an array of all 20 outputs
+#### Story 3.6: Workflow Versioning & Locking
+**As a** System Architect,
+**I want** workflows to be immutable versioned snapshots (v1, v2),
+**So that** editing a workflow definition does not break active runs relying on the old logic.
+
+**Acceptance Criteria:**
+**Given** an existing published workflow (v1)
+**When** the Admin saves changes
+**Then** the system creates a new version (v2)
+**And** new runs use v2
+**And** existing active runs continue using v1 (references are locked to `workflow_version_id`)
+**And** the Admin can "Rollback" (set v1 as active) if v2 is broken
 
 ### Epic 4: Workflow Execution Engine (The Creator)
 **Goal:** The heart of the system. Enable "Creators" to run workflows asynchronously, handling file inputs, queue management, and robust state persistence.
@@ -298,27 +367,29 @@ This document provides the complete epic and story breakdown for project_bubble,
 
 #### Story 4.1: Storefront & Run Initiation (Dynamic Forms)
 **As a** Creator,
-**I want** to select a workflow and see a dynamic form asking for the specific inputs it needs (e.g., "Upload 5 Transcripts", "Select Codebook"),
-**So that** I can start a run with the correct data.
+**I want** to select a workflow and see a dynamically generated modal based on the Admin's definition,
+**So that** I don't have to guess what files to upload.
 
 **Acceptance Criteria:**
+**Given** I click "Run" on the "QDA Workflow" card
+**Then** a Modal opens rendering the form defined in `InputSchema` (Story 3.3)
+**And** specialized fields render correctly:
+    *   `format: file_upload` -> Renders Multi-File Dropzone.
+    *   `format: asset_picker` -> Renders Dropdown of Tenant Assets.
+**And** every field has the stable `data-testid` defined in the schema (QA Requirement).
+**And** validation prevents submission until all required fields are filled
 
-**Given** I select a "Batch Analysis" workflow
-**When** the page loads
-**Then** the UI renders a Multi-File Uploader (because the schema assumes `File[]`) and a Dropdown for "Codebook"
-**And** I cannot click "Run" until validation passes (Story 4.4)
-
-#### Story 4.2: Execution Engine Core (The Orchestrator)
+#### Story 4.2: Execution Engine Core (Versioned Runner)
 **As a** System Architect,
-**I want** a robust background worker that picks up the job and executes the LangGraph definition,
-**So that** the user doesn't have to wait with their browser open.
+**I want** a robust background worker that executes the specific immutable version of the workflow,
+**So that** users don't have to wait with their browser open AND in-flight runs don't break on updates.
 
 **Acceptance Criteria:**
-
 **Given** a "Job Created" event in BullMQ
 **When** the Worker picks it up
-**Then** it loads the specific Workflow Graph from the DB
-**And** executes the nodes (supporting parallel "Map" branches for batch inputs)
+**Then** it loads the specific `GraphJSON` from `workflow_versions` using the `version_id` in the payload (NOT the current tip)
+**And** executes the nodes, supporting the **"Map over [Variable]"** pattern defined in Story 3.5
+**And** guarantees extracted text from user files is **Sanitized (DOMPurify)** before use/storage
 **And** updates the Run Status to `RUNNING`
 
 #### Story 4.3: State Persistence & Resumption (Auto-Save)
@@ -338,12 +409,19 @@ This document provides the complete epic and story breakdown for project_bubble,
 **I want** the system to prevent me from running a workflow if I am missing a required Asset (e.g., "Codebook"),
 **So that** I don't waste credits on a failed run.
 
-**Acceptance Criteria:**
-
-**Given** a workflow that requires a "Style Guide" asset
-**When** I try to run it without selecting one
-**Then** the API rejects the request
 **And** the UI shows a specific error: "Missing Required Asset: Style Guide"
+
+#### Story 4.6: Context Injection (Markdown Support)
+**As a** System Architect,
+**I want** the engine to read attached Markdown files from the definition and inject them into the System Prompt,
+**So that** agents have the necessary "Knowledge Context" (Story 3.2) without bloating the JSON.
+
+**Acceptance Criteria:**
+**Given** a Node Definition with an attached `context_file_id` (Markdown)
+**When** the Agent Node is initialized
+**Then** the Worker fetches the file content from Storage (S3/MinIO)
+**And** **Sanitizes it** (Server-Side) to ensure no executable code is present
+**And** appends it to the System Prompt: `\n\n### Context:\n{file_content}`
 
 #### Story 4.5: Output Generation (Raw Data & Citations)
 **As a** Data Analyst,
@@ -480,6 +558,42 @@ This document provides the complete epic and story breakdown for project_bubble,
 #### Story 7.1: Advanced LLM Configuration UI (Roadmap Item)
 **As a** Bubble Admin,
 **I want** a UI to configure multiple LLM Providers and API Keys per tenant or workflow,
+### Epic 9: Knowledge Graph Evolution (Phase 2 - The Moat)
+**Goal:** Upgrade the flat "Vector Knowledge Base" into a true "Hybrid Knowledge Graph" to enable multi-hop reasoning and "Connecting the Dots" across projects.
+**Status:** [Future / Phase 2]
+**Technical Note:** Requires implementing `node_relationships` table and Graph Traversal algorithms.
+
+#### Story 9.1: Relational Edge Extraction
+**As a** System Architect,
+**I want** the Ingestion Worker to not just embed text, but identify entities and relationships (e.g., "Project A -> uses -> Tool B"),
+**So that** we can build the graph structure.
+
+#### Story 9.2: Visual Graph Explorer
+**As a** Creator,
+**I want** to visually explore connections between my assets,
+**So that** I can see hidden patterns (e.g., "All these interviews mention 'Pricing'").
+
+#### Story 9.3: Smart Ingestion Agent (The Normalizer) - [Phase 2]
+**As a** System Architect,
+**I want** an agent to pre-process uploads before storage,
+**So that** we handle PPTs, Images, and "Rules" correctly without user manual labor.
+
+**Acceptance Criteria:**
+**Given** a raw file upload
+#### Story 9.3: Smart Ingestion Pipelines (Vision & Normalization) - [Phase 2 / Future]
+**As a** System Architect,
+**I want** to upgrade the ingestion to handle Images, Charts, and complex parsing strategies,
+**So that** we can move beyond simple text extraction.
+
+**Acceptance Criteria:**
+**Given** a non-text upload (Image/PPT)
+**Then** the Agent executes the **Advanced Pipeline** (Deferred to Future):
+1.  **Safety & Tagging:** Auto-applies System Tags.
+2.  **Classification:** Router decides strategy (Vision Model for Charts).
+3.  **Concept Extraction:** Parent-level "Blueprint" vectorization.
+4.  **Hybrid Splitting:** Separating Tables from Text.
+**Note:** For MVP (Epic 2), only the **Text Pipeline** is active (Story 2.2).
+
 ### Epic 8: Conversational Intelligence (Future Roadmap)
 **Goal:** Enable "Chat with Data" capabilities, transforming static reports and knowledge graphs into interactive, conversational consultants.
 **FRs covered:** FR52, FR53
@@ -507,3 +621,17 @@ This document provides the complete epic and story breakdown for project_bubble,
 **When** I ask a question
 **Then** the agent searches the entire Hybrid Knowledge Graph (Vector + Relational) across all assets and past reports
 **And** synthesizes a global answer with citations to multiple projects
+
+### Epic 10: Advanced Visual Definition (Future MVP v2)
+**Goal:** Introduce a full "No-Code" Visual Canvas for defining workflows, replacing the Form-Based Wizard with a drag-and-drop experience.
+**Status:** [Future] - Deferred from Epic 3.
+
+#### Story 10.1: Visual Graph Canvas
+**As a** Bubble Admin,
+**I want** to drag and drop nodes onto an infinite canvas and connect them with wires,
+**So that** I can visualize complex non-linear flows easily.
+
+#### Story 10.2: Visual Cycle Detection
+**As a** Bubble Admin,
+**I want** the canvas to visually highlight valid/invalid loops,
+**So that** I don't create infinite recursion bugs.
