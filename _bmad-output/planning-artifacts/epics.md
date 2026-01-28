@@ -165,6 +165,17 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** I can select which `WorkflowIDs` are enabled for this tenant (Entitlement List)
 **And** system deducts credits **Upfront** (at Run Request); if request fails validation, credit is refunded immediately.
 
+#### Story 1.2e: Tenant Seeding (Templates) [Prototype]
+**As a** Bubble Admin,
+**I want** new tenants to be initialized with "Template Workflows" and "Sample Assets",
+**So that** they can experience the value immediately without manual setup.
+
+**Acceptance Criteria:**
+**Given** a new Tenant is created (via Story 1.2)
+**Then** the system automatically copies the "Global Template Workflows" (e.g., QDA Analyzer) into the new Tenant's scope
+**And** creates a "Sample Codebook" in their Asset Library
+**And** labels these as "Example / Read-Only" (or allows users to clone/edit them)
+
 #### Story 1.3: User Authentication & RBAC
 **As a** User,
 **I want** to log in and receive a secure JWT,
@@ -307,6 +318,17 @@ This document provides the complete epic and story breakdown for project_bubble,
 *   **Model:** A dropdown to select `Gemini 1.5 Pro` or `Flash`.
 *   **Tools:** A multi-select checklist to enable capabilities.
 **And** the system **Sanitizes (DOMPurify)** any Markdown content rendered in the UI to prevent XSS.
+
+#### Story 3.2b: The Gatekeeper Pattern (Scanner Configuration)
+**As a** Bubble Admin,
+**I want** to configure the first node as a "Gatekeeper" that validates input semantics (e.g., "Is this a Transcript?"),
+**So that** I don't waste 10k tokens analyzing a shopping list.
+
+**Acceptance Criteria:**
+**Given** I am configuring a "Scanner" Node
+**Then** I can set a **"Validation Prompt"** (e.g., "Check if text contains speaker labels")
+**And** I can set a **"Fail Fast"** message (e.g., "Error: Input is not a transcript")
+**And** the engine runs this check on the first 1,000 tokens only (Low Cost) before proceeding.
 
 #### Story 3.3: Input Schema Wizard (The Dynamic Form Builder)
 **As a** Bubble Admin,
@@ -465,16 +487,18 @@ This document provides the complete epic and story breakdown for project_bubble,
 **When** I click "View Full Source" on the card
 **Then** a Modal opens loading the original PDF, jumped to the specific page, with text highlighted
 
-#### Story 5.3: Human-in-the-Loop Feedback (Structured + Freeform)
+#### Story 5.3: Human-in-the-Loop Feedback (Multi-Modal)
 **As a** Creator,
-**I want** to review flagged assumptions and provide general feedback,
-**So that** I can correct the agent's reasoning.
+**I want** to correct the AI's logic using various feedback mechanisms,
+**So that** I can ensure the final report is accurate, regardless of whether the AI flagged the issue or not.
 
 **Acceptance Criteria:**
-
-**Given** the report contains "Low Confidence Assumptions"
-**Then** I see a "Review Assumptions" section where I can click "Approve" or "Edit" for each
-**And** I also see a "Global Feedback" text area to provide general instructions (e.g., "Focus more on X")
+**Given** the report is generated
+**Then** I have **Three Feedback Mechanisms**:
+1.  **Flagged Assumption Review:** A list of "Low Confidence" items. I can **Edit** the text to provide the correct fact (not just Yes/No).
+2.  **Unflagged Correction (General):** I can proactively add a new constraint or correct a "High Confidence" error (e.g., "Actually, Vendor X is the customer") via a chat/text input.
+3.  **Targeted Section Feedback:** I can select a specific Report Section and provide feedback scoped to that block (FR41), triggering a focused update.
+**And** any correction triggers a re-run (Global or Partial depending on dependency graph).
 
 #### Story 5.4: Feedback Processing (The Re-Run)
 **As a** Workflow Engine,
@@ -487,6 +511,18 @@ This document provides the complete epic and story breakdown for project_bubble,
 **When** the "Re-Run" triggers
 **Then** the engine re-executes the generation nodes
 **And** injects the Feedback as a high-priority "Correction Context" into the system prompt
+
+#### Story 5.5: PDF Export Service [Prototype]
+**As a** Creator,
+**I want** to export the final report as a watermark-protected PDF,
+**So that** I can share a static version with stakeholders.
+
+**Acceptance Criteria:**
+**Given** a completed report
+**When** I click "Export PDF"
+**Then** the backend generates a PDF file preserving the report layout
+**And** applies a faint watermark (User Email + Timestamp) diagonally across every page (FR43 - MVP)
+**And** the file download starts automatically
 
 ### Epic 6: Guest Access & Sharing
 **Goal:** Enable viral sharing by allowing authenticated Users to generate secure, time-limited Magic Links for external Guests (Stakeholders).
@@ -554,6 +590,18 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Given** the worker detects repeated 500 errors from Gemini
 **Then** the System Status is updated to `DEGRADED`
 **And** a global banner appears in the Storefront UI
+
+#### Story 7.4: Execution Trace Viewer [Prototype]
+**As a** Customer Admin,
+**I want** to view the full execution trace of a workflow run,
+**So that** I can debug why an agent gave a specific answer.
+
+**Acceptance Criteria:**
+**Given** a specific Run ID
+**When** I view the "Debug/Trace" tab
+**Then** I see a chronological log of every Node execution
+**And** for each Node, I can expand to see the **Exact Input** (Prompts sent to LLM) and **Raw Output** (Response from LLM)
+**And** I can see the Token Usage cost for that step
 
 #### Story 7.1: Advanced LLM Configuration UI (Roadmap Item)
 **As a** Bubble Admin,

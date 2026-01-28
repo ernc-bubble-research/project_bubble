@@ -67,7 +67,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 ## File Organization & Naming
 
 *   **Directory Structure:**
-    *   `apps/web-client`: Angular SPA
+    *   `apps/web`: Angular SPA
     *   `apps/api-gateway`: NestJS HTTP API
     *   `apps/worker-engine`: NestJS Background Processor
     *   `libs/shared`: DTOs, Types

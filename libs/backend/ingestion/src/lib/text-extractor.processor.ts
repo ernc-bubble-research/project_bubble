@@ -3,20 +3,18 @@ import { Job } from 'bullmq';
 import { INGESTION_QUEUE, IngestionJob } from './ingestion.queue';
 import { PrismaService } from '@bubble/backend/core';
 import * as fs from 'fs';
-import { JSDOM } from 'jsdom';
-const createDOMPurify = require('dompurify');
+const sanitizeHtml = require('sanitize-html');
 const pdf = require('pdf-parse');
 
 @Processor(INGESTION_QUEUE)
 export class TextExtractorProcessor extends WorkerHost {
-    private window = new JSDOM('').window;
-    private purifier = createDOMPurify(this.window);
-
     constructor(private prisma: PrismaService) {
         super();
+        console.log('TextExtractorProcessor Initialized!');
     }
 
     async process(job: Job<{ assetId: string }>): Promise<any> {
+        console.log(`Processing Job: ${job.name} for Asset: ${job.data?.assetId}`);
         if (job.name !== IngestionJob.EXTRACT_TEXT) return;
 
         const { assetId } = job.data;
@@ -41,7 +39,11 @@ export class TextExtractorProcessor extends WorkerHost {
         }
 
         // SANITIZATION (Critical Security Requirement)
-        const sanitizedText = this.purifier.sanitize(rawText);
+        // sanitize-html defaults are safe (strips scripts, etc.)
+        const sanitizedText = sanitizeHtml(rawText, {
+            allowedTags: [], // Strip all HTML tags for pure text extraction
+            allowedAttributes: {},
+        });
 
         await this.prisma.asset.update({
             where: { id: assetId },

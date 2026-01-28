@@ -229,7 +229,7 @@ await this.isolation.runInTransaction(currentTenantId, async (manager) => {
 ```text
 project_bubble/
 ├── apps/
-│   ├── web-client/          (Angular 18+ Frontend)
+│   ├── web/                 (Angular 18+ Frontend)
 │   │   └── src/app/         (Pages, Components)
 │   ├── api-gateway/         (NestJS HTTP API)
 │   │   └── src/app/         (Controllers, Gateway Logic)
@@ -254,7 +254,7 @@ project_bubble/
 
 **Data Boundaries:**
 *   **Database:** Only `libs/db-layer` is allowed to touch `pg`.
-*   **Safety:** `apps/web-client` MUST use DTOs. It cannot import TypeORM entities.
+*   **Safety:** `apps/web` MUST use DTOs. It cannot import TypeORM entities.
 
 ### File Organization Patterns
 

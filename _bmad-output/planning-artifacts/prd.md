@@ -139,6 +139,11 @@ Bubble is the **Infrastructure Platform** that allows Admins to build "Virtual S
 ### Risk Mitigation
 *   **Graph Corruption:** Mitigated via "Knowledge Base Snapshots" and "Revert" functionality.
 *   **Complexity Overload:** Mitigated by hiding the logic (JSON) behind a clean "Storefront" UI that speaks the user's language.
+*   **Garbage Inputs (The "Shopping List" Risk):** Mitigated via **3-Layer Governance**:
+    1.  **UI:** Extension/Size Check.
+    2.  **Schema:** Type Enforcement (Codebook vs Transcript).
+    3.  **Gatekeeper Node:** AI Semantic Check (Fail Fast on first 1k tokens).
+
 
 ## SaaS B2B Specific Requirements
 
