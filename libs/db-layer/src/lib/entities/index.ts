@@ -1,2 +1,1 @@
-// Barrel export for TypeORM entities
-// Add entity exports here as they are created
+export { TenantEntity, TenantStatus } from './tenant.entity';

@@ -1,2 +1,1 @@
-// Barrel export for shared DTOs
-// Add DTO exports here as they are created
+export * from './tenant';
