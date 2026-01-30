@@ -36,17 +36,23 @@
       "@project_bubble/backend/ingestion": [
         "libs/backend/ingestion/src/index.ts"
       ],
-      "@project-bubble/shared": [
-        "libs/shared/src/index.ts"
-      ],
       "@project-bubble/backend/workflows": [
         "libs/backend/workflows/src/index.ts"
       ],
       "@bubble/backend/core": [
         "libs/backend/core/src/index.ts"
       ],
+      "@bubble/backend/auth": [
+        "libs/backend/auth/src/index.ts"
+      ],
       "@bubble/backend/ingestion": [
         "libs/backend/ingestion/src/index.ts"
+      ],
+      "@project-bubble/shared": [
+        "libs/shared/src/index.ts"
+      ],
+      "@bubble/web/admin": [
+        "libs/web/admin/src/index.ts"
       ]
     }
   },

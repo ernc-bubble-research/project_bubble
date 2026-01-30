@@ -226,8 +226,6 @@ Requirements are tagged by implementation phase:
 - **[Future]**: Deferred to post-MVP roadmap.
 
 ### Workflow Administration (The Architect)
-
-### Workflow Administration (The Architect)
 - FR1: [Prototype] Bubble Admin can define workflow graph topology using a **Form-Based Wizard** (No-Code).
 - FR2: [Prototype] Bubble Admin can configure specific node types (Scanner, Doer, Reviewer) with execution instructions and **Markdown Prompts**.
 - FR_Versioning: [Prototype] System enforces **Immutable Versioning** for workflows; editing a workflow creates a new version (`v2`) to protect active runs.
@@ -275,6 +273,7 @@ Requirements are tagged by implementation phase:
 - FR48_Parallel: [Prototype] System processes multiple file uploads concurrently (Parallel Ingestion).
 - FR_Ingest: [Phase 2] System upgrades to "Smart Normalization" (Vision, Splitters).
 - FR21: [Prototype] Knowledge Base ("The Brain") stores validated interaction data / insights separately from raw assets.
+- FR22: [Prototype] Workflow execution queries Knowledge Base for historical context (verified insights, past corrections) before processing new inputs.
 - FR23: [Prototype] Customer Admin can manage Company Assets (Codebooks, Knowledge Files) available to the tenant.
 - FR_Graph_1: [Phase 2] System upgrades Vector Store to **Hybrid Knowledge Graph**, storing explicit relationships (edges) between information nodes.
 - FR_Graph_2: [Phase 2] System supports "Multi-Hop" reasoning (traversing edges) to answer complex queries across disparate documents.

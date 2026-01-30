@@ -9,7 +9,7 @@ workflow_status:
   research: skipped
   product-brief: "_bmad-output/planning-artifacts/product-brief-project_bubble-2026-01-09.md"
   prd: "_bmad-output/planning-artifacts/prd.md"
-  create-ux-design: skipped
+  create-ux-design: "_bmad-output/planning-artifacts/ux-design-specification.md"
   create-architecture: "_bmad-output/planning-artifacts/architecture.md"
   create-epics-and-stories: "_bmad-output/planning-artifacts/epics.md"
   test-design: optional

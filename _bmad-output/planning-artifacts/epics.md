@@ -21,8 +21,8 @@ This document provides the complete epic and story breakdown for project_bubble,
 *   FR4: [Prototype] Bubble Admin can create custom form inputs (text fields, multiple choice) for workflow initialization.
 *   FR5: [Prototype] Bubble Admin can define output report schemas mapping analysis results to UI components.
 *   FR6: [Prototype] Bubble Admin can update validation rules for "Gatekeeper Protocol" within workflows.
-*   FR7: [Prototype] Creator can browse available admin-defined workflows in the Storefront.
-*   FR8: [Prototype] Creator can initiate a new workflow run from the Storefront.
+*   FR7: [Prototype] Creator can browse available admin-defined workflows in the Workflows.
+*   FR8: [Prototype] Creator can initiate a new workflow run from the Workflows.
 *   FR9: [Prototype] Creator can upload required files (supporting .txt, .csv, .md, .docx, .pdf) for a run.
 *   FR10: [Prototype] Creator can select necessary Company Assets (e.g., Codebooks, Knowledge Files) to bind to the run.
 *   FR11: [Prototype] Creator can provide text responses to mandatory custom form questions.
@@ -48,7 +48,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 *   FR33: [Prototype] System authenticates users based on assigned roles.
 *   FR34: [Prototype] System can persist intermediate state at each node completion to allow resumption on failure.
 *   FR35: [Prototype] Bubble Admin can configure retry policies (count, backoff) for specific node types.
-*   FR36: [Prototype] Creator can view remaining run quota (e.g. "Runs: 5/10") in the Storefront.
+*   FR36: [Prototype] Creator can view remaining run quota (e.g. "Runs: 5/10") in the Workflows.
 *   FR37: [Prototype] System pauses execution if tenant usage exceeds Admin-defined hard limits.
 *   FR38: [Prototype] Customer Admin can view full execution traces (Input -> Prompt -> Raw Output) for debugging purposes.
 *   FR39: [Prototype] Guest access is strictly scoped to the specific Report UUID linked in the magic link.
@@ -91,19 +91,19 @@ This document provides the complete epic and story breakdown for project_bubble,
 
 | FR | Epic | Description |
 | :--- | :--- | :--- |
-| FR30, FR33, FR26, FR27, FR28, FR32 | **Epic 1** | System Foundation, Auth, & Tenants |
-| FR23, FR48, FR3, FR21, FR22 | **Epic 2** | Asset & Knowledge Management |
-| FR1, FR2, FR4, FR5, FR6, FR35, FR42 | **Epic 3** | Workflow Definition (The Architect) |
-| FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR34, FR36, FR37, FR46, FR47 | **Epic 4** | Workflow Execution Engine (The Creator) |
-| FR14, FR15, FR16, FR17, FR18, FR19, FR43, FR45 | **Epic 4** | Interactive Reporting & Feedback |
+| FR30, FR33, FR26, FR27, FR28, FR32, FR51, FR_Admin_Lobby, FR_Impersonate, FR_Entitlements | **Epic 1** | System Foundation, Auth, & Tenants |
+| FR23, FR48, FR48_Library, FR48_Parallel, FR_Archive, FR3, FR21, FR22 | **Epic 2** | Asset & Knowledge Management |
+| FR1, FR2, FR4, FR5, FR6, FR35, FR42, FR_QA_TestID | **Epic 3** | Workflow Definition (The Architect) |
+| FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR34, FR36, FR37, FR46, FR47, FR_Sec_Sanit | **Epic 4** | Workflow Execution Engine (The Creator) |
+| FR14, FR15, FR16, FR17, FR18, FR19, FR43, FR45 | **Epic 5** | Interactive Reporting & Feedback |
 | FR20, FR39, FR40 | **Epic 6** | Guest Access & Sharing |
 | FR29, FR31, FR38, FR49 | **Epic 7** | Observability & Advanced Ops |
 
 ## Epic List
 
-### Epic 1: System Foundation & Tenant Isolation
-**Goal:** Establish the production-ready infrastructure, including the monorepo, database with RLS, and secure tenant management, ensuring strict data isolation from Day 1.
-**FRs covered:** FR30, FR33, FR26, FR27, FR28, FR32
+### Epic 1: Tenant Management & Platform Setup
+**Goal:** Establish the production-ready platform with secure tenant management, authentication, and data isolation from Day 1.
+**FRs covered:** FR30, FR33, FR26, FR27, FR28, FR32, FR51, FR_Admin_Lobby, FR_Impersonate, FR_Entitlements
 **NFRs:** NFR-Sec-1, NFR-Sec-2, NFR-Comp-1
 
 #### Story 1.1: Monorepo & Infrastructure Initialization
@@ -129,21 +129,21 @@ This document provides the complete epic and story breakdown for project_bubble,
 **When** I POST to `/admin/tenants` with a name
 **Then** a new Tenant record is created with a unique UUID
 
-#### Story 1.2b: Bubble Admin Dashboard ("The Lobby")
+#### Story 1.3: Bubble Admin Dashboard ("The Lobby")
 **As a** Bubble Admin,
 **I want** a "Super Admin" landing page that lists all active tenants,
 **So that** I can see who is on the platform and manage them.
 
 **Acceptance Criteria:**
 **Given** I log in with `role: bubble_admin`
-**Then** I am redirected to `/ops` (or `/super-admin`)
+**Then** I am redirected to `/admin/dashboard`
 **And** I see a table of Tenants (Name, ID, User Count, Status)
 **And** I see a "Create Tenant" button (triggers Story 1.2)
 
-#### Story 1.2c: Impersonation Action
+#### Story 1.4: Impersonation Action
 **As a** Bubble Admin,
 **I want** to click "Manage" on a tenant in the Lobby,
-**So that** I can log in as them (Option B) to support them.
+**So that** I can log in as them to provide support.
 
 **Acceptance Criteria:**
 **Given** I click "Manage Acme Corp"
@@ -152,7 +152,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** a **Prominent "Viewing as Acme Corp" Banner** persists at the top (Red/Safety Orange)
 **And** after 60 minutes of inactivity, the session reverts to the Admin Lobby (does not logout, just exits impersonation)
 
-#### Story 1.2d: Tenant Configuration (Credits & Entitlements)
+#### Story 1.5: Tenant Configuration (Credits & Entitlements)
 **As a** Bubble Admin,
 **I want** to configure a tenant's limits and available workflows,
 **So that** I can enforce pricing tiers (e.g., "Tier 1: 50 runs, QDA Workflow only").
@@ -165,7 +165,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** I can select which `WorkflowIDs` are enabled for this tenant (Entitlement List)
 **And** system deducts credits **Upfront** (at Run Request); if request fails validation, credit is refunded immediately.
 
-#### Story 1.2e: Tenant Seeding (Templates) [Prototype]
+#### Story 1.6: Tenant Seeding (Templates) [Prototype]
 **As a** Bubble Admin,
 **I want** new tenants to be initialized with "Template Workflows" and "Sample Assets",
 **So that** they can experience the value immediately without manual setup.
@@ -176,7 +176,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** creates a "Sample Codebook" in their Asset Library
 **And** labels these as "Example / Read-Only" (or allows users to clone/edit them)
 
-#### Story 1.3: User Authentication & RBAC
+#### Story 1.7: User Authentication & RBAC
 **As a** User,
 **I want** to log in and receive a secure JWT,
 **So that** the system knows my identity, tenant context, and permissions.
@@ -188,10 +188,10 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Then** I receive a JWT containing `sub` (User ID), `tenant_id`, and `role`
 **And** the supported roles are `BubbleAdmin`, `CustomerAdmin`, `Creator`
 
-#### Story 1.4: RLS Enforcement Mechanism (Security)
-**As a** Security Architect,
-**I want** the system to enforce `SET LOCAL app.current_tenant` on every query and block direct repository access,
-**So that** data isolation is guaranteed by the database engine and developers cannot accidentally bypass it.
+#### Story 1.8: RLS Enforcement Mechanism (Security)
+**As a** Bubble Admin,
+**I want** the system to enforce strict tenant data isolation via `SET LOCAL app.current_tenant` on every query,
+**So that** no tenant can ever access another tenant's data, even if application code has a bug.
 
 **Acceptance Criteria:**
 **Given** a database transaction (HTTP Request OR Background Job)
@@ -200,7 +200,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** for Background Jobs (BullMQ), the Worker must reconstitute the Tenant Context from the Job Payload before opening the transaction
 **And** a Code Guard must prevent direct Repository access
 
-#### Story 1.5: User Management (Admin Creation) - [Prototype]
+#### Story 1.9: User Management (Admin Creation) [Prototype]
 **As a** Customer Admin (managing my team) OR Bubble Admin (providing support),
 **I want** to create a new user directly in the system,
 **So that** I can onboard team members without relying on an external email service.
@@ -215,7 +215,40 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Then** I must specify which `tenant_id` this user belongs to (or assign them to the 'Admin' tenant)
 **And** the password is securely hashed immediately
 
-#### Story 1.6: User Invitations (Email Flow) - [Phase 2]
+#### Story 1.10: Login & Password Pages (Auth UI) [Prototype]
+**As a** User,
+**I want** a clean login page and password-set page,
+**So that** I can authenticate and access the application.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/auth/login`
+**Then** I see a branded login form with email and password fields, the Bubble logo, and a "Sign In" button
+**And** the form validates email format and required fields before submission
+**And** on invalid credentials, I see an inline error: "Invalid email or password"
+**And** on successful login, I am redirected to `/app/workflows` (Creator/Customer Admin) or `/admin/dashboard` (Bubble Admin)
+
+**Given** I navigate to `/auth/set-password` with a valid invitation/reset token
+**Then** I see a password-set form with "New Password" and "Confirm Password" fields
+**And** the form enforces minimum password requirements (8+ chars, mixed case, number)
+**And** on success, I am redirected to `/auth/login` with a success message
+
+#### Story 1.11: CI/CD Pipeline Setup [Prototype]
+**As a** Developer,
+**I want** a CI/CD pipeline configured with GitHub Actions and Nx Cloud,
+**So that** every push is automatically built, tested, and validated.
+
+**Acceptance Criteria:**
+
+**Given** a PR is opened or a commit is pushed to main
+**When** GitHub Actions triggers
+**Then** `nx affected:lint` runs on changed projects
+**And** `nx affected:test` runs unit tests on changed projects
+**And** `nx affected:build` builds changed apps (web, api-gateway, worker-engine)
+**And** the pipeline fails if any step fails, blocking the merge
+**And** Nx Cloud caches previous builds to speed up CI runs
+
+#### Story 1.12: User Invitations (Email Flow) [Phase 2]
 **As a** Customer Admin,
 **I want** to invite colleagues via email,
 **So that** they can set their own passwords and onboard themselves.
@@ -233,12 +266,12 @@ This document provides the complete epic and story breakdown for project_bubble,
 
 #### Story 2.1: Asset Management (Tenant Shared Drive)
 **As a** Customer Admin or User,
-**I want** to upload and manage files in a shared Tenant Library,
+**I want** to upload and manage files in a shared Assets,
 **So that** my team has a central repository of inputs.
 
 **Acceptance Criteria:**
 **Given** I upload a file (Text/PDF only for MVP)
-**Then** it is stored in the **Tenant Library** (accessible to all tenant users)
+**Then** it is stored in the **Assets** (accessible to all tenant users)
 **And** the system supports **Parallel Uploads**
 **And** I can organize it into **Folders**
 **And** the system calculates a **SHA-256 Hash** to prevent duplicate uploads (Warning: "File exists")
@@ -248,9 +281,9 @@ This document provides the complete epic and story breakdown for project_bubble,
 *   *Warning:* Deletion removes it for *everyone* in the tenant (Shared Drive model).
 
 #### Story 2.2: Vector Ingestion (Reference Assets)
-**As a** System Architect,
-**I want** `REFERENCE` assets to be processed into the Vector Knowledge Base,
-**So that** they are available for semantic search (RAG).
+**As a** Creator,
+**I want** my uploaded reference assets to be automatically processed and indexed into the Knowledge Base,
+**So that** workflow agents can find relevant context from my documents during analysis.
 
 **Acceptance Criteria:**
 
@@ -276,16 +309,19 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** returns relevant text chunks with metadata
 
 #### Story 2.4: Validated Insight Storage (Memory)
-**As a** Product Strategist,
-**I want** validated user feedback/findings to be saved back to the Knowledge Base,
-**So that** the system learns (e.g., "User confirmed X is true").
+**As a** Creator,
+**I want** validated user feedback and findings to be saved back to the Knowledge Base,
+**So that** the system learns from corrections (e.g., "User confirmed X is true") and improves over time.
 
 **Acceptance Criteria:**
 
-**Given** validated feedback from Epic 5
-**When** the "Feedback Event" is received
-**Then** a new entry is created in `knowledge_vectors` with `is_verified=true`
-**And** the Search Service boosts these verified chunks in future queries
+**Given** a validated feedback event is emitted (from any source: report feedback, assumption correction, or manual insight entry)
+**When** the Knowledge Service receives the event
+**Then** a new entry is created in `knowledge_vectors` with `is_verified=true` and metadata linking to the originating run/report
+**And** the Search Service boosts these verified chunks in future queries (higher relevance weight)
+**And** the entry is scoped to the current `tenant_id` via RLS
+
+**Note:** This story provides the *storage mechanism*. The feedback *sources* (Report UI, Assumption Verification) are implemented in Epic 5. This story can be implemented and tested with programmatic/API-driven feedback events before the Report UI exists.
 
 ### Epic 3: Workflow Definition (The Architect)
 **Goal:** Provide "Architects" (Admins) with a user-friendly "Form-Based" tool to define the agents.
@@ -333,7 +369,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 #### Story 3.3: Input Schema Wizard (The Dynamic Form Builder)
 **As a** Bubble Admin,
 **I want** to define the inputs using a "Field Builder" (like Typeform),
-**So that** the Storefront knows exactly which Modal fields to render for the user.
+**So that** the Workflows knows exactly which Modal fields to render for the user.
 
 **Acceptance Criteria:**
 **Given** the "Input Settings" tab
@@ -387,7 +423,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 **FRs covered:** FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR34, FR36, FR37, FR46, FR47
 **NFRs:** NFR-Perf-2, NFR-Rel-1, NFR-Rel-2, NFR-Scale-1
 
-#### Story 4.1: Storefront & Run Initiation (Dynamic Forms)
+#### Story 4.1: Workflows & Run Initiation (Dynamic Forms)
 **As a** Creator,
 **I want** to select a workflow and see a dynamically generated modal based on the Admin's definition,
 **So that** I don't have to guess what files to upload.
@@ -402,9 +438,9 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** validation prevents submission until all required fields are filled
 
 #### Story 4.2: Execution Engine Core (Versioned Runner)
-**As a** System Architect,
-**I want** a robust background worker that executes the specific immutable version of the workflow,
-**So that** users don't have to wait with their browser open AND in-flight runs don't break on updates.
+**As a** Creator,
+**I want** my workflow runs to execute reliably in the background using the exact workflow version I selected,
+**So that** I don't have to wait with my browser open and my run isn't affected if an admin updates the workflow.
 
 **Acceptance Criteria:**
 **Given** a "Job Created" event in BullMQ
@@ -415,9 +451,9 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** updates the Run Status to `RUNNING`
 
 #### Story 4.3: State Persistence & Resumption (Auto-Save)
-**As a** DevOps Engineer,
-**I want** the engine to save the workflow state (Postgres Checkpoint) after every node transition,
-**So that** if the server restarts, the job resumes exactly where it left off.
+**As a** Creator,
+**I want** the system to automatically save my workflow's progress after every step,
+**So that** if there's a server issue, my run resumes where it left off instead of starting over.
 
 **Acceptance Criteria:**
 
@@ -431,12 +467,30 @@ This document provides the complete epic and story breakdown for project_bubble,
 **I want** the system to prevent me from running a workflow if I am missing a required Asset (e.g., "Codebook"),
 **So that** I don't waste credits on a failed run.
 
-**And** the UI shows a specific error: "Missing Required Asset: Style Guide"
+**Acceptance Criteria:**
 
-#### Story 4.6: Context Injection (Markdown Support)
-**As a** System Architect,
-**I want** the engine to read attached Markdown files from the definition and inject them into the System Prompt,
-**So that** agents have the necessary "Knowledge Context" (Story 3.2) without bloating the JSON.
+**Given** a Creator opens the Run Wizard for a workflow that requires a "Codebook" asset
+**When** no asset of type "Codebook" exists in the tenant's Data Vault
+**Then** the Asset Picker field displays an inline error: "Missing Required Asset: [Asset Type]"
+**And** the "Run" button is disabled with a tooltip explaining the missing requirement
+**And** a link to the Data Vault is provided so the user can upload the missing asset
+
+**Given** a Creator has selected all required inputs and clicks "Run"
+**When** the server-side pre-flight validation runs
+**Then** the system re-validates all inputs (files, assets, form fields) against the workflow's InputSchema
+**And** if any validation fails, the submission is rejected with a specific error message per field
+**And** no credits are deducted for a rejected submission
+
+**Given** a Creator's tenant has exhausted their run quota (FR37)
+**When** the Creator attempts to submit a run
+**Then** the "Run" button is disabled
+**And** the UI displays: "Run quota exceeded. Contact your admin to increase your plan."
+**And** no credits are deducted
+
+#### Story 4.5: Context Injection (Markdown Support)
+**As a** Creator,
+**I want** workflow agents to automatically receive the knowledge context files (Markdown) attached by the admin during workflow definition,
+**So that** the analysis is informed by methodology guides and domain knowledge without me needing to upload them each time.
 
 **Acceptance Criteria:**
 **Given** a Node Definition with an attached `context_file_id` (Markdown)
@@ -445,7 +499,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** **Sanitizes it** (Server-Side) to ensure no executable code is present
 **And** appends it to the System Prompt: `\n\n### Context:\n{file_content}`
 
-#### Story 4.5: Output Generation (Raw Data & Citations)
+#### Story 4.6: Output Generation (Raw Data & Citations)
 **As a** Data Analyst,
 **I want** the final output to be saved as a structured JSON containing the text AND specific citations (Page numbers, Quotes),
 **So that** the UI can later verify the evidence.
@@ -589,7 +643,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 
 **Given** the worker detects repeated 500 errors from Gemini
 **Then** the System Status is updated to `DEGRADED`
-**And** a global banner appears in the Storefront UI
+**And** a global banner appears in the Workflows UI
 
 #### Story 7.4: Execution Trace Viewer [Prototype]
 **As a** Customer Admin,
@@ -603,44 +657,56 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** for each Node, I can expand to see the **Exact Input** (Prompts sent to LLM) and **Raw Output** (Response from LLM)
 **And** I can see the Token Usage cost for that step
 
-#### Story 7.1: Advanced LLM Configuration UI (Roadmap Item)
+#### Story 7.1: LLM Provider Configuration [Future]
 **As a** Bubble Admin,
-**I want** a UI to configure multiple LLM Providers and API Keys per tenant or workflow,
+**I want** a UI to configure multiple LLM Providers (e.g., Gemini, OpenAI, Anthropic) and API Keys per tenant or workflow,
+**So that** I can control which models are used, manage costs, and switch providers without downtime.
+
+**Acceptance Criteria:**
+
+**Given** I am on the Admin Portal → System Settings → LLM Providers page
+**When** I add a new LLM Provider
+**Then** I can configure: Provider Name, API Key (encrypted at rest), Default Model, and Rate Limits
+**And** I can assign a provider as the default for a specific Tenant or Workflow
+**And** the system validates the API Key by making a test call before saving
+**And** I can set a **Fallback Provider** that activates if the primary returns repeated errors
+
+**Given** a Workflow is configured to use Provider A
+**When** Provider A returns 3+ consecutive 500 errors
+**Then** the system automatically switches to the configured Fallback Provider
+**And** logs the failover event in the audit trail
+
 ### Epic 9: Knowledge Graph Evolution (Phase 2 - The Moat)
 **Goal:** Upgrade the flat "Vector Knowledge Base" into a true "Hybrid Knowledge Graph" to enable multi-hop reasoning and "Connecting the Dots" across projects.
 **Status:** [Future / Phase 2]
 **Technical Note:** Requires implementing `node_relationships` table and Graph Traversal algorithms.
 
 #### Story 9.1: Relational Edge Extraction
-**As a** System Architect,
-**I want** the Ingestion Worker to not just embed text, but identify entities and relationships (e.g., "Project A -> uses -> Tool B"),
-**So that** we can build the graph structure.
+**As a** Creator,
+**I want** the system to automatically identify entities and relationships in my documents (e.g., "Project A -> uses -> Tool B"),
+**So that** the Knowledge Graph can reveal hidden connections across my research data.
 
 #### Story 9.2: Visual Graph Explorer
 **As a** Creator,
 **I want** to visually explore connections between my assets,
 **So that** I can see hidden patterns (e.g., "All these interviews mention 'Pricing'").
 
-#### Story 9.3: Smart Ingestion Agent (The Normalizer) - [Phase 2]
-**As a** System Architect,
-**I want** an agent to pre-process uploads before storage,
-**So that** we handle PPTs, Images, and "Rules" correctly without user manual labor.
-
-**Acceptance Criteria:**
-**Given** a raw file upload
 #### Story 9.3: Smart Ingestion Pipelines (Vision & Normalization) - [Phase 2 / Future]
-**As a** System Architect,
-**I want** to upgrade the ingestion to handle Images, Charts, and complex parsing strategies,
-**So that** we can move beyond simple text extraction.
+**As a** Creator,
+**I want** the ingestion system to handle non-text uploads (Images, PPTs, Charts) via advanced parsing strategies,
+**So that** I can upload any document type and the system extracts meaningful content automatically.
 
 **Acceptance Criteria:**
-**Given** a non-text upload (Image/PPT)
-**Then** the Agent executes the **Advanced Pipeline** (Deferred to Future):
-1.  **Safety & Tagging:** Auto-applies System Tags.
-2.  **Classification:** Router decides strategy (Vision Model for Charts).
-3.  **Concept Extraction:** Parent-level "Blueprint" vectorization.
-4.  **Hybrid Splitting:** Separating Tables from Text.
-**Note:** For MVP (Epic 2), only the **Text Pipeline** is active (Story 2.2).
+
+**Given** a non-text upload (Image/PPT/Chart)
+**When** the Ingestion Worker processes the file
+**Then** the Agent executes the **Advanced Pipeline**:
+1.  **Safety & Tagging:** Auto-applies System Tags based on content classification.
+2.  **Classification:** Router decides parsing strategy (Vision Model for Charts, OCR for scanned docs).
+3.  **Concept Extraction:** Parent-level "Blueprint" vectorization for complex documents.
+4.  **Hybrid Splitting:** Separating Tables from Text for structured extraction.
+
+**Note:** For Prototype (Epic 2), only the **Text Pipeline** is active (Story 2.2). This story activates the Advanced Pipeline in Phase 2.
 
 ### Epic 8: Conversational Intelligence (Future Roadmap)
 **Goal:** Enable "Chat with Data" capabilities, transforming static reports and knowledge graphs into interactive, conversational consultants.

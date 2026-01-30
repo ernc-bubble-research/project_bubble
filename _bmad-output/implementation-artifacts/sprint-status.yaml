@@ -1,0 +1,116 @@
+# generated: 2026-01-28
+# project: project_bubble
+# project_key: bubble
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+generated: 2026-01-28
+project: project_bubble
+project_key: bubble
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1: System Foundation & Tenant Isolation
+  epic-1: in-progress
+  1-1-monorepo-infrastructure-initialization: review
+  1-2-tenant-provisioning-api: review
+  1-2b-bubble-admin-dashboard-the-lobby: in-progress
+  1-2c-impersonation-action: backlog
+  1-2d-tenant-configuration-credits-entitlements: backlog
+  1-2e-tenant-seeding-templates: backlog
+  1-3-user-authentication-rbac: backlog
+  1-4-rls-enforcement-mechanism-security: backlog
+  1-5-user-management-admin-creation: backlog
+  1-6-user-invitations-email-flow: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Asset & Knowledge Management
+  epic-2: backlog
+  2-1-asset-management-tenant-shared-drive: backlog
+  2-2-vector-ingestion-reference-assets: backlog
+  2-3-semantic-search-service-vector-rag: backlog
+  2-4-validated-insight-storage-memory: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Workflow Definition (The Architect)
+  epic-3: backlog
+  3-1-form-based-workflow-builder: backlog
+  3-2-node-configuration-form: backlog
+  3-2b-the-gatekeeper-pattern-scanner-configuration: backlog
+  3-3-input-schema-wizard-the-dynamic-form-builder: backlog
+  3-4-logic-rule-builder-the-gatekeeper: backlog
+  3-5-parallel-execution-easy-mode: backlog
+  3-6-workflow-versioning-locking: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Workflow Execution Engine (The Creator)
+  epic-4: backlog
+  4-1-workflows-run-initiation-dynamic-forms: backlog
+  4-2-execution-engine-core-versioned-runner: backlog
+  4-3-state-persistence-resumption-auto-save: backlog
+  4-4-dynamic-validation-the-runtime-blocker: backlog
+  4-6-context-injection-markdown-support: backlog
+  4-5-output-generation-raw-data-citations: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Interactive Reporting & Feedback Loop
+  epic-5: backlog
+  5-1-interactive-report-dashboard: backlog
+  5-2-evidence-evidence-drawer-progressive-disclosure: backlog
+  5-3-human-in-the-loop-feedback-multi-modal: backlog
+  5-4-feedback-processing-the-re-run: backlog
+  5-5-pdf-export-service: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Guest Access & Sharing
+  epic-6: backlog
+  6-1-magic-link-generator-service: backlog
+  6-2-guest-access-guard-middleware: backlog
+  6-3-guest-report-viewer-read-only: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Observability & Advanced Operations
+  epic-7: backlog
+  7-2-audit-logging-service-security: backlog
+  7-3-service-status-monitor: backlog
+  7-4-execution-trace-viewer: backlog
+  7-1-advanced-llm-configuration-ui: backlog
+  epic-7-retrospective: optional
+
+  # Epic 9: Knowledge Graph Evolution (Phase 2)
+  epic-9: backlog
+  9-1-relational-edge-extraction: backlog
+  9-2-visual-graph-explorer: backlog
+  9-3-smart-ingestion-pipelines: backlog
+  epic-9-retrospective: optional
+
+  # Epic 8: Conversational Intelligence (Future Roadmap)
+  epic-8: backlog
+  8-1-chat-with-report-scoped-rag: backlog
+  8-2-chat-with-company-global-rag: backlog
+  epic-8-retrospective: optional
+
+  # Epic 10: Advanced Visual Definition (Future MVP v2)
+  epic-10: backlog
+  10-1-visual-graph-canvas: backlog
+  10-2-visual-cycle-detection: backlog
+  epic-10-retrospective: optional
