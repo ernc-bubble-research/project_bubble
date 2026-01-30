@@ -3,8 +3,37 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import {
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { appRoutes } from './app.routes';
+import { adminApiKeyInterceptor } from './core/interceptors/admin-api-key.interceptor';
+import {
+  LucideIconProvider,
+  LUCIDE_ICONS,
+} from 'lucide-angular';
+import {
+  LayoutDashboard,
+  Building2,
+  GitBranch,
+  Settings,
+} from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideBrowserGlobalErrorListeners(), provideRouter(appRoutes)],
+  providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideRouter(appRoutes),
+    provideHttpClient(withInterceptors([adminApiKeyInterceptor])),
+    {
+      provide: LUCIDE_ICONS,
+      multi: true,
+      useValue: new LucideIconProvider({
+        LayoutDashboard,
+        Building2,
+        GitBranch,
+        Settings,
+      }),
+    },
+  ],
 };

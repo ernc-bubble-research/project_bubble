@@ -1,0 +1,151 @@
+<div class="dashboard">
+  <!-- Page header -->
+  <div class="page-header">
+    <h1>Dashboard</h1>
+    <button class="btn btn-primary" (click)="openCreateModal()">
+      + Create Tenant
+    </button>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stat-grid">
+    <app-stat-card
+      icon="📊"
+      [value]="totalTenants()"
+      label="Total Tenants"
+      color="var(--primary-600)"
+    />
+    <app-stat-card
+      icon="🟢"
+      [value]="activeTenants()"
+      label="Active Tenants"
+      color="var(--success)"
+    />
+    <app-stat-card
+      icon="🔴"
+      [value]="suspendedTenants()"
+      label="Suspended Tenants"
+      color="var(--danger)"
+    />
+    <app-stat-card
+      icon="👥"
+      [value]="'—'"
+      label="Total Users"
+      color="var(--slate-500)"
+    />
+  </div>
+
+  <!-- System Health (placeholder) -->
+  <div class="health-panel">
+    <h3>System Health</h3>
+    <div class="health-items">
+      <span class="health-item">
+        <span class="health-dot operational"></span>
+        LLM Provider: Operational
+      </span>
+      <span class="health-item">
+        <span class="health-dot operational"></span>
+        Database: Operational
+      </span>
+      <span class="health-item">
+        <span class="health-dot operational"></span>
+        Queue: Operational
+      </span>
+      <span class="health-item">
+        <span class="health-dot operational"></span>
+        Storage: Operational
+      </span>
+    </div>
+  </div>
+
+  <!-- Tenant table -->
+  <div class="table-section">
+    <div class="table-header">
+      <h2>All Tenants</h2>
+      <div class="table-controls">
+        <div class="filter-group">
+          <button
+            class="filter-btn"
+            [class.active]="filter() === 'all'"
+            (click)="setFilter('all')"
+          >
+            All
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="filter() === 'active'"
+            (click)="setFilter('active')"
+          >
+            Active
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="filter() === 'suspended'"
+            (click)="setFilter('suspended')"
+          >
+            Suspended
+          </button>
+        </div>
+        <select
+          class="sort-select"
+          (change)="setSortBy($any($event.target).value)"
+        >
+          <option value="name">Sort by Name</option>
+          <option value="createdAt">Sort by Date</option>
+        </select>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state">Loading tenants...</div>
+    } @else if (filteredTenants().length === 0 && totalTenants() === 0) {
+      <div class="empty-state">
+        No tenants yet. Click "+ Create Tenant" to onboard your first customer.
+      </div>
+    } @else if (filteredTenants().length === 0) {
+      <div class="empty-state">No tenants match the current filter.</div>
+    } @else {
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Users</th>
+              <th>Runs (Month)</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (tenant of filteredTenants(); track tenant.id) {
+              <tr>
+                <td class="tenant-name">{{ tenant.name }}</td>
+                <td class="center">—</td>
+                <td class="center">—/—</td>
+                <td>
+                  <app-status-badge [status]="tenant.status" />
+                </td>
+                <td>
+                  <button
+                    class="btn btn-outline btn-sm"
+                    (click)="manageTenant(tenant)"
+                  >
+                    Manage
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Create Tenant Modal -->
+@if (showCreateModal()) {
+  <app-create-tenant-modal
+    (created)="onTenantCreated()"
+    (closed)="onModalClosed()"
+  />
+}

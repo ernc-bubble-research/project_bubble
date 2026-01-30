@@ -1,0 +1,47 @@
+<div class="admin-layout" [ngClass]="{ 'mobile-menu-open': mobileMenuOpen() }">
+  <!-- Mobile hamburger -->
+  <button class="hamburger" aria-label="Toggle menu" (click)="toggleMobileMenu()">☰</button>
+
+  <!-- Mobile overlay -->
+  @if (mobileMenuOpen()) {
+    <div class="mobile-overlay" role="button" tabindex="0" aria-label="Close menu" (click)="closeMobileMenu()" (keydown.enter)="closeMobileMenu()" (keydown.escape)="closeMobileMenu()"></div>
+  }
+
+  <!-- Sidebar -->
+  <aside class="sidebar" [ngClass]="{ open: mobileMenuOpen() }">
+    <div class="sidebar-header">
+      <span class="logo-icon">B</span>
+      <span class="logo-text">Bubble<br /><small>Admin Portal</small></span>
+    </div>
+
+    <nav class="sidebar-nav">
+      @for (item of navItems; track item.route) {
+        <a
+          class="nav-item"
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          (click)="closeMobileMenu()"
+        >
+          <lucide-icon class="nav-icon" [name]="item.icon" [size]="20"></lucide-icon>
+          <span class="nav-label">{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-divider"></div>
+      <div class="user-info">
+        <span class="user-avatar">A</span>
+        <div class="user-details">
+          <span class="user-name">Admin</span>
+          <span class="user-role">Bubble Admin</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <router-outlet />
+  </main>
+</div>

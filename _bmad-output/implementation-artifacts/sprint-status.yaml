@@ -64,7 +64,7 @@ development_status:
   epic-1: in-progress
   1-1-monorepo-infrastructure-initialization: done
   1-2-tenant-provisioning-api: done
-  1-3-bubble-admin-dashboard-the-lobby: backlog
+  1-3-bubble-admin-dashboard-the-lobby: done
   1-4-impersonation-action: backlog
   1-5-tenant-configuration-credits-entitlements: backlog
   1-6-tenant-seeding-templates: backlog
