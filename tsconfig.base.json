@@ -10,54 +10,14 @@
     "importHelpers": true,
     "target": "es2015",
     "module": "esnext",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
+    "lib": ["es2020", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@project_bubble/backend/core": [
-        "libs/backend/core/src/index.ts"
-      ],
-      "@project_bubble/backend/infra": [
-        "libs/backend/infra/src/index.ts"
-      ],
-      "@project_bubble/backend/auth": [
-        "libs/backend/auth/src/index.ts"
-      ],
-      "@project_bubble/backend/tenants": [
-        "libs/backend/tenants/src/index.ts"
-      ],
-      "@project_bubble/backend/assets": [
-        "libs/backend/assets/src/index.ts"
-      ],
-      "@project_bubble/backend/ingestion": [
-        "libs/backend/ingestion/src/index.ts"
-      ],
-      "@project-bubble/backend/workflows": [
-        "libs/backend/workflows/src/index.ts"
-      ],
-      "@bubble/backend/core": [
-        "libs/backend/core/src/index.ts"
-      ],
-      "@bubble/backend/auth": [
-        "libs/backend/auth/src/index.ts"
-      ],
-      "@bubble/backend/ingestion": [
-        "libs/backend/ingestion/src/index.ts"
-      ],
-      "@project-bubble/shared": [
-        "libs/shared/src/index.ts"
-      ],
-      "@bubble/web/admin": [
-        "libs/web/admin/src/index.ts"
-      ]
+      "@project-bubble/shared": ["libs/shared/src/index.ts"],
+      "@project-bubble/db-layer": ["libs/db-layer/src/index.ts"]
     }
   },
-  "exclude": [
-    "node_modules",
-    "tmp"
-  ]
+  "exclude": ["node_modules", "tmp"]
 }

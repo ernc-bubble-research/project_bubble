@@ -423,6 +423,8 @@ This document provides the complete epic and story breakdown for project_bubble,
 **FRs covered:** FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR34, FR36, FR37, FR46, FR47
 **NFRs:** NFR-Perf-2, NFR-Rel-1, NFR-Rel-2, NFR-Scale-1
 
+> **GATE REQUIREMENT:** Before starting Epic 4, run `/bmad:bmm:workflows:quick-spec` to produce a LangGraph.js Integration Tech Spec. This must define: graph_json → StateGraph mapping, state schema, node type implementations (Scanner/Doer/Reviewer/Output), Postgres checkpointing, Map/parallel pattern, and feedback re-run strategy. No Epic 4 stories should be created until this spec is approved.
+
 #### Story 4.1: Workflows & Run Initiation (Dynamic Forms)
 **As a** Creator,
 **I want** to select a workflow and see a dynamically generated modal based on the Admin's definition,

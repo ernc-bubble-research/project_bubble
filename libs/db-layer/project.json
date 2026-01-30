@@ -1,0 +1,19 @@
+{
+  "name": "db-layer",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/db-layer/src",
+  "projectType": "library",
+  "tags": ["scope:db", "type:lib"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/db-layer",
+        "main": "libs/db-layer/src/index.ts",
+        "tsConfig": "libs/db-layer/tsconfig.lib.json",
+        "assets": ["libs/db-layer/*.md"]
+      }
+    }
+  }
+}

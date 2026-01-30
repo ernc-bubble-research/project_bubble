@@ -33,10 +33,10 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 ## Technology Stack & Versions
 
-*   **Monorepo:** Nx 19+ (Integrated Repo)
-*   **Web Client:** Angular 18+ (Standalone Components, Signals)
-*   **API Gateway:** NestJS 10+ (Fastify Adapter preferred)
-*   **Worker Engine:** NestJS 10+ (Standalone Application)
+*   **Monorepo:** Nx 22+ (Integrated Repo)
+*   **Web Client:** Angular 21+ (Standalone Components, Signals)
+*   **API Gateway:** NestJS 11+ (Express Adapter — Fastify migration deferred)
+*   **Worker Engine:** NestJS 11+ (Standalone Application)
 *   **Database:** PostgreSQL 16+ (with `pgvector` extension)
 *   **Queue:** BullMQ (Redis-backed)
 *   **ORM:** TypeORM (Active Record pattern NOT allowed; use Repository pattern)
@@ -108,11 +108,4 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   ❌ **No Active Record:** Do not use `user.save()`. Use `repository.save(user)`.
 *   ❌ **No Direct Worker HTTP:** The API must not HTTP call the Worker. Use Redis.
 
-### SYSTEM OVERRIDE: FILE LOCK PREVENTION PROTOCOL
-**You are working in an unstable Nx environment.**
-Whenever you need to EDIT or CREATE any file (not just main.ts), you MUST follow this strict sequence:
-1.  **KILL THE WATCHER FIRST:** Without asking, execute `./node_modules/.bin/nx reset || pkill -f nx`
-2.  **PERFORM THE EDIT:** Write the code.
-3.  **VERIFY AND FIX:** Only AFTER the write is complete, run build/lint. If errors occur, repeat Step 1 before fixing.
-**EXCEPTION:** This rule may be skipped for BMAD-related `.md` artifacts.
 

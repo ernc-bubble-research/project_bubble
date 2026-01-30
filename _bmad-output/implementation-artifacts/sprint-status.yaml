@@ -1,8 +1,8 @@
-# generated: 2026-01-28
+# generated: 2026-01-30
 # project: project_bubble
 # project_key: bubble
 # tracking_system: file-system
-# story_location: _bmad-output/implementation-artifacts
+# story_location: stories
 
 # STATUS DEFINITIONS:
 # ==================
@@ -11,39 +11,75 @@
 #   - in-progress: Epic actively being worked on
 #   - done: All stories in epic completed
 #
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
 # Story Status:
 #   - backlog: Story only exists in epic file
-#   - ready-for-dev: Story file created, ready for development
+#   - ready-for-dev: Story file created in stories folder
 #   - in-progress: Developer actively working on implementation
-#   - review: Implementation complete, ready for review
+#   - review: Ready for code review (via Dev's code-review workflow)
 #   - done: Story completed
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
 #   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+#
+# PHASE SCOPE:
+# ============
+# Prototype (Phase 1): Epics 1-7 (7 epics, 40 stories)
+# Phase 2 / Future:    Epics 8, 9, 10 (3 epics, 7 stories)
+#
+# DEPENDENCY CHAIN:
+# Epic 1 → Epic 2 + Epic 3 (parallel) → Epic 4 → Epic 5 → Epic 6
+# Epic 7 runs parallel to Epics 4-6
+#
+# GATE REQUIREMENTS:
+# ==================
+# BEFORE Epic 4: Run /bmad:bmm:workflows:quick-spec for LangGraph.js integration.
+#   Scope: How graph_json maps to LangGraph StateGraph, state schema design,
+#   node type implementations (Scanner/Doer/Reviewer/Output), Postgres checkpointing,
+#   Map/parallel execution pattern, feedback re-run (partial graph execution).
+#   This tech spec MUST be completed before any Epic 4 story is created.
 
-generated: 2026-01-28
+generated: 2026-01-30
 project: project_bubble
 project_key: bubble
 tracking_system: file-system
-story_location: _bmad-output/implementation-artifacts
+story_location: stories
 
 development_status:
-  # Epic 1: System Foundation & Tenant Isolation
+  # ═══════════════════════════════════════════════════════
+  # Epic 1: Tenant Management & Platform Setup
+  # FRs: FR30, FR33, FR26, FR27, FR28, FR32, FR51
+  # ═══════════════════════════════════════════════════════
   epic-1: in-progress
-  1-1-monorepo-infrastructure-initialization: review
-  1-2-tenant-provisioning-api: review
-  1-2b-bubble-admin-dashboard-the-lobby: in-progress
-  1-2c-impersonation-action: backlog
-  1-2d-tenant-configuration-credits-entitlements: backlog
-  1-2e-tenant-seeding-templates: backlog
-  1-3-user-authentication-rbac: backlog
-  1-4-rls-enforcement-mechanism-security: backlog
-  1-5-user-management-admin-creation: backlog
-  1-6-user-invitations-email-flow: backlog
+  1-1-monorepo-infrastructure-initialization: done
+  1-2-tenant-provisioning-api: backlog
+  1-3-bubble-admin-dashboard-the-lobby: backlog
+  1-4-impersonation-action: backlog
+  1-5-tenant-configuration-credits-entitlements: backlog
+  1-6-tenant-seeding-templates: backlog
+  1-7-user-authentication-rbac: backlog
+  1-8-rls-enforcement-mechanism-security: backlog
+  1-9-user-management-admin-creation: backlog
+  1-10-login-password-pages-auth-ui: backlog
+  1-11-ci-cd-pipeline-setup: backlog
+  1-12-user-invitations-email-flow: backlog
   epic-1-retrospective: optional
 
+  # ═══════════════════════════════════════════════════════
   # Epic 2: Asset & Knowledge Management
+  # FRs: FR23, FR48, FR3, FR21, FR22
+  # ═══════════════════════════════════════════════════════
   epic-2: backlog
   2-1-asset-management-tenant-shared-drive: backlog
   2-2-vector-ingestion-reference-assets: backlog
@@ -51,7 +87,10 @@ development_status:
   2-4-validated-insight-storage-memory: backlog
   epic-2-retrospective: optional
 
+  # ═══════════════════════════════════════════════════════
   # Epic 3: Workflow Definition (The Architect)
+  # FRs: FR1, FR2, FR4, FR5, FR6, FR35, FR42
+  # ═══════════════════════════════════════════════════════
   epic-3: backlog
   3-1-form-based-workflow-builder: backlog
   3-2-node-configuration-form: backlog
@@ -62,54 +101,73 @@ development_status:
   3-6-workflow-versioning-locking: backlog
   epic-3-retrospective: optional
 
+  # ═══════════════════════════════════════════════════════
   # Epic 4: Workflow Execution Engine (The Creator)
+  # FRs: FR7-FR13, FR34, FR36, FR37, FR46, FR47
+  # ═══════════════════════════════════════════════════════
   epic-4: backlog
   4-1-workflows-run-initiation-dynamic-forms: backlog
   4-2-execution-engine-core-versioned-runner: backlog
   4-3-state-persistence-resumption-auto-save: backlog
   4-4-dynamic-validation-the-runtime-blocker: backlog
-  4-6-context-injection-markdown-support: backlog
-  4-5-output-generation-raw-data-citations: backlog
+  4-5-context-injection-markdown-support: backlog
+  4-6-output-generation-raw-data-citations: backlog
   epic-4-retrospective: optional
 
+  # ═══════════════════════════════════════════════════════
   # Epic 5: Interactive Reporting & Feedback Loop
+  # FRs: FR14-FR19, FR43, FR45
+  # ═══════════════════════════════════════════════════════
   epic-5: backlog
   5-1-interactive-report-dashboard: backlog
-  5-2-evidence-evidence-drawer-progressive-disclosure: backlog
+  5-2-evidence-drawer-progressive-disclosure: backlog
   5-3-human-in-the-loop-feedback-multi-modal: backlog
   5-4-feedback-processing-the-re-run: backlog
   5-5-pdf-export-service: backlog
   epic-5-retrospective: optional
 
+  # ═══════════════════════════════════════════════════════
   # Epic 6: Guest Access & Sharing
+  # FRs: FR20, FR39, FR40
+  # ═══════════════════════════════════════════════════════
   epic-6: backlog
   6-1-magic-link-generator-service: backlog
   6-2-guest-access-guard-middleware: backlog
   6-3-guest-report-viewer-read-only: backlog
   epic-6-retrospective: optional
 
+  # ═══════════════════════════════════════════════════════
   # Epic 7: Observability & Advanced Operations
+  # FRs: FR29, FR31, FR38, FR49
+  # ═══════════════════════════════════════════════════════
   epic-7: backlog
+  7-1-llm-provider-configuration: backlog
   7-2-audit-logging-service-security: backlog
   7-3-service-status-monitor: backlog
   7-4-execution-trace-viewer: backlog
-  7-1-advanced-llm-configuration-ui: backlog
   epic-7-retrospective: optional
 
+  # ═══════════════════════════════════════════════════════
+  # Epic 8: Conversational Intelligence (Future Roadmap)
+  # FRs: FR52, FR53
+  # ═══════════════════════════════════════════════════════
+  epic-8: backlog
+  8-1-chat-with-report-scoped-rag: backlog
+  8-2-chat-with-company-global-rag: backlog
+  epic-8-retrospective: optional
+
+  # ═══════════════════════════════════════════════════════
   # Epic 9: Knowledge Graph Evolution (Phase 2)
+  # ═══════════════════════════════════════════════════════
   epic-9: backlog
   9-1-relational-edge-extraction: backlog
   9-2-visual-graph-explorer: backlog
   9-3-smart-ingestion-pipelines: backlog
   epic-9-retrospective: optional
 
-  # Epic 8: Conversational Intelligence (Future Roadmap)
-  epic-8: backlog
-  8-1-chat-with-report-scoped-rag: backlog
-  8-2-chat-with-company-global-rag: backlog
-  epic-8-retrospective: optional
-
+  # ═══════════════════════════════════════════════════════
   # Epic 10: Advanced Visual Definition (Future MVP v2)
+  # ═══════════════════════════════════════════════════════
   epic-10: backlog
   10-1-visual-graph-canvas: backlog
   10-2-visual-cycle-detection: backlog
