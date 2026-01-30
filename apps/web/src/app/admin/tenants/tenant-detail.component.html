@@ -1,0 +1,121 @@
+@if (loading()) {
+  <div class="loading-state">Loading tenant...</div>
+} @else if (tenant(); as t) {
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a routerLink="/admin/tenants" class="breadcrumb-link">
+      <lucide-icon name="arrow-left" [size]="16"></lucide-icon>
+      Tenants
+    </a>
+    <span class="breadcrumb-separator">/</span>
+    <span class="breadcrumb-current">{{ t.name }}</span>
+  </div>
+
+  <!-- Header Card -->
+  <div class="header-card">
+    <div class="header-info">
+      <div class="header-title-row">
+        <h1 class="tenant-name">{{ t.name }}</h1>
+        <app-status-badge [status]="t.status"></app-status-badge>
+      </div>
+      <div class="header-meta">
+        <span>Created: {{ t.createdAt | date:'mediumDate' }}</span>
+        <span class="meta-separator">&bull;</span>
+        <span>Tier: &mdash;</span>
+        <span class="meta-separator">&bull;</span>
+        <span>Users: &mdash;</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button
+        class="btn btn-danger-outline"
+        (click)="openImpersonateDialog()"
+        [disabled]="impersonating() || t.status === 'suspended'"
+      >
+        <lucide-icon name="alert-triangle" [size]="16"></lucide-icon>
+        Impersonate
+      </button>
+      <button class="btn btn-outline" disabled>Suspend</button>
+      <button class="btn btn-outline" disabled>Edit</button>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    @for (tab of tabs; track tab.key) {
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === tab.key"
+        [disabled]="tab.key !== 'general'"
+        (click)="setTab(tab.key)"
+      >
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Tab Content -->
+  @if (activeTab() === 'general') {
+    <div class="tab-content">
+      <div class="form-card">
+        <div class="form-group">
+          <label class="form-label" for="tenant-name">Tenant Name</label>
+          <input id="tenant-name" class="form-input" type="text" [value]="t.name" readonly />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="tenant-id">Tenant ID</label>
+          <div class="id-field">
+            <input id="tenant-id" class="form-input id-input" type="text" [value]="t.id" readonly />
+            <button class="btn btn-sm btn-outline copy-btn" (click)="copyTenantId()">
+              <lucide-icon name="copy" [size]="14"></lucide-icon>
+              {{ copiedId() ? 'Copied!' : 'Copy' }}
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="tenant-created">Created</label>
+          <input id="tenant-created" class="form-input" type="text" [value]="t.createdAt | date:'medium'" readonly />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="tenant-contact">Primary Contact</label>
+          <input id="tenant-contact" class="form-input" type="text" value="—" readonly />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="tenant-plan">Plan Tier</label>
+            <select id="tenant-plan" class="form-select" disabled>
+              <option>—</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="tenant-residency">Data Residency</label>
+            <select id="tenant-residency" class="form-select" disabled>
+              <option>—</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" disabled>Cancel</button>
+          <button class="btn btn-primary" disabled>Save Changes</button>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="tab-content">
+      <div class="placeholder-content">
+        <p>{{ activeTab() | titlecase }} tab — coming in a future story.</p>
+      </div>
+    </div>
+  }
+
+  <!-- Impersonate Confirmation Dialog -->
+  @if (showImpersonateDialog()) {
+    <app-impersonate-confirm-dialog
+      [tenantName]="t.name"
+      (confirmed)="onConfirmImpersonate()"
+      (cancelled)="closeImpersonateDialog()"
+    ></app-impersonate-confirm-dialog>
+  }
+} @else {
+  <div class="loading-state">Tenant not found.</div>
+}

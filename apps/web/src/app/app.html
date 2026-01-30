@@ -1,1 +1,12 @@
-<router-outlet />
+@if (impersonationService.isImpersonating()) {
+  <app-impersonation-banner></app-impersonation-banner>
+}
+<div [class.impersonation-active]="impersonationService.isImpersonating()">
+  <router-outlet />
+</div>
+@if (impersonationService.toastMessage(); as msg) {
+  <div class="toast-notification">
+    <span>{{ msg }}</span>
+    <button class="toast-close" (click)="impersonationService.dismissToast()" aria-label="Dismiss">&times;</button>
+  </div>
+}

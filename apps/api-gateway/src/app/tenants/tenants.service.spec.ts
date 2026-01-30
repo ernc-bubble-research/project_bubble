@@ -1,6 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { QueryFailedError, Repository } from 'typeorm';
 import { TenantEntity, TenantStatus } from '@project-bubble/db-layer';
 import { TenantsService } from './tenants.service';
@@ -17,6 +22,10 @@ describe('TenantsService', () => {
     updatedAt: new Date('2026-01-30'),
   };
 
+  const mockJwtService = {
+    sign: jest.fn().mockReturnValue('mock-jwt-token'),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -29,6 +38,10 @@ describe('TenantsService', () => {
             create: jest.fn(),
             save: jest.fn(),
           },
+        },
+        {
+          provide: JwtService,
+          useValue: mockJwtService,
         },
       ],
     }).compile();
@@ -116,6 +129,43 @@ describe('TenantsService', () => {
 
       await expect(service.findOne('nonexistent-id')).rejects.toThrow(
         NotFoundException,
+      );
+    });
+  });
+
+  describe('impersonate', () => {
+    it('should return a token for an active tenant', async () => {
+      repo.findOne.mockResolvedValue(mockTenant);
+
+      const result = await service.impersonate(mockTenant.id);
+
+      expect(result.token).toBe('mock-jwt-token');
+      expect(result.tenant).toEqual({ id: mockTenant.id, name: mockTenant.name });
+      expect(mockJwtService.sign).toHaveBeenCalledWith({
+        sub: 'admin',
+        tenant_id: mockTenant.id,
+        role: 'impersonator',
+        impersonating: true,
+      });
+    });
+
+    it('should throw NotFoundException for non-existent tenant', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(service.impersonate('nonexistent-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw BadRequestException for suspended tenant', async () => {
+      const suspendedTenant = {
+        ...mockTenant,
+        status: TenantStatus.SUSPENDED,
+      };
+      repo.findOne.mockResolvedValue(suspendedTenant);
+
+      await expect(service.impersonate(mockTenant.id)).rejects.toThrow(
+        BadRequestException,
       );
     });
   });

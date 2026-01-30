@@ -7,7 +7,10 @@ import {
   ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
-import { CreateTenantDto } from '@project-bubble/shared';
+import {
+  CreateTenantDto,
+  ImpersonateResponseDto,
+} from '@project-bubble/shared';
 import { AdminApiKeyGuard } from '../guards/admin-api-key.guard';
 import { TenantsService } from './tenants.service';
 
@@ -29,5 +32,12 @@ export class TenantsController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.tenantsService.findOne(id);
+  }
+
+  @Post(':id/impersonate')
+  impersonate(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ImpersonateResponseDto> {
+    return this.tenantsService.impersonate(id);
   }
 }

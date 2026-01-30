@@ -26,18 +26,11 @@
 }
 
 .logo-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 36px;
   height: 36px;
-  background: var(--brand-blue);
-  color: #fff;
   border-radius: var(--radius-md);
-  font-weight: 800;
-  font-size: 18px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
   flex-shrink: 0;
+  object-fit: cover;
 }
 
 .logo-text {

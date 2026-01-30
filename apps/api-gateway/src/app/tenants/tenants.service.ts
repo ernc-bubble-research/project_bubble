@@ -2,17 +2,23 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { QueryFailedError, Repository } from 'typeorm';
-import { TenantEntity } from '@project-bubble/db-layer';
-import { CreateTenantDto } from '@project-bubble/shared';
+import { TenantEntity, TenantStatus } from '@project-bubble/db-layer';
+import {
+  CreateTenantDto,
+  ImpersonateResponseDto,
+} from '@project-bubble/shared';
 
 @Injectable()
 export class TenantsService {
   constructor(
     @InjectRepository(TenantEntity)
     private readonly tenantRepo: Repository<TenantEntity>,
+    private readonly jwtService: JwtService,
   ) {}
 
   async create(dto: CreateTenantDto): Promise<TenantEntity> {
@@ -50,5 +56,28 @@ export class TenantsService {
       throw new NotFoundException(`Tenant with id "${id}" not found`);
     }
     return tenant;
+  }
+
+  async impersonate(tenantId: string): Promise<ImpersonateResponseDto> {
+    const tenant = await this.tenantRepo.findOne({
+      where: { id: tenantId },
+    });
+    if (!tenant) {
+      throw new NotFoundException(`Tenant with id "${tenantId}" not found`);
+    }
+    if (tenant.status === TenantStatus.SUSPENDED) {
+      throw new BadRequestException(
+        'Cannot impersonate a suspended tenant',
+      );
+    }
+
+    const token = this.jwtService.sign({
+      sub: 'admin',
+      tenant_id: tenantId,
+      role: 'impersonator',
+      impersonating: true,
+    });
+
+    return { token, tenant: { id: tenant.id, name: tenant.name } };
   }
 }

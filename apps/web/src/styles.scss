@@ -165,3 +165,63 @@ button {
   padding: 6px 12px;
   font-size: 13px;
 }
+
+/* ============================================
+   Impersonation Layout Shift
+   ============================================ */
+
+.impersonation-active {
+  padding-top: 40px;
+
+  .sidebar {
+    top: 40px;
+  }
+}
+
+/* ============================================
+   Toast Notification
+   ============================================ */
+
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--slate-900);
+  color: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 10001;
+  animation: toastIn 0.3s ease;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.toast-close:hover {
+  color: white;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}

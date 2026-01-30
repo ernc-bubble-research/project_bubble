@@ -1,9 +1,13 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
+import { ImpersonationBannerComponent } from './shared/components/impersonation-banner/impersonation-banner.component';
+import { ImpersonationService } from './core/services/impersonation.service';
 
 @Component({
-  imports: [RouterModule],
+  imports: [RouterModule, ImpersonationBannerComponent],
   selector: 'app-root',
   templateUrl: './app.html',
 })
-export class App {}
+export class App {
+  readonly impersonationService = inject(ImpersonationService);
+}

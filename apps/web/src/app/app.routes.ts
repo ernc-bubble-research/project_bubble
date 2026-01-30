@@ -16,6 +16,20 @@ export const appRoutes: Route[] = [
             (m) => m.DashboardComponent
           ),
       },
+      {
+        path: 'tenants',
+        loadComponent: () =>
+          import('./admin/tenants/tenant-list.component').then(
+            (m) => m.TenantListComponent
+          ),
+      },
+      {
+        path: 'tenants/:id',
+        loadComponent: () =>
+          import('./admin/tenants/tenant-detail.component').then(
+            (m) => m.TenantDetailComponent
+          ),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

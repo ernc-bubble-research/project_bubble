@@ -18,6 +18,11 @@ import {
   Building2,
   GitBranch,
   Settings,
+  AlertTriangle,
+  Copy,
+  ArrowLeft,
+  X,
+  Clock,
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
@@ -33,6 +38,11 @@ export const appConfig: ApplicationConfig = {
         Building2,
         GitBranch,
         Settings,
+        AlertTriangle,
+        Copy,
+        ArrowLeft,
+        X,
+        Clock,
       }),
     },
   ],

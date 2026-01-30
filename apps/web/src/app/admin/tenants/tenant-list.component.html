@@ -1,0 +1,65 @@
+<div class="page-header">
+  <h1 class="page-title">Tenants</h1>
+  <button class="btn btn-primary" (click)="navigateToDashboard()">+ Create Tenant</button>
+</div>
+
+<!-- Filter Tabs -->
+<div class="filter-tabs">
+  <button
+    class="filter-tab"
+    [class.active]="filter() === 'all'"
+    (click)="setFilter('all')"
+  >
+    All <span class="tab-count">{{ allCount() }}</span>
+  </button>
+  <button
+    class="filter-tab"
+    [class.active]="filter() === 'active'"
+    (click)="setFilter('active')"
+  >
+    Active <span class="tab-count">{{ activeCount() }}</span>
+  </button>
+  <button
+    class="filter-tab"
+    [class.active]="filter() === 'suspended'"
+    (click)="setFilter('suspended')"
+  >
+    Suspended <span class="tab-count">{{ suspendedCount() }}</span>
+  </button>
+</div>
+
+<!-- Tenant Table -->
+<div class="table-container">
+  @if (loading()) {
+    <div class="loading-state">Loading tenants...</div>
+  } @else if (filteredTenants().length === 0) {
+    <div class="empty-state">
+      <p>No tenants found.</p>
+    </div>
+  } @else {
+    <table class="tenant-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Plan</th>
+          <th>Users</th>
+          <th>Runs Used</th>
+          <th>Storage</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (tenant of filteredTenants(); track tenant.id) {
+          <tr class="tenant-row" (click)="navigateToTenant(tenant)">
+            <td class="tenant-name-cell">{{ tenant.name }}</td>
+            <td>&mdash;</td>
+            <td>&mdash;</td>
+            <td>&mdash;</td>
+            <td>&mdash;</td>
+            <td><app-status-badge [status]="tenant.status"></app-status-badge></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
