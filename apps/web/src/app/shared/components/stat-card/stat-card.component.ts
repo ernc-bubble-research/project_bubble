@@ -1,11 +1,15 @@
 import { Component, Input } from '@angular/core';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   standalone: true,
+  imports: [LucideAngularModule],
   selector: 'app-stat-card',
   template: `
     <div class="stat-card">
-      <span class="stat-icon" [style.color]="color">{{ icon }}</span>
+      <span class="stat-icon" [style.color]="color">
+        <lucide-icon [name]="icon" [size]="24"></lucide-icon>
+      </span>
       <span class="stat-value">{{ value }}</span>
       <span class="stat-label">{{ label }}</span>
     </div>

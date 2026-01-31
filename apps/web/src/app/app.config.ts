@@ -24,6 +24,12 @@ import {
   ArrowLeft,
   X,
   Clock,
+  BarChart3,
+  CircleCheck,
+  CircleX,
+  Users,
+  Menu,
+  Info,
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
@@ -44,6 +50,12 @@ export const appConfig: ApplicationConfig = {
         ArrowLeft,
         X,
         Clock,
+        BarChart3,
+        CircleCheck,
+        CircleX,
+        Users,
+        Menu,
+        Info,
       }),
     },
   ],

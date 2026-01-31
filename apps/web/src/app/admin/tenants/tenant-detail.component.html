@@ -101,7 +101,12 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="tenant-plan">Plan Tier</label>
+            <label class="form-label" for="tenant-plan">
+              Plan Tier
+              <span class="label-hint" title="Tier is currently a label only. Usage limits (runs, retention) are configured manually per tenant in the Entitlements tab. A tier management system to define what each tier includes is planned for a future release.">
+                <lucide-icon name="info" [size]="14"></lucide-icon>
+              </span>
+            </label>
             <select
               id="tenant-plan"
               class="form-select"
@@ -112,9 +117,15 @@
                 <option [value]="opt.value">{{ opt.label }}</option>
               }
             </select>
+            <span class="form-hint">Limits are set manually per tenant in the Entitlements tab.</span>
           </div>
           <div class="form-group">
-            <label class="form-label" for="tenant-residency">Data Residency</label>
+            <label class="form-label" for="tenant-residency">
+              Data Residency
+              <span class="label-hint" title="For the MVP, all tenants are hosted in the EU (Frankfurt/Dublin) regardless of this setting. Regional routing will be available in a future release.">
+                <lucide-icon name="info" [size]="14"></lucide-icon>
+              </span>
+            </label>
             <select
               id="tenant-residency"
               class="form-select"
@@ -125,6 +136,7 @@
                 <option [value]="opt.value">{{ opt.label }}</option>
               }
             </select>
+            <span class="form-hint">All data is currently processed in EU (Frankfurt/Dublin).</span>
           </div>
         </div>
         <div class="form-actions">

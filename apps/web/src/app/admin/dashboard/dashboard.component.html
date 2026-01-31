@@ -10,25 +10,25 @@
   <!-- Stat cards -->
   <div class="stat-grid">
     <app-stat-card
-      icon="📊"
+      icon="bar-chart-3"
       [value]="totalTenants()"
       label="Total Tenants"
       color="var(--primary-600)"
     />
     <app-stat-card
-      icon="🟢"
+      icon="circle-check"
       [value]="activeTenants()"
       label="Active Tenants"
       color="var(--success)"
     />
     <app-stat-card
-      icon="🔴"
+      icon="circle-x"
       [value]="suspendedTenants()"
       label="Suspended Tenants"
       color="var(--danger)"
     />
     <app-stat-card
-      icon="👥"
+      icon="users"
       [value]="'—'"
       label="Total Users"
       color="var(--slate-500)"

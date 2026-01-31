@@ -1,6 +1,8 @@
 <div class="admin-layout" [ngClass]="{ 'mobile-menu-open': mobileMenuOpen() }">
   <!-- Mobile hamburger -->
-  <button class="hamburger" aria-label="Toggle menu" (click)="toggleMobileMenu()">☰</button>
+  <button class="hamburger" aria-label="Toggle menu" (click)="toggleMobileMenu()">
+    <lucide-icon name="menu" [size]="24"></lucide-icon>
+  </button>
 
   <!-- Mobile overlay -->
   @if (mobileMenuOpen()) {

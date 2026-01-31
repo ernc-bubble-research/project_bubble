@@ -755,3 +755,31 @@ This document provides the complete epic and story breakdown for project_bubble,
 **As a** Bubble Admin,
 **I want** the canvas to visually highlight valid/invalid loops,
 **So that** I don't create infinite recursion bugs.
+
+### Epic 11: Plan Tier Management & Template System (Placeholder)
+**Goal:** Provide Bubble Admins with a dedicated admin interface to define, configure, and manage plan tiers as reusable templates. When a tier is assigned to a tenant, its predefined limits (monthly runs, retention days, feature flags, etc.) are automatically applied. Admins can add, rename, remove, and modify tier definitions without code changes.
+**Status:** [Future] - To be detailed and broken into stories.
+**Dependencies:** Epic 1 (tenant entity with planTier field already exists).
+
+**Scope (to be refined):**
+- Admin page (`/admin/plan-tiers`) to list, create, edit, and delete tier definitions
+- Each tier definition includes: name, display label, maxMonthlyRuns, assetRetentionDays, feature flags, and any future entitlement fields
+- When assigning a tier to a tenant, the system auto-populates the tenant's entitlement fields from the tier template
+- Option to override individual limits per tenant after tier assignment
+- Migration path for existing tenants with manually-set limits
+- Audit log for tier changes
+
+#### Story 11.1: Tier Definition CRUD (Placeholder)
+**As a** Bubble Admin,
+**I want** to create, edit, and delete plan tier definitions from the admin panel,
+**So that** I can manage what each tier includes without code changes.
+
+#### Story 11.2: Tier-to-Tenant Auto-Apply (Placeholder)
+**As a** Bubble Admin,
+**I want** assigning a tier to a tenant to automatically set that tenant's entitlement limits,
+**So that** I don't have to manually configure each tenant's limits individually.
+
+#### Story 11.3: Per-Tenant Override (Placeholder)
+**As a** Bubble Admin,
+**I want** to override specific limits on a per-tenant basis after a tier is assigned,
+**So that** I can handle custom deals or exceptions.

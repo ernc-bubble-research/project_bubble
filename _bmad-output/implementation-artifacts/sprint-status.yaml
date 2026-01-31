@@ -36,7 +36,7 @@
 # PHASE SCOPE:
 # ============
 # Prototype (Phase 1): Epics 1-7 (7 epics, 40 stories)
-# Phase 2 / Future:    Epics 8, 9, 10 (3 epics, 7 stories)
+# Phase 2 / Future:    Epics 8, 9, 10, 11 (4 epics, 10 stories)
 #
 # DEPENDENCY CHAIN:
 # Epic 1 → Epic 2 + Epic 3 (parallel) → Epic 4 → Epic 5 → Epic 6
@@ -172,3 +172,13 @@ development_status:
   10-1-visual-graph-canvas: backlog
   10-2-visual-cycle-detection: backlog
   epic-10-retrospective: optional
+
+  # ═══════════════════════════════════════════════════════
+  # Epic 11: Plan Tier Management & Template System (Future)
+  # Dependencies: Epic 1
+  # ═══════════════════════════════════════════════════════
+  epic-11: backlog
+  11-1-tier-definition-crud: backlog
+  11-2-tier-to-tenant-auto-apply: backlog
+  11-3-per-tenant-override: backlog
+  epic-11-retrospective: optional
