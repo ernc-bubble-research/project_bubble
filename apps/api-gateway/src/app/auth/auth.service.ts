@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { UserEntity, UserRole } from '@project-bubble/db-layer';
+import { UserEntity, UserRole, UserStatus } from '@project-bubble/db-layer';
 import { LoginDto, LoginResponseDto } from '@project-bubble/shared';
 
 @Injectable()
@@ -53,6 +53,9 @@ export class AuthService implements OnModuleInit {
   ): Promise<UserEntity | null> {
     const user = await this.userRepo.findOne({ where: { email } });
     if (!user) {
+      return null;
+    }
+    if (user.status === UserStatus.INACTIVE) {
       return null;
     }
     const isMatch = await bcrypt.compare(password, user.passwordHash);

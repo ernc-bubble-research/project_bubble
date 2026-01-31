@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { UserEntity, UserRole } from '@project-bubble/db-layer';
+import { UserEntity, UserRole, UserStatus } from '@project-bubble/db-layer';
 import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
@@ -21,9 +21,10 @@ describe('AuthService', () => {
     passwordHash: hashedPassword,
     role: UserRole.BUBBLE_ADMIN,
     tenantId: '00000000-0000-0000-0000-000000000000',
+    status: UserStatus.ACTIVE,
     createdAt: new Date('2026-01-31'),
     updatedAt: new Date('2026-01-31'),
-  };
+  } as UserEntity;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -190,6 +191,21 @@ describe('AuthService', () => {
 
       const result = await service.validateUser(
         'nobody@bubble.io',
+        'Admin123!',
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when user is inactive', async () => {
+      const inactiveUser = {
+        ...mockUser,
+        status: UserStatus.INACTIVE,
+      } as UserEntity;
+      repo.findOne.mockResolvedValue(inactiveUser);
+
+      const result = await service.validateUser(
+        'admin@bubble.io',
         'Admin123!',
       );
 

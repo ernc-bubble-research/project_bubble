@@ -12,6 +12,11 @@ export enum UserRole {
   CREATOR = 'creator',
 }
 
+export enum UserStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+}
+
 @Entity('users')
 export class UserEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -26,8 +31,14 @@ export class UserEntity {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.CREATOR })
   role!: UserRole;
 
+  @Column({ nullable: true })
+  name?: string;
+
   @Column({ name: 'tenant_id' })
   tenantId!: string;
+
+  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
+  status!: UserStatus;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
