@@ -34,7 +34,7 @@ export class UserEntity {
   @Column({ nullable: true })
   name?: string;
 
-  @Column({ name: 'tenant_id' })
+  @Column({ name: 'tenant_id', type: 'uuid' })
   tenantId!: string;
 
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
