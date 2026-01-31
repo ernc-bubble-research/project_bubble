@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   ParseUUIDPipe,
@@ -10,6 +11,7 @@ import {
 import {
   CreateTenantDto,
   ImpersonateResponseDto,
+  UpdateTenantDto,
 } from '@project-bubble/shared';
 import { AdminApiKeyGuard } from '../guards/admin-api-key.guard';
 import { TenantsService } from './tenants.service';
@@ -32,6 +34,14 @@ export class TenantsController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.tenantsService.findOne(id);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTenantDto,
+  ) {
+    return this.tenantsService.update(id, dto);
   }
 
   @Post(':id/impersonate')

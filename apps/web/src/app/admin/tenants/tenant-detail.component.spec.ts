@@ -21,18 +21,25 @@ class DummyComponent {}
 describe('TenantDetailComponent', () => {
   let component: TenantDetailComponent;
   let fixture: ComponentFixture<TenantDetailComponent>;
+  let tenantServiceMock: Record<string, jest.Mock>;
 
   const mockTenant = {
     id: '123e4567-e89b-12d3-a456-426614174000',
     name: 'Acme Corp',
     status: 'active' as const,
+    primaryContact: null,
+    planTier: 'free' as const,
+    dataResidency: 'eu-west',
+    maxMonthlyRuns: 50,
+    assetRetentionDays: 30,
     createdAt: '2026-01-15T00:00:00Z',
     updatedAt: '2026-01-15T00:00:00Z',
   };
 
   beforeEach(async () => {
-    const tenantServiceMock = {
+    tenantServiceMock = {
       getOne: jest.fn().mockReturnValue(of(mockTenant)),
+      update: jest.fn().mockReturnValue(of(mockTenant)),
     };
 
     await TestBed.configureTestingModule({
@@ -74,6 +81,15 @@ describe('TenantDetailComponent', () => {
     expect(component.tenant()).toEqual(mockTenant);
   });
 
+  it('should sync form signals from loaded tenant', () => {
+    expect(component.editName()).toBe('Acme Corp');
+    expect(component.editContact()).toBe('');
+    expect(component.editPlanTier()).toBe('free');
+    expect(component.editResidency()).toBe('eu-west');
+    expect(component.editMaxRuns()).toBe(50);
+    expect(component.editRetentionDays()).toBe(30);
+  });
+
   it('should render breadcrumb with tenant name', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.breadcrumb-current')?.textContent).toContain(
@@ -108,9 +124,90 @@ describe('TenantDetailComponent', () => {
     expect(el.querySelector('.form-card')).toBeTruthy();
   });
 
+  it('should have Save Changes button disabled when form is pristine', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const saveBtn = el.querySelector('.btn-primary') as HTMLButtonElement;
+    expect(saveBtn.disabled).toBe(true);
+  });
+
+  it('should detect dirty state when name is changed', () => {
+    expect(component.isGeneralDirty()).toBe(false);
+    component.editName.set('New Name');
+    expect(component.isGeneralDirty()).toBe(true);
+  });
+
+  it('should reset form on cancelGeneral', () => {
+    component.editName.set('Changed');
+    expect(component.isGeneralDirty()).toBe(true);
+    component.cancelGeneral();
+    expect(component.editName()).toBe('Acme Corp');
+    expect(component.isGeneralDirty()).toBe(false);
+  });
+
+  it('should call tenantService.update on saveGeneral', () => {
+    const updatedTenant = { ...mockTenant, name: 'New Name' };
+    tenantServiceMock['update'].mockReturnValue(of(updatedTenant));
+
+    component.editName.set('New Name');
+    component.saveGeneral();
+
+    expect(tenantServiceMock['update']).toHaveBeenCalledWith(
+      mockTenant.id,
+      { name: 'New Name' },
+    );
+  });
+
   it('should open impersonate dialog when button clicked', () => {
     expect(component.showImpersonateDialog()).toBe(false);
     component.openImpersonateDialog();
     expect(component.showImpersonateDialog()).toBe(true);
+  });
+
+  it('should render Suspend button for active tenant', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const buttons = Array.from(el.querySelectorAll('.header-actions .btn'));
+    const suspendBtn = buttons.find((b) => b.textContent?.trim() === 'Suspend');
+    expect(suspendBtn).toBeTruthy();
+  });
+
+  it('should open suspend dialog', () => {
+    expect(component.showSuspendDialog()).toBe(false);
+    component.openSuspendDialog();
+    expect(component.showSuspendDialog()).toBe(true);
+  });
+
+  it('should switch to entitlements tab', () => {
+    component.setTab('entitlements');
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.section-title')?.textContent).toContain('Run Quota');
+  });
+
+  it('should detect entitlements dirty state', () => {
+    expect(component.isEntitlementsDirty()).toBe(false);
+    component.editMaxRuns.set(200);
+    expect(component.isEntitlementsDirty()).toBe(true);
+  });
+
+  it('should reset entitlements on cancelEntitlements', () => {
+    component.editMaxRuns.set(200);
+    expect(component.isEntitlementsDirty()).toBe(true);
+    component.cancelEntitlements();
+    expect(component.editMaxRuns()).toBe(50);
+    expect(component.isEntitlementsDirty()).toBe(false);
+  });
+
+  it('should call tenantService.update on saveEntitlements', () => {
+    const updatedTenant = { ...mockTenant, maxMonthlyRuns: 200 };
+    tenantServiceMock['update'].mockReturnValue(of(updatedTenant));
+
+    component.editMaxRuns.set(200);
+    component.saveEntitlements();
+
+    expect(tenantServiceMock['update']).toHaveBeenCalledWith(
+      mockTenant.id,
+      { maxMonthlyRuns: 200 },
+    );
   });
 });

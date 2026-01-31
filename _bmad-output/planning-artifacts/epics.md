@@ -154,15 +154,17 @@ This document provides the complete epic and story breakdown for project_bubble,
 
 #### Story 1.5: Tenant Configuration (Credits & Entitlements)
 **As a** Bubble Admin,
-**I want** to configure a tenant's limits and available workflows,
-**So that** I can enforce pricing tiers (e.g., "Tier 1: 50 runs, QDA Workflow only").
+**I want** to configure a tenant's limits (run quota, asset retention) and general settings,
+**So that** I can enforce pricing tiers and control tenant resource allocation.
 
 **Acceptance Criteria:**
 **Given** I am on the Tenant Detail page (in The Lobby)
 **When** I edit "Settings"
 **Then** I can set `max_monthly_runs` (Integer)
 **And** I can set **`asset_retention_days`** (Integer, default: 30) for the Soft Delete Archive policy
-**And** I can select which `WorkflowIDs` are enabled for this tenant (Entitlement List)
+**And** I can set general tenant settings: name, primary contact, plan tier, data residency
+**And** I can suspend/activate a tenant
+**And** workflow access is shown as read-only (managed at workflow level — see Epic 3 design decision)
 **And** system deducts credits **Upfront** (at Run Request); if request fails validation, credit is refunded immediately.
 
 #### Story 1.6: Tenant Seeding (Templates) [Prototype]
@@ -327,6 +329,8 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Goal:** Provide "Architects" (Admins) with a user-friendly "Form-Based" tool to define the agents.
 **Approach:** **"Low-Code/No-Code Wizard"**. The Admin uses dropdowns and forms to generate the underlying JSON. No raw code editing required.
 **FRs covered:** FR1, FR2, FR4, FR5, FR6, FR35, FR42
+
+> **DESIGN DECISION (from Story 1.5 revision):** Workflow access control is **workflow-centric**, not tenant-centric. Each workflow template has a `visibility` field: `public` (default, available to all tenants) or `private` (restricted to a specific `allowedTenants: string[]` list). This avoids the N-tenant update problem when rolling out new workflows. The Bubble Admin configures visibility when publishing a workflow in Workflow Studio. The tenant's Entitlements tab shows a read-only view of available workflows. Epic 3 stories (likely Story 3.1 or 3.6) must implement the `visibility` + `allowedTenants` fields on the workflow template entity and the corresponding UI in Workflow Studio.
 
 #### Story 3.1: Form-Based Workflow Builder
 **As a** Bubble Admin,

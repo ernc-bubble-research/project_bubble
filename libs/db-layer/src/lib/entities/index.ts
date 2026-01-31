@@ -1,1 +1,1 @@
-export { TenantEntity, TenantStatus } from './tenant.entity';
+export { TenantEntity, TenantStatus, PlanTier } from './tenant.entity';

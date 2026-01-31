@@ -11,6 +11,7 @@ import { TenantEntity, TenantStatus } from '@project-bubble/db-layer';
 import {
   CreateTenantDto,
   ImpersonateResponseDto,
+  UpdateTenantDto,
 } from '@project-bubble/shared';
 
 @Injectable()
@@ -56,6 +57,15 @@ export class TenantsService {
       throw new NotFoundException(`Tenant with id "${id}" not found`);
     }
     return tenant;
+  }
+
+  async update(id: string, dto: UpdateTenantDto): Promise<TenantEntity> {
+    const tenant = await this.tenantRepo.findOne({ where: { id } });
+    if (!tenant) {
+      throw new NotFoundException(`Tenant with id "${id}" not found`);
+    }
+    Object.assign(tenant, dto);
+    return this.tenantRepo.save(tenant);
   }
 
   async impersonate(tenantId: string): Promise<ImpersonateResponseDto> {

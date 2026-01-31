@@ -21,7 +21,7 @@
       <div class="header-meta">
         <span>Created: {{ t.createdAt | date:'mediumDate' }}</span>
         <span class="meta-separator">&bull;</span>
-        <span>Tier: &mdash;</span>
+        <span>Tier: {{ t.planTier | titlecase }}</span>
         <span class="meta-separator">&bull;</span>
         <span>Users: &mdash;</span>
       </div>
@@ -35,8 +35,14 @@
         <lucide-icon name="alert-triangle" [size]="16"></lucide-icon>
         Impersonate
       </button>
-      <button class="btn btn-outline" disabled>Suspend</button>
-      <button class="btn btn-outline" disabled>Edit</button>
+      <button
+        class="btn btn-outline"
+        [class.btn-danger-outline]="t.status === 'active'"
+        (click)="openSuspendDialog()"
+        [disabled]="saving()"
+      >
+        {{ t.status === 'active' ? 'Suspend' : 'Activate' }}
+      </button>
     </div>
   </div>
 
@@ -46,7 +52,7 @@
       <button
         class="tab-btn"
         [class.active]="activeTab() === tab.key"
-        [disabled]="tab.key !== 'general'"
+        [disabled]="tab.key !== 'general' && tab.key !== 'entitlements'"
         (click)="setTab(tab.key)"
       >
         {{ tab.label }}
@@ -60,7 +66,13 @@
       <div class="form-card">
         <div class="form-group">
           <label class="form-label" for="tenant-name">Tenant Name</label>
-          <input id="tenant-name" class="form-input" type="text" [value]="t.name" readonly />
+          <input
+            id="tenant-name"
+            class="form-input"
+            type="text"
+            [value]="editName()"
+            (input)="editName.set($any($event.target).value)"
+          />
         </div>
         <div class="form-group">
           <label class="form-label" for="tenant-id">Tenant ID</label>
@@ -78,25 +90,116 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="tenant-contact">Primary Contact</label>
-          <input id="tenant-contact" class="form-input" type="text" value="—" readonly />
+          <input
+            id="tenant-contact"
+            class="form-input"
+            type="text"
+            placeholder="Enter primary contact email"
+            [value]="editContact()"
+            (input)="editContact.set($any($event.target).value)"
+          />
         </div>
         <div class="form-row">
           <div class="form-group">
             <label class="form-label" for="tenant-plan">Plan Tier</label>
-            <select id="tenant-plan" class="form-select" disabled>
-              <option>—</option>
+            <select
+              id="tenant-plan"
+              class="form-select"
+              [value]="editPlanTier()"
+              (change)="editPlanTier.set($any($event.target).value)"
+            >
+              @for (opt of planTierOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
             </select>
           </div>
           <div class="form-group">
             <label class="form-label" for="tenant-residency">Data Residency</label>
-            <select id="tenant-residency" class="form-select" disabled>
-              <option>—</option>
+            <select
+              id="tenant-residency"
+              class="form-select"
+              [value]="editResidency()"
+              (change)="editResidency.set($any($event.target).value)"
+            >
+              @for (opt of residencyOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
             </select>
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn btn-outline" disabled>Cancel</button>
-          <button class="btn btn-primary" disabled>Save Changes</button>
+          <button class="btn btn-outline" [disabled]="!isGeneralDirty()" (click)="cancelGeneral()">Cancel</button>
+          <button class="btn btn-primary" [disabled]="!isGeneralDirty() || saving()" (click)="saveGeneral()">
+            {{ saving() ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else if (activeTab() === 'entitlements') {
+    <div class="tab-content">
+      <!-- Run Quota Section -->
+      <div class="form-card entitlements-section">
+        <h3 class="section-title">Run Quota</h3>
+        <div class="form-group">
+          <label class="form-label" for="max-runs">Max Monthly Runs</label>
+          <input
+            id="max-runs"
+            class="form-input number-input"
+            type="number"
+            min="0"
+            [value]="editMaxRuns()"
+            (input)="onMaxRunsInput($event)"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="current-usage">Current Usage</label>
+          <div class="progress-container">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width]="'0%'"></div>
+            </div>
+            <span id="current-usage" class="progress-text">0 / {{ editMaxRuns() }} (0%)</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reset-date">Reset Date</label>
+          <input id="reset-date" class="form-input" type="text" [value]="resetDate() | date:'mediumDate'" readonly />
+        </div>
+      </div>
+
+      <!-- Asset Retention Section -->
+      <div class="form-card entitlements-section">
+        <h3 class="section-title">Asset Retention</h3>
+        <div class="form-group">
+          <label class="form-label" for="retention-days">Retention Days</label>
+          <input
+            id="retention-days"
+            class="form-input number-input"
+            type="number"
+            min="1"
+            max="365"
+            [value]="editRetentionDays()"
+            (input)="onRetentionDaysInput($event)"
+          />
+          <span class="form-helper">Soft-deleted files are purged after this period</span>
+        </div>
+      </div>
+
+      <!-- Workflow Access Placeholder -->
+      <div class="form-card entitlements-section">
+        <h3 class="section-title">Workflow Access</h3>
+        <div class="info-box">
+          <p>Workflow access is managed per-workflow from Workflow Studio. Public workflows are available to all tenants.</p>
+          <a routerLink="/admin/workflows" class="btn btn-outline btn-sm">Go to Workflow Studio</a>
+        </div>
+      </div>
+
+      <!-- Entitlements Save/Cancel -->
+      <div class="form-card">
+        <div class="form-actions">
+          <button class="btn btn-outline" [disabled]="!isEntitlementsDirty()" (click)="cancelEntitlements()">Cancel</button>
+          <button class="btn btn-primary" [disabled]="!isEntitlementsDirty() || saving()" (click)="saveEntitlements()">
+            {{ saving() ? 'Saving...' : 'Save Entitlements' }}
+          </button>
         </div>
       </div>
     </div>
@@ -115,6 +218,37 @@
       (confirmed)="onConfirmImpersonate()"
       (cancelled)="closeImpersonateDialog()"
     ></app-impersonate-confirm-dialog>
+  }
+
+  <!-- Suspend/Activate Confirmation Dialog -->
+  @if (showSuspendDialog()) {
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
+    <div class="dialog-overlay" (click)="closeSuspendDialog()" role="dialog" aria-modal="true">
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+      <div class="dialog-card" (click)="$event.stopPropagation()">
+        <h2 class="dialog-title">
+          {{ t.status === 'active' ? 'Suspend' : 'Activate' }} {{ t.name }}?
+        </h2>
+        <p class="dialog-text">
+          @if (t.status === 'active') {
+            Users will lose access. This can be reversed.
+          } @else {
+            Users will regain access.
+          }
+        </p>
+        <div class="dialog-actions">
+          <button class="btn btn-outline" (click)="closeSuspendDialog()">Cancel</button>
+          <button
+            class="btn"
+            [class.btn-danger]="t.status === 'active'"
+            [class.btn-primary]="t.status !== 'active'"
+            (click)="confirmSuspendToggle()"
+          >
+            {{ t.status === 'active' ? 'Suspend' : 'Activate' }}
+          </button>
+        </div>
+      </div>
+    </div>
   }
 } @else {
   <div class="loading-state">Tenant not found.</div>

@@ -66,7 +66,7 @@ development_status:
   1-2-tenant-provisioning-api: done
   1-3-bubble-admin-dashboard-the-lobby: done
   1-4-impersonation-action: done
-  1-5-tenant-configuration-credits-entitlements: backlog
+  1-5-tenant-configuration-credits-entitlements: done
   1-6-tenant-seeding-templates: backlog
   1-7-user-authentication-rbac: backlog
   1-8-rls-enforcement-mechanism-security: backlog

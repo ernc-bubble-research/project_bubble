@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { QueryFailedError, Repository } from 'typeorm';
-import { TenantEntity, TenantStatus } from '@project-bubble/db-layer';
+import { TenantEntity, TenantStatus, PlanTier } from '@project-bubble/db-layer';
 import { TenantsService } from './tenants.service';
 
 describe('TenantsService', () => {
@@ -18,6 +18,11 @@ describe('TenantsService', () => {
     id: '123e4567-e89b-12d3-a456-426614174000',
     name: 'Acme Corp',
     status: TenantStatus.ACTIVE,
+    primaryContact: null,
+    planTier: PlanTier.FREE,
+    dataResidency: 'eu-west',
+    maxMonthlyRuns: 50,
+    assetRetentionDays: 30,
     createdAt: new Date('2026-01-30'),
     updatedAt: new Date('2026-01-30'),
   };
@@ -167,6 +172,63 @@ describe('TenantsService', () => {
       await expect(service.impersonate(mockTenant.id)).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('update', () => {
+    it('should update a tenant with partial data (name only)', async () => {
+      const updated = { ...mockTenant, name: 'New Name' };
+      repo.findOne.mockResolvedValue({ ...mockTenant });
+      repo.save.mockResolvedValue(updated);
+
+      const result = await service.update(mockTenant.id, { name: 'New Name' });
+
+      expect(result.name).toBe('New Name');
+      expect(repo.findOne).toHaveBeenCalledWith({ where: { id: mockTenant.id } });
+      expect(repo.save).toHaveBeenCalled();
+    });
+
+    it('should update entitlements fields only', async () => {
+      const updated = { ...mockTenant, maxMonthlyRuns: 200, assetRetentionDays: 90 };
+      repo.findOne.mockResolvedValue({ ...mockTenant });
+      repo.save.mockResolvedValue(updated);
+
+      const result = await service.update(mockTenant.id, {
+        maxMonthlyRuns: 200,
+        assetRetentionDays: 90,
+      });
+
+      expect(result.maxMonthlyRuns).toBe(200);
+      expect(result.assetRetentionDays).toBe(90);
+    });
+
+    it('should throw NotFoundException for non-existent tenant', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.update('nonexistent-id', { name: 'Test' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should update status from active to suspended', async () => {
+      const updated = { ...mockTenant, status: TenantStatus.SUSPENDED };
+      repo.findOne.mockResolvedValue({ ...mockTenant });
+      repo.save.mockResolvedValue(updated);
+
+      const result = await service.update(mockTenant.id, { status: 'suspended' });
+
+      expect(result.status).toBe(TenantStatus.SUSPENDED);
+    });
+
+    it('should update status from suspended to active', async () => {
+      const suspendedTenant = { ...mockTenant, status: TenantStatus.SUSPENDED };
+      const activated = { ...mockTenant, status: TenantStatus.ACTIVE };
+      repo.findOne.mockResolvedValue({ ...suspendedTenant });
+      repo.save.mockResolvedValue(activated);
+
+      const result = await service.update(mockTenant.id, { status: 'active' });
+
+      expect(result.status).toBe(TenantStatus.ACTIVE);
     });
   });
 });

@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Tenant, CreateTenantPayload } from '@project-bubble/shared';
+import { Tenant, CreateTenantPayload, UpdateTenantPayload } from '@project-bubble/shared';
 
-export type { Tenant, CreateTenantPayload } from '@project-bubble/shared';
+export type { Tenant, CreateTenantPayload, UpdateTenantPayload } from '@project-bubble/shared';
 
 @Injectable({ providedIn: 'root' })
 export class TenantService {
@@ -20,5 +20,9 @@ export class TenantService {
 
   create(payload: CreateTenantPayload): Observable<Tenant> {
     return this.http.post<Tenant>(this.baseUrl, payload);
+  }
+
+  update(id: string, payload: UpdateTenantPayload): Observable<Tenant> {
+    return this.http.patch<Tenant>(`${this.baseUrl}/${id}`, payload);
   }
 }
