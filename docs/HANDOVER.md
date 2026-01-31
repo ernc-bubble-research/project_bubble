@@ -1,24 +1,31 @@
 # PROJECT HANDOVER DOCUMENT
 
 ## Last Updated
-2026-01-31 14:00
-[Dev Session | Claude Opus 4.5]
+2026-01-31 14:30
+[Dev + Code Review Session | Claude Opus 4.5]
 
 ## Current Phase
 **Phase 3: Execution — Epic 1 nearing completion**
 
 ## Current Step
-**Epic 1: Tenant Management & Platform Setup — Stories 1.1–1.9 DONE**
+**Epic 1: Tenant Management & Platform Setup — Stories 1.1–1.10 DONE**
 
 ## Status
-**GREEN — Epic 1 core backend + admin UI complete, 3 stories remaining**
+**GREEN — Epic 1 backend + admin UI + auth UI complete, 2 stories remaining**
 
 ## Work Just Completed (This Session)
-1. **Story 1.9: User Management & Admin Creation** — Full CRUD, role-based access, code review fixes applied, status: done.
-2. **Bug Fix: users.tenant_id UUID type mismatch** — Column was VARCHAR, RLS policy required UUID. Fixed in user.entity.ts.
-3. **UI Polish: Replaced all emoji icons with Lucide icons** — Dashboard stat cards (bar-chart-3, circle-check, circle-x, users), hamburger menu icon.
-4. **UX Clarity: Added info tooltips** — Plan Tier label explains it's currently a label-only field with manual limit config. Data Residency label explains all data is EU-hosted for MVP.
-5. **Epic 11 Placeholder Created** — "Plan Tier Management & Template System" with 3 placeholder stories (CRUD, auto-apply, per-tenant override). Status: Future.
+1. **Story 1.10: Login & Password Pages (Auth UI)** — Full implementation + adversarial code review, status: done.
+   - Login page with branded card, email/password form, role-based redirect, returnUrl support
+   - Set-password page with complexity validation, match validation, token-based flow
+   - Auth guards: `authGuard` (redirects unauthenticated), `noAuthGuard` (redirects authenticated), `adminGuard` (restricts `/admin/*` to bubble_admin)
+   - Coming Soon placeholder for Zone B (`/app/workflows`)
+   - Shared auth SCSS extracted to `_auth-shared.scss`
+2. **Code Review Fixes Applied:**
+   - H1: `isLoading` reset on successful login (was stuck in loading state)
+   - H2: Added returnUrl test coverage (AC3 requirement)
+   - M1: Added `adminGuard` role check on `/admin` route (was auth-only, no role check)
+   - M2: Added `customer_admin` role test coverage
+   - M3: Extracted shared auth SCSS to eliminate duplication
 
 ## Epic 1 Progress
 | Story | Status |
@@ -32,31 +39,48 @@
 | 1.7 User Authentication & RBAC | done |
 | 1.8 RLS Enforcement Mechanism | done |
 | 1.9 User Management & Admin Creation | done |
-| 1.10 Login/Password Pages (Auth UI) | backlog |
+| 1.10 Login/Password Pages (Auth UI) | done |
 | 1.11 CI/CD Pipeline Setup | backlog |
 | 1.12 User Invitations & Email Flow | backlog |
 
+## Test Counts
+- **Web:** 101 tests (15 suites)
+- **API Gateway:** 78 tests
+- **DB Layer:** 11 tests
+- **Total:** 190 tests
+
 ## Key Decisions Made
-- **Tier Management deferred**: Plan tiers are label-only for now. A full tier template system (Epic 11) is planned for the future. Limits are set manually per tenant.
+- **Tier Management deferred**: Plan tiers are label-only for now. A full tier template system (Epic 11) is planned for the future.
 - **Data Residency**: EU-only for Prototype/MVP. The field is stored but regional routing is deferred.
-- **Impersonation navigation**: Currently routes to `/app/workflows` which doesn't exist yet (Epic 2). This is expected — Zone B (tenant workspace) is not built yet.
+- **Admin role guard**: Added `adminGuard` during code review to enforce `bubble_admin` role on `/admin/*` routes (was missing from initial implementation).
+- **Set-password backend deferred**: `POST /api/auth/set-password` doesn't exist yet — will be implemented in Story 1.12 (User Invitations).
 
 ## Known Issues
 - SCSS budget warning on tenant-detail.component.scss (5.46 kB vs 4 kB budget) — cosmetic, not blocking.
 
 ## Next Steps
-1. **Story 1.10**: Login & Password Pages (Auth UI) — Angular login/register forms
-2. **Story 1.11**: CI/CD Pipeline Setup
-3. **Story 1.12**: User Invitations & Email Flow
-4. After Epic 1 completion → Epic 2 (Asset Management) + Epic 3 (Workflow Studio) can start in parallel
+1. **Story 1.11:** CI/CD Pipeline Setup
+2. **Story 1.12:** User Invitations & Email Flow
+3. After Epic 1 completion → Epic 1 retrospective, then Epic 2 (Asset Management) + Epic 3 (Workflow Studio) in parallel
 
 ## Files Modified (This Session)
-- `libs/db-layer/src/lib/entities/user.entity.ts` — tenant_id UUID fix
-- `apps/web/src/app/shared/components/stat-card/stat-card.component.ts` — Lucide icons
-- `apps/web/src/app/admin/dashboard/dashboard.component.html` — Lucide icon names
-- `apps/web/src/app/admin/admin-layout.component.html` — Lucide menu icon
-- `apps/web/src/app/app.config.ts` — registered new Lucide icons
-- `apps/web/src/app/admin/tenants/tenant-detail.component.html` — plan tier + data residency tooltips
-- `apps/web/src/app/admin/tenants/tenant-detail.component.scss` — hint/tooltip styles
-- `_bmad-output/planning-artifacts/epics.md` — Epic 11 placeholder
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — Epic 11 tracking
+### New Files
+- `apps/web/src/app/core/guards/auth.guard.ts` — authGuard + adminGuard
+- `apps/web/src/app/core/guards/no-auth.guard.ts`
+- `apps/web/src/app/core/guards/auth.guard.spec.ts`
+- `apps/web/src/app/auth/_auth-shared.scss` — shared auth page styles
+- `apps/web/src/app/auth/login/login.component.{ts,html,scss,spec.ts}`
+- `apps/web/src/app/auth/set-password/set-password.component.{ts,html,scss,spec.ts}`
+- `apps/web/src/app/app-shell/coming-soon.component.ts`
+- `stories/1-10-login-password-pages-auth-ui.md`
+
+### Modified Files
+- `apps/web/src/app/app.routes.ts` — auth routes, guards, adminGuard on /admin
+- `apps/web/src/app/app.config.ts` — Eye, EyeOff, LogOut icons
+- `apps/web/src/app/core/services/auth.service.ts` — getRoleHome(), setPassword()
+- `apps/web/src/app/admin/admin-layout.component.spec.ts` — added Menu icon
+- `apps/web/src/app/admin/dashboard/dashboard.component.spec.ts` — added Lucide icons
+- `apps/web/src/app/admin/tenants/tenant-detail.component.spec.ts` — added Info icon
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 1-10 → done
+- `HANDOVER.md` — updated
+- `docs/HANDOVER.md` — updated

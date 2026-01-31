@@ -1,9 +1,34 @@
 import { Route } from '@angular/router';
+import { authGuard, adminGuard } from './core/guards/auth.guard';
+import { noAuthGuard } from './core/guards/no-auth.guard';
 
 export const appRoutes: Route[] = [
-  // Zone C: Admin Portal
+  // Zone A: Auth pages
+  {
+    path: 'auth',
+    children: [
+      {
+        path: 'login',
+        canActivate: [noAuthGuard],
+        loadComponent: () =>
+          import('./auth/login/login.component').then(
+            (m) => m.LoginComponent
+          ),
+      },
+      {
+        path: 'set-password',
+        loadComponent: () =>
+          import('./auth/set-password/set-password.component').then(
+            (m) => m.SetPasswordComponent
+          ),
+      },
+      { path: '', redirectTo: 'login', pathMatch: 'full' },
+    ],
+  },
+  // Zone C: Admin Portal (bubble_admin only)
   {
     path: 'admin',
+    canActivate: [authGuard, adminGuard],
     loadComponent: () =>
       import('./admin/admin-layout.component').then(
         (m) => m.AdminLayoutComponent
@@ -33,12 +58,23 @@ export const appRoutes: Route[] = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
-  // Zone A: Public / Auth (placeholder — Story 1.10)
-  { path: 'auth', redirectTo: '/admin/dashboard', pathMatch: 'prefix' },
-  // Zone B: App / Tenant UI (placeholder — Epic 2)
-  { path: 'app', redirectTo: '/admin/dashboard', pathMatch: 'prefix' },
-  // Default redirect (temporary — will redirect to /auth/login after Story 1.10)
-  { path: '', redirectTo: '/admin/dashboard', pathMatch: 'full' },
+  // Zone B: Tenant App (placeholder — Epic 2+)
+  {
+    path: 'app',
+    canActivate: [authGuard],
+    children: [
+      {
+        path: 'workflows',
+        loadComponent: () =>
+          import('./app-shell/coming-soon.component').then(
+            (m) => m.ComingSoonComponent
+          ),
+      },
+      { path: '', redirectTo: 'workflows', pathMatch: 'full' },
+    ],
+  },
+  // Default: redirect to login (guards handle authenticated redirect)
+  { path: '', redirectTo: '/auth/login', pathMatch: 'full' },
   {
     path: '**',
     loadComponent: () =>

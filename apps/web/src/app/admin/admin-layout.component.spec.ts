@@ -8,6 +8,7 @@ import {
   Building2,
   GitBranch,
   Settings,
+  Menu,
 } from 'lucide-angular';
 
 describe('AdminLayoutComponent', () => {
@@ -23,6 +24,7 @@ describe('AdminLayoutComponent', () => {
             Building2,
             GitBranch,
             Settings,
+            Menu,
           }),
         },
       ],

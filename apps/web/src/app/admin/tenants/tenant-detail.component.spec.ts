@@ -11,6 +11,7 @@ import {
   Copy,
   ArrowLeft,
   X,
+  Info,
 } from 'lucide-angular';
 import { TenantDetailComponent } from './tenant-detail.component';
 import { TenantService } from '../../core/services/tenant.service';
@@ -63,6 +64,7 @@ describe('TenantDetailComponent', () => {
             Copy,
             ArrowLeft,
             X,
+            Info,
           }),
         },
       ],

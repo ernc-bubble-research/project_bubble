@@ -5,6 +5,14 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
+import {
+  LUCIDE_ICONS,
+  LucideIconProvider,
+  BarChart3,
+  CircleCheck,
+  CircleX,
+  Users,
+} from 'lucide-angular';
 import { DashboardComponent } from './dashboard.component';
 import { Tenant } from '../../core/services/tenant.service';
 
@@ -35,6 +43,16 @@ describe('DashboardComponent', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        {
+          provide: LUCIDE_ICONS,
+          multi: true,
+          useValue: new LucideIconProvider({
+            BarChart3,
+            CircleCheck,
+            CircleX,
+            Users,
+          }),
+        },
       ],
     }).compileComponents();
 

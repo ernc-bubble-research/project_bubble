@@ -62,4 +62,13 @@ export class AuthService {
       return false;
     }
   }
+
+  getRoleHome(): string {
+    const user = this.getCurrentUser();
+    return user?.role === 'bubble_admin' ? '/admin/dashboard' : '/app/workflows';
+  }
+
+  setPassword(token: string, password: string): Observable<void> {
+    return this.http.post<void>('/api/auth/set-password', { token, password });
+  }
 }

@@ -30,6 +30,9 @@ import {
   Users,
   Menu,
   Info,
+  Eye,
+  EyeOff,
+  LogOut,
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
@@ -56,6 +59,9 @@ export const appConfig: ApplicationConfig = {
         Users,
         Menu,
         Info,
+        Eye,
+        EyeOff,
+        LogOut,
       }),
     },
   ],

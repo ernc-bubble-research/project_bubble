@@ -1,36 +1,28 @@
 # Handover Context
 
 **Project:** `project_bubble`
-**Session Date:** 2026-01-28
-**Status:** Protocol Reset & Alignment Complete
+**Session Date:** 2026-01-31
+**Status:** Epic 1 — Story 1.10 Complete (Auth UI)
 
-## 1. Critical Protocol Change (Mandatory)
-We have switched to a **Strict Story-Driven Workflow** to prevent feature creep and hallucinations.
-**The Rule:** No code is written unless a specific `stories/story-XXX.md` file exists and is approved by the user.
+## 1. Workflow Protocol
+We follow a **Strict Story-Driven Workflow** using the BMAD methodology.
+**The Rule:** No code is written unless a specific `stories/<story>.md` file exists and is approved.
 
-**Active Story:**
-*   `stories/story-001-frontend-foundation.md` (Approved & Implemented).
-    *   Defines: 3-Zone Architecture, "Dark/Blue" Layout, and Sidebar Navigation.
-    *   **Naming Convention (Option A):** `Workflows`, `Assets`, `Activity`.
+**Last Completed Story:**
+- `stories/1-10-login-password-pages-auth-ui.md` — **done** (implemented + code reviewed)
+  - Login page, set-password page, auth guards, route guards, admin role guard
+  - 101 web tests passing, lint clean, build passing
 
 ## 2. Current State
-*   **Documentation:**
-    *   `epics.md`, `ux-design-specification.md`, and `story-001` all align on Option A naming.
-*   **Code (`apps/web`):**
-    *   `AppLayout`: Sidebar updated to Workflows/Assets/Activity.
-    *   `app.routes.ts`: Routes updated to `/app/workflows`, `/app/assets`, `/app/activity`.
-    *   *Note:* Routes currently point to `LibraryComponent` as a placeholder.
+- **Epic 1:** 10/12 stories done (1.6 skipped, 1.11 + 1.12 remaining)
+- **All backend + admin UI + auth UI complete**
+- **Sprint tracking:** `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
-## 3. Next Actions (Next Session)
-**Goal:** Implement Backend Authentication (Epic 1.3).
+## 3. Next Actions
+1. **Story 1.11:** CI/CD Pipeline Setup
+2. **Story 1.12:** User Invitations & Email Flow
+3. After Epic 1 completion → Epic 1 retrospective, then Epic 2 + Epic 3 in parallel
 
-1.  **Generate Story 002:**
-    *   Execute `/bmad-bmm-workflows-create-story`.
-    *   Extract Epic 1.3 (Auth) requirements into `stories/story-002-backend-auth.md`.
-    *   **Verify** with User.
-2.  **Implementation:**
-    *   Execute `/bmad-bmm-workflows-dev-story` for Story 002.
-    *   Implement NestJS Guards, JWT Strategy, and User Entity.
-
-## 4. Known Oddities
-*   The component folder `features/storefront/library` is still named "library". This should be renamed to "workflows" in a future refactor task, but functionality is correct.
+## 4. Known Issues
+- SCSS budget warning on tenant-detail.component.scss (5.46 kB vs 4 kB budget) — cosmetic, not blocking
+- Set-password backend endpoint (`POST /api/auth/set-password`) doesn't exist yet — deferred to Story 1.12

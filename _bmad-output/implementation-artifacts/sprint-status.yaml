@@ -71,7 +71,7 @@ development_status:
   1-7-user-authentication-rbac: done
   1-8-rls-enforcement-mechanism-security: done
   1-9-user-management-admin-creation: done
-  1-10-login-password-pages-auth-ui: backlog
+  1-10-login-password-pages-auth-ui: done
   1-11-ci-cd-pipeline-setup: backlog
   1-12-user-invitations-email-flow: backlog
   epic-1-retrospective: optional
