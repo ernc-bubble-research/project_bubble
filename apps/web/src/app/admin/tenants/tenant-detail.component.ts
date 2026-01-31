@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { TenantService, Tenant } from '../../core/services/tenant.service';
+import { InvitationService } from '../../core/services/invitation.service';
 import { ImpersonationService } from '../../core/services/impersonation.service';
 import { ToastService } from '../../core/services/toast.service';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { ImpersonateConfirmDialogComponent } from './impersonate-confirm-dialog.component';
-import { UpdateTenantPayload } from '@project-bubble/shared';
+import { InviteUserDialogComponent } from './invite-user-dialog.component';
+import { UpdateTenantPayload, InvitationResponseDto } from '@project-bubble/shared';
 
 @Component({
   standalone: true,
@@ -17,6 +19,7 @@ import { UpdateTenantPayload } from '@project-bubble/shared';
     LucideAngularModule,
     StatusBadgeComponent,
     ImpersonateConfirmDialogComponent,
+    InviteUserDialogComponent,
   ],
   selector: 'app-tenant-detail',
   templateUrl: './tenant-detail.component.html',
@@ -28,6 +31,7 @@ export class TenantDetailComponent implements OnInit {
   private readonly tenantService = inject(TenantService);
   private readonly impersonationService = inject(ImpersonationService);
   private readonly toastService = inject(ToastService);
+  private readonly invitationService = inject(InvitationService);
 
   tenant = signal<Tenant | null>(null);
   loading = signal(false);
@@ -46,6 +50,11 @@ export class TenantDetailComponent implements OnInit {
   // Entitlements tab form signals
   editMaxRuns = signal(50);
   editRetentionDays = signal(30);
+
+  // Invitations
+  showInviteDialog = signal(false);
+  invitations = signal<InvitationResponseDto[]>([]);
+  loadingInvitations = signal(false);
 
   // Suspend/Activate dialog
   showSuspendDialog = signal(false);
@@ -129,6 +138,71 @@ export class TenantDetailComponent implements OnInit {
 
   setTab(tab: 'general' | 'entitlements' | 'users' | 'usage' | 'audit'): void {
     this.activeTab.set(tab);
+    if (tab === 'users') {
+      this.loadInvitations();
+    }
+  }
+
+  // Invitation actions
+  openInviteDialog(): void {
+    this.showInviteDialog.set(true);
+  }
+
+  closeInviteDialog(): void {
+    this.showInviteDialog.set(false);
+  }
+
+  onInviteSent(): void {
+    this.showInviteDialog.set(false);
+    this.toastService.show('Invitation sent successfully');
+    this.loadInvitations();
+  }
+
+  loadInvitations(): void {
+    const t = this.tenant();
+    if (!t) return;
+
+    this.loadingInvitations.set(true);
+    this.invitationService.getAll(t.id).subscribe({
+      next: (invitations) => {
+        this.invitations.set(invitations);
+        this.loadingInvitations.set(false);
+      },
+      error: () => {
+        this.loadingInvitations.set(false);
+        this.toastService.show('Failed to load invitations');
+      },
+    });
+  }
+
+  resendInvitation(id: string): void {
+    const t = this.tenant();
+    if (!t) return;
+
+    this.invitationService.resend(t.id, id).subscribe({
+      next: () => {
+        this.toastService.show('Invitation resent');
+        this.loadInvitations();
+      },
+      error: () => {
+        this.toastService.show('Failed to resend invitation');
+      },
+    });
+  }
+
+  revokeInvitation(id: string): void {
+    const t = this.tenant();
+    if (!t) return;
+
+    this.invitationService.revoke(t.id, id).subscribe({
+      next: () => {
+        this.toastService.show('Invitation revoked');
+        this.loadInvitations();
+      },
+      error: () => {
+        this.toastService.show('Failed to revoke invitation');
+      },
+    });
   }
 
   // General tab actions

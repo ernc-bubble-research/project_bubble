@@ -1,0 +1,77 @@
+<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
+<div class="modal-overlay" (click)="close()" role="dialog" aria-modal="true" aria-label="Invite user dialog">
+  <div class="modal-container" tabindex="-1" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <lucide-icon name="user-plus" [size]="24"></lucide-icon>
+      </div>
+      <h2 class="modal-title">Invite User</h2>
+      <button class="close-btn" aria-label="Close dialog" (click)="close()">
+        <lucide-icon name="x" [size]="20"></lucide-icon>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="modal-body">
+        @if (errorMessage()) {
+          <div class="error-banner">
+            <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <div class="form-group">
+          <label class="form-label" for="invite-email">Email Address</label>
+          <input
+            id="invite-email"
+            class="form-input"
+            type="email"
+            formControlName="email"
+            placeholder="colleague@company.com"
+          />
+          @if (form.get('email')?.touched && form.get('email')?.hasError('required')) {
+            <span class="form-error">Email is required</span>
+          }
+          @if (form.get('email')?.touched && form.get('email')?.hasError('email')) {
+            <span class="form-error">Invalid email address</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="invite-role">Role</label>
+          <select id="invite-role" class="form-select" formControlName="role">
+            <option value="creator">Creator</option>
+            <option value="customer_admin">Customer Admin</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="invite-name">Name (optional)</label>
+          <input
+            id="invite-name"
+            class="form-input"
+            type="text"
+            formControlName="name"
+            placeholder="Bob Smith"
+          />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="close()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isSubmitting()"
+        >
+          @if (isSubmitting()) {
+            Sending...
+          } @else {
+            <lucide-icon name="send" [size]="16"></lucide-icon>
+            Send Invitation
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

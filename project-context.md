@@ -81,6 +81,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
     | Service | Reason |
     |:---|:---|
     | `AuthService` (login + seed) | Login is pre-authentication — no tenant context. Seed is dev-only startup. Both need cross-tenant user queries. |
+    | `InvitationsService` (accept + create) | Accept is pre-authentication (user has no JWT yet). Create checks global email uniqueness cross-tenant. Same pattern as AuthService. |
     | `TenantsService` | Admin-scoped — `tenants` table has no `tenant_id` column and no RLS policy. |
 *   **ALL future services** MUST use `TransactionManager` for any table that has a `tenant_id` column.
 

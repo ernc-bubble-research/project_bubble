@@ -33,6 +33,11 @@ import {
   Eye,
   EyeOff,
   LogOut,
+  UserPlus,
+  Send,
+  RefreshCw,
+  XCircle,
+  AlertCircle,
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
@@ -62,6 +67,11 @@ export const appConfig: ApplicationConfig = {
         Eye,
         EyeOff,
         LogOut,
+        UserPlus,
+        Send,
+        RefreshCw,
+        XCircle,
+        AlertCircle,
       }),
     },
   ],

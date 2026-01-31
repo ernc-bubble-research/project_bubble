@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { TenantContextInterceptor } from './interceptors/tenant-context.interceptor';
 import { TenantsModule } from './tenants/tenants.module';
 import { UsersModule } from './users/users.module';
+import { InvitationsModule } from './invitations/invitations.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     TenantsModule,
     UsersModule,
+    InvitationsModule,
   ],
   controllers: [AppController],
   providers: [

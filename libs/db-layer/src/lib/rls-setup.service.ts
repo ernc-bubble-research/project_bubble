@@ -7,7 +7,7 @@ export class RlsSetupService implements OnModuleInit {
   private readonly logger = new Logger(RlsSetupService.name);
 
   /** Tables that have a tenant_id column and require RLS. Names must match ^[a-z_]+$ */
-  private readonly tenantScopedTables = ['users'];
+  private readonly tenantScopedTables = ['users', 'invitations'];
 
   private static readonly TABLE_NAME_PATTERN = /^[a-z_]+$/;
 
@@ -32,6 +32,15 @@ export class RlsSetupService implements OnModuleInit {
     // This permissive policy allows SELECT without SET LOCAL while INSERT/UPDATE/DELETE
     // still require tenant context via the restrictive tenant_isolation policy.
     await this.createAuthSelectPolicy();
+
+    // Invitation accept flow needs cross-tenant SELECT on invitations (pre-auth).
+    await this.createAuthAcceptInvitationsPolicy();
+
+    // Auth flows (seed, invitation accept) need INSERT on users without tenant context.
+    await this.createAuthInsertUsersPolicy();
+
+    // Invitation accept flow needs UPDATE on invitations (mark as ACCEPTED/EXPIRED).
+    await this.createAuthUpdateInvitationsPolicy();
   }
 
   private async createAuthSelectPolicy(): Promise<void> {
@@ -53,6 +62,81 @@ export class RlsSetupService implements OnModuleInit {
       );
     } catch (error) {
       this.logger.error('Failed to create auth SELECT policy:', error);
+      throw error;
+    }
+  }
+
+  private async createAuthAcceptInvitationsPolicy(): Promise<void> {
+    try {
+      await this.dataSource.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_policies
+            WHERE tablename = 'invitations' AND policyname = 'auth_accept_invitations'
+          ) THEN
+            CREATE POLICY auth_accept_invitations ON "invitations" FOR SELECT USING (true);
+          END IF;
+        END
+        $$;
+      `);
+      this.logger.log(
+        'Auth SELECT policy created on "invitations" — allows pre-auth invitation queries',
+      );
+    } catch (error) {
+      this.logger.error(
+        'Failed to create auth SELECT policy on invitations:',
+        error,
+      );
+      throw error;
+    }
+  }
+
+  private async createAuthInsertUsersPolicy(): Promise<void> {
+    try {
+      await this.dataSource.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_policies
+            WHERE tablename = 'users' AND policyname = 'auth_insert_users'
+          ) THEN
+            CREATE POLICY auth_insert_users ON "users" FOR INSERT WITH CHECK (true);
+          END IF;
+        END
+        $$;
+      `);
+      this.logger.log(
+        'Auth INSERT policy created on "users" — allows pre-auth user creation (seed, invitation accept)',
+      );
+    } catch (error) {
+      this.logger.error('Failed to create auth INSERT policy on users:', error);
+      throw error;
+    }
+  }
+
+  private async createAuthUpdateInvitationsPolicy(): Promise<void> {
+    try {
+      await this.dataSource.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_policies
+            WHERE tablename = 'invitations' AND policyname = 'auth_update_invitations'
+          ) THEN
+            CREATE POLICY auth_update_invitations ON "invitations" FOR UPDATE USING (true);
+          END IF;
+        END
+        $$;
+      `);
+      this.logger.log(
+        'Auth UPDATE policy created on "invitations" — allows pre-auth invitation status updates',
+      );
+    } catch (error) {
+      this.logger.error(
+        'Failed to create auth UPDATE policy on invitations:',
+        error,
+      );
       throw error;
     }
   }

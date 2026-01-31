@@ -104,7 +104,7 @@ development_status:
   1-9-user-management-admin-creation: done
   1-10-login-password-pages-auth-ui: done
   1-11-ci-cd-pipeline-setup: deferred # Moved to post-MVP. BMAD workflow covers lint/test/build per story.
-  1-12-user-invitations-email-flow: ready-for-dev
+  1-12-user-invitations-email-flow: done
   epic-1-retrospective: optional
 
   # ═══════════════════════════════════════════════════════

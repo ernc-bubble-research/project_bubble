@@ -24,21 +24,39 @@ describe('RlsSetupService', () => {
 
     await service.onModuleInit();
 
-    // 3 calls for enableRls(users) + 1 call for createAuthSelectPolicy
-    expect(dataSource.query).toHaveBeenCalledTimes(4);
+    // 3 calls for enableRls(users) + 3 calls for enableRls(invitations)
+    // + 1 createAuthSelectPolicy + 1 createAuthAcceptInvitationsPolicy
+    // + 1 createAuthInsertUsersPolicy + 1 createAuthUpdateInvitationsPolicy
+    expect(dataSource.query).toHaveBeenCalledTimes(10);
     expect(dataSource.query).toHaveBeenCalledWith(
       'ALTER TABLE "users" ENABLE ROW LEVEL SECURITY',
     );
     expect(dataSource.query).toHaveBeenCalledWith(
       'ALTER TABLE "users" FORCE ROW LEVEL SECURITY',
     );
-    // Third call is the DO block for tenant isolation policy
     expect(dataSource.query).toHaveBeenCalledWith(
       expect.stringContaining('tenant_isolation_users'),
     );
-    // Fourth call creates the auth_select_all permissive SELECT policy
+    expect(dataSource.query).toHaveBeenCalledWith(
+      'ALTER TABLE "invitations" ENABLE ROW LEVEL SECURITY',
+    );
+    expect(dataSource.query).toHaveBeenCalledWith(
+      'ALTER TABLE "invitations" FORCE ROW LEVEL SECURITY',
+    );
+    expect(dataSource.query).toHaveBeenCalledWith(
+      expect.stringContaining('tenant_isolation_invitations'),
+    );
     expect(dataSource.query).toHaveBeenCalledWith(
       expect.stringContaining('auth_select_all'),
+    );
+    expect(dataSource.query).toHaveBeenCalledWith(
+      expect.stringContaining('auth_accept_invitations'),
+    );
+    expect(dataSource.query).toHaveBeenCalledWith(
+      expect.stringContaining('auth_insert_users'),
+    );
+    expect(dataSource.query).toHaveBeenCalledWith(
+      expect.stringContaining('auth_update_invitations'),
     );
   });
 

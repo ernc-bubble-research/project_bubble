@@ -1,6 +1,6 @@
 # Story 1.12: User Invitations & Email Flow
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -65,18 +65,18 @@ so that they can set their own passwords and onboard themselves.
 
 > **Execution order:** Email service → Invitation entity + RLS → Shared DTOs → Backend invitation service → Auth set-password endpoint → Backend controllers → Frontend invitation service → Frontend invite UI + Users tab → Auth service verify → Lucide icons → Tests → Build verification
 
-- [ ] **Task 1: Create Email Service** (AC: 1, 5)
-  - [ ] 1.1 Install `nodemailer` + `@types/nodemailer` as dependencies
+- [x] **Task 1: Create Email Service** (AC: 1, 5)
+  - [x] 1.1 Install `nodemailer` + `@types/nodemailer` as dependencies
     - Rationale: nodemailer is transport-agnostic (SMTP, SendGrid, SES) — avoids vendor lock-in. For prototype, use SMTP (Mailtrap/Ethereal for dev). Production can swap to SendGrid/SES transport without code changes.
-  - [ ] 1.2 Create `apps/api-gateway/src/app/email/email.service.ts`
+  - [x] 1.2 Create `apps/api-gateway/src/app/email/email.service.ts`
     - Injectable NestJS service
     - Constructor creates nodemailer transport from env vars (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`)
     - `sendInvitationEmail(to: string, token: string, inviterName: string, tenantName: string): Promise<void>`
     - Email body: HTML template with magic link `{FRONTEND_URL}/auth/set-password?token={token}`
     - Include inviter name and tenant name in email for context
-  - [ ] 1.3 Create `apps/api-gateway/src/app/email/email.module.ts`
+  - [x] 1.3 Create `apps/api-gateway/src/app/email/email.module.ts`
     - Export `EmailService` for use in other modules
-  - [ ] 1.4 Add environment variables to `.env.example`:
+  - [x] 1.4 Add environment variables to `.env.example`:
     ```
     # Email (SMTP — use Mailtrap/Ethereal for dev, SendGrid SMTP or AWS SES SMTP for production)
     SMTP_HOST=sandbox.smtp.mailtrap.io
@@ -88,8 +88,8 @@ so that they can set their own passwords and onboard themselves.
     INVITATION_EXPIRY_HOURS=72
     ```
 
-- [ ] **Task 2: Create Invitation Entity & Migration** (AC: 1, 2, 3, 6)
-  - [ ] 2.1 Create `libs/db-layer/src/lib/entities/invitation.entity.ts`
+- [x] **Task 2: Create Invitation Entity & Migration** (AC: 1, 2, 3, 6)
+  - [x] 2.1 Create `libs/db-layer/src/lib/entities/invitation.entity.ts`
     ```typescript
     @Entity('invitations')
     export class InvitationEntity {
@@ -108,13 +108,13 @@ so that they can set their own passwords and onboard themselves.
     ```
     - `InvitationStatus` enum: `PENDING`, `ACCEPTED`, `EXPIRED`, `REVOKED`
     - **NOTE:** `tokenHash` stores bcrypt hash — raw token is NEVER stored in DB
-  - [ ] 2.2 Export `InvitationEntity` and `InvitationStatus` from `libs/db-layer/src/lib/entities/index.ts` and `libs/db-layer/src/index.ts`
-  - [ ] 2.3 Register entity in `InvitationsModule` via `TypeOrmModule.forFeature([InvitationEntity])` — the project uses `autoLoadEntities: true` so entities are auto-discovered from feature modules (NOT from a central entity list)
-  - [ ] 2.4 Add `'invitations'` to the `tenantScopedTables` array in `libs/db-layer/src/lib/rls-setup.service.ts` — this automatically creates the tenant isolation RLS policy on startup. Also add a permissive SELECT policy `auth_accept_invitations` (same pattern as `auth_select_all` on users table) to allow the unauthenticated `accept` endpoint to query invitations cross-tenant.
-  - [ ] 2.5 No migration needed — the project uses `synchronize: true` (TypeORM auto-creates tables from entities in dev). The `invitations` table will be auto-created when the entity is registered.
+  - [x] 2.2 Export `InvitationEntity` and `InvitationStatus` from `libs/db-layer/src/lib/entities/index.ts` and `libs/db-layer/src/index.ts`
+  - [x] 2.3 Register entity in `InvitationsModule` via `TypeOrmModule.forFeature([InvitationEntity])` — the project uses `autoLoadEntities: true` so entities are auto-discovered from feature modules (NOT from a central entity list)
+  - [x] 2.4 Add `'invitations'` to the `tenantScopedTables` array in `libs/db-layer/src/lib/rls-setup.service.ts` — this automatically creates the tenant isolation RLS policy on startup. Also add a permissive SELECT policy `auth_accept_invitations` (same pattern as `auth_select_all` on users table) to allow the unauthenticated `accept` endpoint to query invitations cross-tenant.
+  - [x] 2.5 No migration needed — the project uses `synchronize: true` (TypeORM auto-creates tables from entities in dev). The `invitations` table will be auto-created when the entity is registered.
 
-- [ ] **Task 3: Create Shared DTOs** (AC: 1, 2, 5, 6)
-  - [ ] 3.1 Create `libs/shared/src/lib/dtos/invitation/invite-user.dto.ts`
+- [x] **Task 3: Create Shared DTOs** (AC: 1, 2, 5, 6)
+  - [x] 3.1 Create `libs/shared/src/lib/dtos/invitation/invite-user.dto.ts`
     ```typescript
     export class InviteUserDto {
       @IsEmail() email: string;
@@ -122,14 +122,14 @@ so that they can set their own passwords and onboard themselves.
       @IsString() @IsOptional() name?: string;
     }
     ```
-  - [ ] 3.2 Create `libs/shared/src/lib/dtos/invitation/accept-invitation.dto.ts`
+  - [x] 3.2 Create `libs/shared/src/lib/dtos/invitation/accept-invitation.dto.ts`
     ```typescript
     export class AcceptInvitationDto {
       @IsString() @IsNotEmpty() token: string;
       @IsString() @MinLength(8) password: string;
     }
     ```
-  - [ ] 3.3 Create `libs/shared/src/lib/dtos/invitation/invitation-response.dto.ts`
+  - [x] 3.3 Create `libs/shared/src/lib/dtos/invitation/invitation-response.dto.ts`
     ```typescript
     export class InvitationResponseDto {
       id: string;
@@ -142,11 +142,11 @@ so that they can set their own passwords and onboard themselves.
       createdAt: string;
     }
     ```
-  - [ ] 3.4 Create `libs/shared/src/lib/dtos/invitation/index.ts` and update `libs/shared/src/lib/dtos/index.ts` to re-export
-  - [ ] 3.5 Define `InvitationStatus` enum in `libs/db-layer/src/lib/entities/invitation.entity.ts` (same file as the entity — follows existing pattern where `UserRole` and `UserStatus` enums are defined in `user.entity.ts`). If the frontend needs the status values, add a type alias `InvitationStatus` in `libs/shared/src/lib/types/` (same pattern as `UserRole` type alias in `libs/shared/src/lib/types/user.types.ts`)
+  - [x] 3.4 Create `libs/shared/src/lib/dtos/invitation/index.ts` and update `libs/shared/src/lib/dtos/index.ts` to re-export
+  - [x] 3.5 Define `InvitationStatus` enum in `libs/db-layer/src/lib/entities/invitation.entity.ts` (same file as the entity — follows existing pattern where `UserRole` and `UserStatus` enums are defined in `user.entity.ts`). If the frontend needs the status values, add a type alias `InvitationStatus` in `libs/shared/src/lib/types/` (same pattern as `UserRole` type alias in `libs/shared/src/lib/types/user.types.ts`)
 
-- [ ] **Task 4: Create Invitations Service** (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] 4.1 Create `apps/api-gateway/src/app/invitations/invitations.service.ts`
+- [x] **Task 4: Create Invitations Service** (AC: 1, 2, 3, 4, 5, 6)
+  - [x] 4.1 Create `apps/api-gateway/src/app/invitations/invitations.service.ts`
     - Inject `TransactionManager` and `EmailService`
     - **`create(dto: InviteUserDto, tenantId: string, inviterId: string, inviterName: string): Promise<InvitationResponseDto>`**
       - Generate crypto-random token (`crypto.randomBytes(32).toString('hex')`)
@@ -171,93 +171,93 @@ so that they can set their own passwords and onboard themselves.
       - Update status to `REVOKED`
     - **`findAllByTenant(tenantId: string): Promise<InvitationResponseDto[]>`**
       - Return all invitations for tenant (any status)
-  - [ ] 4.2 Create `apps/api-gateway/src/app/invitations/invitations.module.ts`
+  - [x] 4.2 Create `apps/api-gateway/src/app/invitations/invitations.module.ts`
     - Import `EmailModule`, `TypeOrmModule.forFeature([InvitationEntity, UserEntity])`, export `InvitationsService`
-  - [ ] 4.3 Add `InvitationsModule` to `apps/api-gateway/src/app/app.module.ts` imports array (required for NestJS to discover the module)
+  - [x] 4.3 Add `InvitationsModule` to `apps/api-gateway/src/app/app.module.ts` imports array (required for NestJS to discover the module)
 
-- [ ] **Task 5: Create Set-Password Backend Endpoint** (AC: 2, 3)
-  - [ ] 5.1 Add `POST /auth/set-password` to `apps/api-gateway/src/app/auth/auth.controller.ts`
+- [x] **Task 5: Create Set-Password Backend Endpoint** (AC: 2, 3)
+  - [x] 5.1 Add `POST /auth/set-password` to `apps/api-gateway/src/app/auth/auth.controller.ts`
     - No JWT guard (public endpoint — user doesn't have an account yet)
     - Body: `AcceptInvitationDto` (token + password)
     - Delegates to `InvitationsService.accept()`
     - Returns 200 on success, 400 on invalid/expired token
-  - [ ] 5.2 Import `InvitationsModule` in `AuthModule` (or wherever AuthController is declared)
+  - [x] 5.2 Import `InvitationsModule` in `AuthModule` (or wherever AuthController is declared)
 
-- [ ] **Task 6: Create Invitation Controllers** (AC: 1, 5, 6, 7)
-  - [ ] 6.1 Create `apps/api-gateway/src/app/invitations/invitations.controller.ts` (Customer Admin)
+- [x] **Task 6: Create Invitation Controllers** (AC: 1, 5, 6, 7)
+  - [x] 6.1 Create `apps/api-gateway/src/app/invitations/invitations.controller.ts` (Customer Admin)
     - Route: `/app/invitations`
     - Guards: `JwtAuthGuard`, `RolesGuard` (customer_admin)
     - `POST /` — create invitation (tenantId from JWT)
     - `GET /` — list invitations for tenant
     - `POST /:id/resend` — resend invitation
     - `DELETE /:id` — revoke invitation
-  - [ ] 6.2 Create `apps/api-gateway/src/app/invitations/admin-invitations.controller.ts` (Bubble Admin)
+  - [x] 6.2 Create `apps/api-gateway/src/app/invitations/admin-invitations.controller.ts` (Bubble Admin)
     - Route: `/admin/tenants/:tenantId/invitations`
     - Guards: `JwtAuthGuard`, `RolesGuard` (bubble_admin)
     - Same CRUD operations but with `tenantId` from URL param
 
-- [ ] **Task 7: Frontend — Invitation Service** (AC: 1, 5, 6)
-  - [ ] 7.1 Create `apps/web/src/app/core/services/invitation.service.ts`
+- [x] **Task 7: Frontend — Invitation Service** (AC: 1, 5, 6)
+  - [x] 7.1 Create `apps/web/src/app/core/services/invitation.service.ts`
     - Follow existing pattern (e.g., `TenantService`): inject `HttpClient`, define `baseUrl`
     - For Bubble Admin context: `baseUrl = '/api/admin/tenants/${tenantId}/invitations'`
     - Methods: `create(tenantId, dto)`, `getAll(tenantId)`, `resend(tenantId, id)`, `revoke(tenantId, id)`
     - Return `Observable<InvitationResponseDto>` / `Observable<InvitationResponseDto[]>` / `Observable<void>`
 
-- [ ] **Task 8: Frontend — Invite User Dialog & Users Tab** (AC: 1, 4)
-  - [ ] 8.1 Create `apps/web/src/app/admin/tenants/invite-user-dialog.component.ts`
+- [x] **Task 8: Frontend — Invite User Dialog & Users Tab** (AC: 1, 4)
+  - [x] 8.1 Create `apps/web/src/app/admin/tenants/invite-user-dialog.component.ts`
     - Dialog/modal component triggered from tenant detail Users tab
     - Form: email (required, email format), role (dropdown: creator, customer_admin), name (optional)
     - On submit: call `InvitationService.create()`
     - On success: close dialog, emit event to refresh invitation list
     - On 409 error: show "A user with this email already exists"
-  - [ ] 8.2 Create `invite-user-dialog.component.html` and `invite-user-dialog.component.scss`
+  - [x] 8.2 Create `invite-user-dialog.component.html` and `invite-user-dialog.component.scss`
     - Modal overlay pattern consistent with existing admin UI (see `ImpersonateConfirmDialogComponent` for pattern)
-  - [ ] 8.3 Implement the Users tab content in `tenant-detail.component.html`
+  - [x] 8.3 Implement the Users tab content in `tenant-detail.component.html`
     - The Users tab currently shows a placeholder: `"Users tab — coming in a future story."`
     - Replace placeholder with: "Invite User" button + invitation list table
     - Add `showInviteDialog = signal(false)` to tenant-detail component
     - Conditionally render `<app-invite-user-dialog>` when `showInviteDialog()` is true
-  - [ ] 8.4 Add invitation list view within the Users tab
+  - [x] 8.4 Add invitation list view within the Users tab
     - Columns: Email, Role, Status, Invited Date, Expiry, Actions (Resend/Revoke)
     - Status badges: pending (yellow), accepted (green), expired (gray), revoked (red)
     - Load invitations via `InvitationService.getAll(tenantId)` when Users tab is activated
 
-- [ ] **Task 9: Frontend — Update Auth Service** (AC: 2)
-  - [ ] 9.1 Verify `apps/web/src/app/core/services/auth.service.ts`
+- [x] **Task 9: Frontend — Update Auth Service** (AC: 2)
+  - [x] 9.1 Verify `apps/web/src/app/core/services/auth.service.ts`
     - `setPassword()` method already exists and calls `POST /api/auth/set-password` — verify it matches the new backend DTO shape (`{ token, password }`)
     - If the DTO shape matches, no changes needed here
-  - [ ] 9.2 Verify set-password component works end-to-end with the new backend endpoint
+  - [x] 9.2 Verify set-password component works end-to-end with the new backend endpoint
     - The component already reads `token` from query params and sends to backend
     - Should work without changes if the backend returns the expected response shape
 
-- [ ] **Task 10: Register Lucide Icons** (AC: 1)
-  - [ ] 10.1 Add any new Lucide icons needed for invitation UI to `apps/web/src/app/app.config.ts`
+- [x] **Task 10: Register Lucide Icons** (AC: 1)
+  - [x] 10.1 Add any new Lucide icons needed for invitation UI to `apps/web/src/app/app.config.ts`
     - Candidates: `Mail`, `Send`, `UserPlus`, `RefreshCw`, `XCircle` (for resend/revoke actions)
 
-- [ ] **Task 11: Unit Tests** (AC: 8)
-  - [ ] 11.1 Create `apps/api-gateway/src/app/invitations/invitations.service.spec.ts`
+- [x] **Task 11: Unit Tests** (AC: 8)
+  - [x] 11.1 Create `apps/api-gateway/src/app/invitations/invitations.service.spec.ts`
     - Test create: happy path, duplicate email, duplicate pending invitation
     - Test accept: happy path, expired token, invalid token, already accepted
     - Test resend: happy path, not found, already accepted
     - Test revoke: happy path, not found
-  - [ ] 11.2 Create `apps/api-gateway/src/app/email/email.service.spec.ts`
+  - [x] 11.2 Create `apps/api-gateway/src/app/email/email.service.spec.ts`
     - Test sendInvitationEmail with mocked nodemailer transport
-  - [ ] 11.3 Create `apps/api-gateway/src/app/invitations/invitations.controller.spec.ts`
+  - [x] 11.3 Create `apps/api-gateway/src/app/invitations/invitations.controller.spec.ts`
     - Test CRUD endpoints with mocked service
-  - [ ] 11.4 Create `apps/web/src/app/admin/tenants/invite-user-dialog.component.spec.ts`
+  - [x] 11.4 Create `apps/web/src/app/admin/tenants/invite-user-dialog.component.spec.ts`
     - Test form validation, submission, error handling
-  - [ ] 11.5 Verify all existing tests still pass:
+  - [x] 11.5 Verify all existing tests still pass:
     - `nx test db-layer` — 11 tests
     - `nx test api-gateway` — 78+ tests
     - `nx test web` — 101+ tests
 
-- [ ] **Task 12: Build Verification** (AC: 1-8)
-  - [ ] 12.1 `nx lint api-gateway` — passes
-  - [ ] 12.2 `nx lint web` — passes
-  - [ ] 12.3 `nx test api-gateway` — all pass
-  - [ ] 12.4 `nx test web` — all pass
-  - [ ] 12.5 `nx build api-gateway` — passes
-  - [ ] 12.6 `nx build web` — passes
+- [x] **Task 12: Build Verification** (AC: 1-8)
+  - [x] 12.1 `nx lint api-gateway` — passes
+  - [x] 12.2 `nx lint web` — passes
+  - [x] 12.3 `nx test api-gateway` — all pass
+  - [x] 12.4 `nx test web` — all pass
+  - [x] 12.5 `nx build api-gateway` — passes
+  - [x] 12.6 `nx build web` — passes
 
 ## Dev Notes
 
@@ -399,6 +399,76 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
+None — all tasks completed without blocking issues.
+
 ### Completion Notes List
 
+- All 12 tasks completed successfully
+- 219 total tests passing (98 api-gateway + 110 web + 11 db-layer)
+- Both builds pass (api-gateway + web)
+- Both lints pass (api-gateway + web)
+- Budget warning on tenant-detail.component.scss (6.50 kB vs 4.00 kB budget) — non-blocking, due to added Users tab styles
+- Used `inject()` pattern for Angular DI (project lint rule: @angular-eslint/prefer-inject)
+- Used `forwardRef()` to resolve circular dependency between AuthModule and InvitationsModule
+
+### Change Log
+
+- Installed nodemailer + @types/nodemailer
+- Fixed pre-existing auth.controller.spec.ts to include InvitationsService mock
+- Updated rls-setup.service.spec.ts to account for new invitations table RLS (8 queries instead of 4)
+- Fixed invite-user-dialog to use inject() instead of constructor injection per project lint rules
+
+**Code Review Fixes (2026-01-31):**
+- [H1] Fixed user `name` field: added `name` column to InvitationEntity for invited user's name, separated from `inviterName` (inviter's name)
+- [H2] Added `tokenPrefix` column to InvitationEntity — `accept()` now queries by prefix to avoid O(n) bcrypt scan of all pending invitations
+- [M1] `resend()` now looks up tenant name from TenantEntity instead of passing empty string to email
+- [M2] Added `InvitationsService` to project-context.md RLS exemption table
+- [M3] Added `auth_insert_users` (INSERT on users) and `auth_update_invitations` (UPDATE on invitations) permissive RLS policies for pre-auth flows
+- [M4] Fixed `inviterName` field semantics — `inviterName` now always stores the inviter's name; `name` stores the invited user's optional name
+- [L1] Added package.json/package-lock.json to File List
+- Updated rls-setup.service.spec.ts expected query count from 8 to 10
+- Updated invitations.service.spec.ts for tokenPrefix, name field, and resend tenant lookup
+
 ### File List
+
+**New Files:**
+- `apps/api-gateway/src/app/email/email.service.ts`
+- `apps/api-gateway/src/app/email/email.module.ts`
+- `apps/api-gateway/src/app/email/email.service.spec.ts`
+- `apps/api-gateway/src/app/invitations/invitations.service.ts`
+- `apps/api-gateway/src/app/invitations/invitations.module.ts`
+- `apps/api-gateway/src/app/invitations/invitations.service.spec.ts`
+- `apps/api-gateway/src/app/invitations/invitations.controller.ts`
+- `apps/api-gateway/src/app/invitations/invitations.controller.spec.ts`
+- `apps/api-gateway/src/app/invitations/admin-invitations.controller.ts`
+- `libs/db-layer/src/lib/entities/invitation.entity.ts`
+- `libs/shared/src/lib/dtos/invitation/invite-user.dto.ts`
+- `libs/shared/src/lib/dtos/invitation/accept-invitation.dto.ts`
+- `libs/shared/src/lib/dtos/invitation/invitation-response.dto.ts`
+- `libs/shared/src/lib/dtos/invitation/index.ts`
+- `libs/shared/src/lib/types/invitation.types.ts`
+- `apps/web/src/app/core/services/invitation.service.ts`
+- `apps/web/src/app/admin/tenants/invite-user-dialog.component.ts`
+- `apps/web/src/app/admin/tenants/invite-user-dialog.component.html`
+- `apps/web/src/app/admin/tenants/invite-user-dialog.component.scss`
+- `apps/web/src/app/admin/tenants/invite-user-dialog.component.spec.ts`
+
+**Modified Files:**
+- `.env.example` — added SMTP + invitation env vars
+- `package.json` — added nodemailer + @types/nodemailer dependencies
+- `package-lock.json` — lockfile update for nodemailer
+- `project-context.md` — added InvitationsService to RLS exemption table
+- `libs/db-layer/src/lib/entities/index.ts` — export InvitationEntity, InvitationStatus
+- `libs/db-layer/src/index.ts` — re-export invitation entity
+- `libs/db-layer/src/lib/rls-setup.service.ts` — added invitations to tenantScopedTables + 4 auth policies
+- `libs/db-layer/src/lib/rls-setup.service.spec.ts` — updated expected query count to 10
+- `libs/shared/src/lib/dtos/index.ts` — re-export invitation DTOs
+- `libs/shared/src/lib/types/index.ts` — re-export InvitationStatus type
+- `apps/api-gateway/src/app/app.module.ts` — added InvitationsModule
+- `apps/api-gateway/src/app/auth/auth.controller.ts` — added POST /auth/set-password
+- `apps/api-gateway/src/app/auth/auth.controller.spec.ts` — added InvitationsService mock
+- `apps/api-gateway/src/app/auth/auth.module.ts` — added forwardRef InvitationsModule
+- `apps/web/src/app/admin/tenants/tenant-detail.component.ts` — added invitation signals + methods
+- `apps/web/src/app/admin/tenants/tenant-detail.component.html` — implemented Users tab
+- `apps/web/src/app/admin/tenants/tenant-detail.component.scss` — added Users tab styles
+- `apps/web/src/app/app.config.ts` — added Lucide icons

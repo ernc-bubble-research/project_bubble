@@ -3,6 +3,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { LoginResponseDto } from '@project-bubble/shared';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { InvitationsService } from '../invitations/invitations.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -16,6 +17,12 @@ describe('AuthController', () => {
           provide: AuthService,
           useValue: {
             login: jest.fn(),
+          },
+        },
+        {
+          provide: InvitationsService,
+          useValue: {
+            accept: jest.fn(),
           },
         },
       ],

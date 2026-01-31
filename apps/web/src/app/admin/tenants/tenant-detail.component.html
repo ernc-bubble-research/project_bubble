@@ -52,7 +52,7 @@
       <button
         class="tab-btn"
         [class.active]="activeTab() === tab.key"
-        [disabled]="tab.key !== 'general' && tab.key !== 'entitlements'"
+        [disabled]="tab.key !== 'general' && tab.key !== 'entitlements' && tab.key !== 'users'"
         (click)="setTab(tab.key)"
       >
         {{ tab.label }}
@@ -215,12 +215,87 @@
         </div>
       </div>
     </div>
+  } @else if (activeTab() === 'users') {
+    <div class="tab-content">
+      <div class="form-card">
+        <div class="users-header">
+          <h3 class="section-title">Invitations</h3>
+          <button class="btn btn-primary btn-sm" (click)="openInviteDialog()">
+            <lucide-icon name="user-plus" [size]="16"></lucide-icon>
+            Invite User
+          </button>
+        </div>
+
+        @if (loadingInvitations()) {
+          <div class="loading-state">Loading invitations...</div>
+        } @else if (invitations().length === 0) {
+          <div class="empty-state">
+            <p>No invitations yet. Click "Invite User" to get started.</p>
+          </div>
+        } @else {
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Invited</th>
+                  <th>Expires</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (inv of invitations(); track inv.id) {
+                  <tr>
+                    <td>{{ inv.email }}</td>
+                    <td>{{ inv.role }}</td>
+                    <td>
+                      <span
+                        class="status-badge"
+                        [class.status-pending]="inv.status === 'pending'"
+                        [class.status-accepted]="inv.status === 'accepted'"
+                        [class.status-expired]="inv.status === 'expired'"
+                        [class.status-revoked]="inv.status === 'revoked'"
+                      >
+                        {{ inv.status }}
+                      </span>
+                    </td>
+                    <td>{{ inv.createdAt | date:'mediumDate' }}</td>
+                    <td>{{ inv.expiresAt | date:'mediumDate' }}</td>
+                    <td>
+                      @if (inv.status === 'pending') {
+                        <button class="btn btn-sm btn-outline" (click)="resendInvitation(inv.id)" title="Resend">
+                          <lucide-icon name="refresh-cw" [size]="14"></lucide-icon>
+                        </button>
+                        <button class="btn btn-sm btn-danger-outline" (click)="revokeInvitation(inv.id)" title="Revoke">
+                          <lucide-icon name="x-circle" [size]="14"></lucide-icon>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
   } @else {
     <div class="tab-content">
       <div class="placeholder-content">
         <p>{{ activeTab() | titlecase }} tab — coming in a future story.</p>
       </div>
     </div>
+  }
+
+  <!-- Invite User Dialog -->
+  @if (showInviteDialog()) {
+    <app-invite-user-dialog
+      [tenantId]="t.id"
+      (closed)="closeInviteDialog()"
+      (invited)="onInviteSent()"
+    ></app-invite-user-dialog>
   }
 
   <!-- Impersonate Confirmation Dialog -->
