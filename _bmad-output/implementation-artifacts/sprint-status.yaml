@@ -39,7 +39,7 @@
 # Phase 2 / Future:    Epics 8, 9, 10, 11 (4 epics, 10 stories)
 #
 # DEPENDENCY CHAIN:
-# Epic 1 → Epic 2 + Epic 3 (parallel) → Epic 4 → Epic 5 → Epic 6
+# Epic 1 → Epic 1H (hardening) → Epic 2 + Epic 3 (parallel) → Epic 4 → Epic 5 → Epic 6
 # Epic 7 runs parallel to Epics 4-6
 #
 # GATE REQUIREMENTS:
@@ -105,7 +105,16 @@ development_status:
   1-10-login-password-pages-auth-ui: done
   1-11-ci-cd-pipeline-setup: deferred # Moved to post-MVP. BMAD workflow covers lint/test/build per story.
   1-12-user-invitations-email-flow: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
+  epic-1-nfr-assessment: done # NFR assessment completed 2026-01-31, FAIL status, hardening story required
+
+  # ═══════════════════════════════════════════════════════
+  # Epic 1H: Security & Reliability Hardening
+  # Cross-cutting fixes from NFR assessment (2026-01-31)
+  # Must complete before Epic 2 starts
+  # ═══════════════════════════════════════════════════════
+  epic-1h: done
+  1h-1-security-reliability-hardening: done # All 7 tasks done, code review passed, 237 tests passing
 
   # ═══════════════════════════════════════════════════════
   # Epic 2: Asset & Knowledge Management
@@ -176,6 +185,7 @@ development_status:
   7-2-audit-logging-service-security: backlog
   7-3-service-status-monitor: backlog
   7-4-execution-trace-viewer: backlog
+  7-5-refresh-token-rotation: backlog # NFR deferred item — replaces interim 7-day JWT expiry from hardening story
   epic-7-retrospective: optional
 
   # ═══════════════════════════════════════════════════════

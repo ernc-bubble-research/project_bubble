@@ -11,9 +11,10 @@ import {
   TenantEntity,
   TransactionManager,
 } from '@project-bubble/db-layer';
+import { createMockUser } from '@project-bubble/db-layer/testing';
 import { UsersService } from './users.service';
 
-describe('UsersService', () => {
+describe('UsersService [P1]', () => {
   let service: UsersService;
   let txManager: jest.Mocked<TransactionManager>;
   let mockManager: {
@@ -27,7 +28,7 @@ describe('UsersService', () => {
 
   const mockTenant = { id: tenantId, name: 'Acme Corp' } as TenantEntity;
 
-  const mockUser: UserEntity = {
+  const mockUser = createMockUser({
     id: '11111111-1111-1111-1111-111111111111',
     email: 'alice@acme.com',
     passwordHash: 'hashed_pw',
@@ -37,7 +38,7 @@ describe('UsersService', () => {
     status: UserStatus.ACTIVE,
     createdAt: new Date('2026-01-31'),
     updatedAt: new Date('2026-01-31'),
-  } as UserEntity;
+  });
 
   beforeEach(() => {
     mockManager = {
@@ -58,7 +59,7 @@ describe('UsersService', () => {
   });
 
   describe('create', () => {
-    it('should create a user and return response without password', async () => {
+    it('[1H.1-UNIT-001] should create a user and return response without password', async () => {
       // First findOne: tenant check → found; Second findOne: email check → not found
       mockManager.findOne
         .mockResolvedValueOnce(mockTenant)
@@ -79,7 +80,7 @@ describe('UsersService', () => {
       expect(txManager.run).toHaveBeenCalledWith(tenantId, expect.any(Function));
     });
 
-    it('should throw ConflictException for duplicate email', async () => {
+    it('[1H.1-UNIT-002] should throw ConflictException for duplicate email', async () => {
       // First findOne: tenant check → found; Second findOne: email check → found (duplicate)
       mockManager.findOne
         .mockResolvedValueOnce(mockTenant)
@@ -94,7 +95,7 @@ describe('UsersService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('should throw NotFoundException when tenant does not exist', async () => {
+    it('[1H.1-UNIT-003] should throw NotFoundException when tenant does not exist', async () => {
       // First findOne: tenant check → not found
       mockManager.findOne.mockResolvedValueOnce(null);
 
@@ -107,7 +108,7 @@ describe('UsersService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw ForbiddenException when non-admin tries to create bubble_admin', async () => {
+    it('[1H.1-UNIT-004] should throw ForbiddenException when non-admin tries to create bubble_admin', async () => {
       await expect(
         service.create(
           { email: 'new@acme.com', password: 'Password1!', role: 'bubble_admin' },
@@ -117,7 +118,7 @@ describe('UsersService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should allow Bubble Admin to create bubble_admin users', async () => {
+    it('[1H.1-UNIT-005] should allow Bubble Admin to create bubble_admin users', async () => {
       mockManager.findOne
         .mockResolvedValueOnce(mockTenant)
         .mockResolvedValueOnce(null);
@@ -134,7 +135,7 @@ describe('UsersService', () => {
       expect(result.role).toBe(UserRole.BUBBLE_ADMIN);
     });
 
-    it('should hash password with bcrypt', async () => {
+    it('[1H.1-UNIT-006] should hash password with bcrypt', async () => {
       mockManager.findOne
         .mockResolvedValueOnce(mockTenant)
         .mockResolvedValueOnce(null);
@@ -154,7 +155,7 @@ describe('UsersService', () => {
   });
 
   describe('findAllByTenant', () => {
-    it('should return all users for tenant without password hashes', async () => {
+    it('[1H.1-UNIT-007] should return all users for tenant without password hashes', async () => {
       mockManager.find.mockResolvedValue([mockUser]);
 
       const result = await service.findAllByTenant(tenantId);
@@ -170,7 +171,7 @@ describe('UsersService', () => {
   });
 
   describe('findOne', () => {
-    it('should return a single user', async () => {
+    it('[1H.1-UNIT-008] should return a single user', async () => {
       mockManager.findOne.mockResolvedValue(mockUser);
 
       const result = await service.findOne(mockUser.id, tenantId);
@@ -178,7 +179,7 @@ describe('UsersService', () => {
       expect(result.id).toBe(mockUser.id);
     });
 
-    it('should throw NotFoundException if user not found', async () => {
+    it('[1H.1-UNIT-009] should throw NotFoundException if user not found', async () => {
       mockManager.findOne.mockResolvedValue(null);
 
       await expect(
@@ -188,7 +189,7 @@ describe('UsersService', () => {
   });
 
   describe('update', () => {
-    it('should update user role and name', async () => {
+    it('[1H.1-UNIT-010] should update user role and name', async () => {
       const updatedUser = { ...mockUser, role: UserRole.CUSTOMER_ADMIN, name: 'Alice Updated' };
       mockManager.findOne.mockResolvedValue({ ...mockUser });
       mockManager.save.mockResolvedValue(updatedUser);
@@ -204,7 +205,7 @@ describe('UsersService', () => {
       expect(result.name).toBe('Alice Updated');
     });
 
-    it('should throw ForbiddenException when Customer Admin promotes to bubble_admin', async () => {
+    it('[1H.1-UNIT-011] should throw ForbiddenException when Customer Admin promotes to bubble_admin', async () => {
       mockManager.findOne.mockResolvedValue({ ...mockUser });
 
       await expect(
@@ -219,7 +220,7 @@ describe('UsersService', () => {
   });
 
   describe('deactivate', () => {
-    it('should set user status to inactive', async () => {
+    it('[1H.1-UNIT-012] should set user status to inactive', async () => {
       const deactivatedUser = { ...mockUser, status: UserStatus.INACTIVE };
       mockManager.findOne.mockResolvedValue({ ...mockUser });
       mockManager.save.mockResolvedValue(deactivatedUser);
@@ -229,7 +230,7 @@ describe('UsersService', () => {
       expect(result.status).toBe(UserStatus.INACTIVE);
     });
 
-    it('should throw NotFoundException for non-existent user', async () => {
+    it('[1H.1-UNIT-013] should throw NotFoundException for non-existent user', async () => {
       mockManager.findOne.mockResolvedValue(null);
 
       await expect(
@@ -239,7 +240,7 @@ describe('UsersService', () => {
   });
 
   describe('resetPassword', () => {
-    it('should hash and update user password', async () => {
+    it('[1H.1-UNIT-014] should hash and update user password', async () => {
       mockManager.findOne.mockResolvedValue({ ...mockUser });
       mockManager.save.mockResolvedValue(mockUser);
 
@@ -250,7 +251,7 @@ describe('UsersService', () => {
       expect(await bcrypt.compare('NewPassword1!', savedUser.passwordHash)).toBe(true);
     });
 
-    it('should throw NotFoundException for non-existent user', async () => {
+    it('[1H.1-UNIT-015] should throw NotFoundException for non-existent user', async () => {
       mockManager.findOne.mockResolvedValue(null);
 
       await expect(

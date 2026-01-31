@@ -12,7 +12,7 @@ import { ImpersonationService } from './impersonation.service';
 @Component({ standalone: true, template: '' })
 class DummyComponent {}
 
-describe('ImpersonationService', () => {
+describe('ImpersonationService [P1]', () => {
   let service: ImpersonationService;
   let httpMock: HttpTestingController;
   let router: Router;
@@ -43,11 +43,11 @@ describe('ImpersonationService', () => {
     service.stopInactivityTimer();
   });
 
-  it('should be created', () => {
+  it('[1H.1-UNIT-001] should be created', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should call POST /api/admin/tenants/:id/impersonate', () => {
+  it('[1H.1-UNIT-002] should call POST /api/admin/tenants/:id/impersonate', () => {
     service.impersonate('tenant-123').subscribe((res) => {
       expect(res.token).toBe('jwt-token');
       expect(res.tenant.name).toBe('Acme Corp');
@@ -58,7 +58,7 @@ describe('ImpersonationService', () => {
     req.flush({ token: 'jwt-token', tenant: { id: 'tenant-123', name: 'Acme Corp' } });
   });
 
-  it('should store impersonation data in localStorage', () => {
+  it('[1H.1-UNIT-003] should store impersonation data in localStorage', () => {
     service.storeImpersonation('jwt-token', { id: 'tenant-123', name: 'Acme Corp' });
 
     expect(localStorage.getItem('impersonation_token')).toBe('jwt-token');
@@ -71,7 +71,7 @@ describe('ImpersonationService', () => {
     expect(service.impersonatedTenant()).toEqual({ id: 'tenant-123', name: 'Acme Corp' });
   });
 
-  it('should clear impersonation on exitImpersonation', () => {
+  it('[1H.1-UNIT-004] should clear impersonation on exitImpersonation', () => {
     service.storeImpersonation('jwt-token', { id: 'tenant-123', name: 'Acme Corp' });
     const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
 
@@ -84,7 +84,7 @@ describe('ImpersonationService', () => {
     expect(navigateSpy).toHaveBeenCalledWith(['/admin/dashboard']);
   });
 
-  it('should show and auto-dismiss toast', () => {
+  it('[1H.1-UNIT-005] should show and auto-dismiss toast', () => {
     service.showToast('Test message');
     expect(service.toastMessage()).toBe('Test message');
 

@@ -15,7 +15,7 @@ import { TenantService } from '../../core/services/tenant.service';
 @Component({ standalone: true, template: '' })
 class DummyComponent {}
 
-describe('TenantListComponent', () => {
+describe('TenantListComponent [P2]', () => {
   let component: TenantListComponent;
   let fixture: ComponentFixture<TenantListComponent>;
   let router: Router;
@@ -63,27 +63,27 @@ describe('TenantListComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
+  it('[1H.1-UNIT-001] should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load tenants on init', () => {
+  it('[1H.1-UNIT-002] should load tenants on init', () => {
     expect(component.tenants().length).toBe(2);
   });
 
-  it('should render tenant table with rows', () => {
+  it('[1H.1-UNIT-003] should render tenant table with rows', () => {
     const el: HTMLElement = fixture.nativeElement;
     const rows = el.querySelectorAll('.tenant-row');
     expect(rows.length).toBe(2);
   });
 
-  it('should render filter tabs with correct counts', () => {
+  it('[1H.1-UNIT-004] should render filter tabs with correct counts', () => {
     expect(component.allCount()).toBe(2);
     expect(component.activeCount()).toBe(1);
     expect(component.suspendedCount()).toBe(1);
   });
 
-  it('should filter tenants by status', () => {
+  it('[1H.1-UNIT-005] should filter tenants by status', () => {
     component.setFilter('active');
     expect(component.filteredTenants().length).toBe(1);
     expect(component.filteredTenants()[0].name).toBe('Acme Corp');
@@ -96,7 +96,7 @@ describe('TenantListComponent', () => {
     expect(component.filteredTenants().length).toBe(2);
   });
 
-  it('should navigate to tenant detail on row click', () => {
+  it('[1H.1-UNIT-006] should navigate to tenant detail on row click', () => {
     const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
     component.navigateToTenant(mockTenants[0]);
     expect(navigateSpy).toHaveBeenCalledWith(['/admin/tenants', 'id-1']);

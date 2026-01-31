@@ -3,7 +3,7 @@ import { of, lastValueFrom } from 'rxjs';
 import { TenantContextInterceptor } from './tenant-context.interceptor';
 import { getCurrentTenantContext } from '@project-bubble/db-layer';
 
-describe('TenantContextInterceptor', () => {
+describe('TenantContextInterceptor [P1]', () => {
   let interceptor: TenantContextInterceptor;
 
   const createMockContext = (
@@ -26,7 +26,7 @@ describe('TenantContextInterceptor', () => {
     interceptor = new TenantContextInterceptor();
   });
 
-  it('should set tenant context from JWT user tenantId', async () => {
+  it('[1H.1-UNIT-001] should set tenant context from JWT user tenantId', async () => {
     const context = createMockContext({
       userId: 'user-1',
       tenantId: 'tenant-abc',
@@ -51,7 +51,7 @@ describe('TenantContextInterceptor', () => {
     });
   });
 
-  it('should set bypassRls=true for bubble_admin role', async () => {
+  it('[1H.1-UNIT-002] should set bypassRls=true for bubble_admin role', async () => {
     const context = createMockContext({
       userId: 'admin-1',
       tenantId: '00000000-0000-0000-0000-000000000000',
@@ -76,7 +76,7 @@ describe('TenantContextInterceptor', () => {
     });
   });
 
-  it('should pass through without context when no user (public route)', async () => {
+  it('[1H.1-UNIT-003] should pass through without context when no user (public route)', async () => {
     const context = createMockContext(null);
     const callHandler = createMockCallHandler('public-response');
 
@@ -86,7 +86,7 @@ describe('TenantContextInterceptor', () => {
     expect(result).toBe('public-response');
   });
 
-  it('should propagate the response from the next handler', async () => {
+  it('[1H.1-UNIT-004] should propagate the response from the next handler', async () => {
     const context = createMockContext({
       userId: 'user-1',
       tenantId: 'tenant-1',

@@ -6,7 +6,7 @@ import {
 } from '@angular/common/http/testing';
 import { CreateTenantModalComponent } from './create-tenant-modal.component';
 
-describe('CreateTenantModalComponent', () => {
+describe('CreateTenantModalComponent [P2]', () => {
   let httpTesting: HttpTestingController;
 
   beforeEach(async () => {
@@ -22,12 +22,12 @@ describe('CreateTenantModalComponent', () => {
     httpTesting.verify();
   });
 
-  it('should create', () => {
+  it('[1H.1-UNIT-001] should create', () => {
     const fixture = TestBed.createComponent(CreateTenantModalComponent);
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should show error for empty name', () => {
+  it('[1H.1-UNIT-002] should show error for empty name', () => {
     const fixture = TestBed.createComponent(CreateTenantModalComponent);
     const component = fixture.componentInstance;
 
@@ -37,7 +37,7 @@ describe('CreateTenantModalComponent', () => {
     expect(component.errorMessage()).toBe('Tenant name is required.');
   });
 
-  it('should submit valid name and emit created', () => {
+  it('[1H.1-UNIT-003] should submit valid name and emit created', () => {
     const fixture = TestBed.createComponent(CreateTenantModalComponent);
     const component = fixture.componentInstance;
     const createdSpy = jest.spyOn(component.created, 'emit');
@@ -61,7 +61,7 @@ describe('CreateTenantModalComponent', () => {
     expect(component.submitting()).toBe(false);
   });
 
-  it('should show error on 409 conflict', () => {
+  it('[1H.1-UNIT-004] should show error on 409 conflict', () => {
     const fixture = TestBed.createComponent(CreateTenantModalComponent);
     const component = fixture.componentInstance;
 
@@ -78,7 +78,7 @@ describe('CreateTenantModalComponent', () => {
     expect(component.submitting()).toBe(false);
   });
 
-  it('should emit closed when close is called', () => {
+  it('[1H.1-UNIT-005] should emit closed when close is called', () => {
     const fixture = TestBed.createComponent(CreateTenantModalComponent);
     const closedSpy = jest.spyOn(fixture.componentInstance.closed, 'emit');
 

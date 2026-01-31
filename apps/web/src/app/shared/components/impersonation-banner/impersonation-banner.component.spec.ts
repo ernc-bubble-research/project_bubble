@@ -14,7 +14,7 @@ import {
 import { ImpersonationBannerComponent } from './impersonation-banner.component';
 import { ImpersonationService } from '../../../core/services/impersonation.service';
 
-describe('ImpersonationBannerComponent', () => {
+describe('ImpersonationBannerComponent [P2]', () => {
   let component: ImpersonationBannerComponent;
   let fixture: ComponentFixture<ImpersonationBannerComponent>;
   let impersonationService: ImpersonationService;
@@ -51,18 +51,18 @@ describe('ImpersonationBannerComponent', () => {
     localStorage.clear();
   });
 
-  it('should create', () => {
+  it('[1H.1-UNIT-001] should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should display tenant name', () => {
+  it('[1H.1-UNIT-002] should display tenant name', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.banner-text')?.textContent).toContain(
       'Test Tenant'
     );
   });
 
-  it('should have exit button', () => {
+  it('[1H.1-UNIT-003] should have exit button', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.exit-btn')).toBeTruthy();
     expect(el.querySelector('.exit-btn')?.textContent).toContain(

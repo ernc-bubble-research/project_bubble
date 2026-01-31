@@ -1,15 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { TenantEntity, TenantStatus, PlanTier } from '@project-bubble/db-layer';
+import { TenantStatus, PlanTier } from '@project-bubble/db-layer';
+import { createMockTenant } from '@project-bubble/db-layer/testing';
 import { TenantsController } from './tenants.controller';
 import { TenantsService } from './tenants.service';
 
-describe('TenantsController', () => {
+describe('TenantsController [P2]', () => {
   let controller: TenantsController;
   let service: jest.Mocked<TenantsService>;
 
-  const mockTenant: TenantEntity = {
+  const mockTenant = createMockTenant({
     id: '123e4567-e89b-12d3-a456-426614174000',
     name: 'Acme Corp',
     status: TenantStatus.ACTIVE,
@@ -20,7 +21,7 @@ describe('TenantsController', () => {
     assetRetentionDays: 30,
     createdAt: new Date('2026-01-30'),
     updatedAt: new Date('2026-01-30'),
-  };
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -49,7 +50,7 @@ describe('TenantsController', () => {
   });
 
   describe('create', () => {
-    it('should create a tenant', async () => {
+    it('[1H.1-UNIT-001] should create a tenant', async () => {
       service.create.mockResolvedValue(mockTenant);
 
       const result = await controller.create({ name: 'Acme Corp' });
@@ -58,7 +59,7 @@ describe('TenantsController', () => {
       expect(service.create).toHaveBeenCalledWith({ name: 'Acme Corp' });
     });
 
-    it('should propagate ConflictException', async () => {
+    it('[1H.1-UNIT-002] should propagate ConflictException', async () => {
       service.create.mockRejectedValue(
         new ConflictException('Tenant with name "Acme Corp" already exists'),
       );
@@ -70,7 +71,7 @@ describe('TenantsController', () => {
   });
 
   describe('findAll', () => {
-    it('should return all tenants', async () => {
+    it('[1H.1-UNIT-003] should return all tenants', async () => {
       service.findAll.mockResolvedValue([mockTenant]);
 
       const result = await controller.findAll();
@@ -80,7 +81,7 @@ describe('TenantsController', () => {
   });
 
   describe('findOne', () => {
-    it('should return a tenant by id', async () => {
+    it('[1H.1-UNIT-004] should return a tenant by id', async () => {
       service.findOne.mockResolvedValue(mockTenant);
 
       const result = await controller.findOne(mockTenant.id);
@@ -88,7 +89,7 @@ describe('TenantsController', () => {
       expect(result).toEqual(mockTenant);
     });
 
-    it('should propagate NotFoundException', async () => {
+    it('[1H.1-UNIT-005] should propagate NotFoundException', async () => {
       service.findOne.mockRejectedValue(
         new NotFoundException('Tenant not found'),
       );
@@ -100,7 +101,7 @@ describe('TenantsController', () => {
   });
 
   describe('update', () => {
-    it('should update a tenant with partial data', async () => {
+    it('[1H.1-UNIT-006] should update a tenant with partial data', async () => {
       const updated = { ...mockTenant, name: 'Updated Corp' };
       service.update.mockResolvedValue(updated);
 
@@ -110,7 +111,7 @@ describe('TenantsController', () => {
       expect(service.update).toHaveBeenCalledWith(mockTenant.id, { name: 'Updated Corp' });
     });
 
-    it('should propagate NotFoundException for non-existent tenant', async () => {
+    it('[1H.1-UNIT-007] should propagate NotFoundException for non-existent tenant', async () => {
       service.update.mockRejectedValue(
         new NotFoundException('Tenant not found'),
       );

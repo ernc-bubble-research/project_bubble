@@ -10,7 +10,7 @@ import {
 } from '@angular/common/http/testing';
 import { jwtInterceptor } from './jwt.interceptor';
 
-describe('jwtInterceptor', () => {
+describe('jwtInterceptor [P0]', () => {
   let http: HttpClient;
   let httpTesting: HttpTestingController;
 
@@ -33,7 +33,7 @@ describe('jwtInterceptor', () => {
     localStorage.clear();
   });
 
-  it('should attach Bearer header when token exists', () => {
+  it('[1H.1-UNIT-001] should attach Bearer header when token exists', () => {
     localStorage.setItem('bubble_access_token', 'test-jwt-token');
 
     http.get('/api/data').subscribe();
@@ -45,7 +45,7 @@ describe('jwtInterceptor', () => {
     req.flush({});
   });
 
-  it('should pass through without header when no token', () => {
+  it('[1H.1-UNIT-002] should pass through without header when no token', () => {
     http.get('/api/data').subscribe();
 
     const req = httpTesting.expectOne('/api/data');

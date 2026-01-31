@@ -28,22 +28,34 @@ export class AuthService implements OnModuleInit {
       return;
     }
 
-    const adminExists = await this.userRepo.findOne({
-      where: { role: UserRole.BUBBLE_ADMIN },
-    });
+    const seedEmail = this.config.get<string>('SEED_ADMIN_EMAIL');
+    const seedPassword = this.config.get<string>('SEED_ADMIN_PASSWORD');
 
-    if (!adminExists) {
-      const passwordHash = await this.hashPassword('Admin123!');
-      const admin = this.userRepo.create({
-        email: 'admin@bubble.io',
-        passwordHash,
-        role: UserRole.BUBBLE_ADMIN,
-        tenantId: '00000000-0000-0000-0000-000000000000',
-      });
-      await this.userRepo.save(admin);
+    if (!seedEmail || !seedPassword) {
       this.logger.log(
-        'Dev seed: Created bubble_admin user — admin@bubble.io / Admin123!',
+        'Dev seed: Skipped — SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD not set',
       );
+      return;
+    }
+
+    try {
+      const adminExists = await this.userRepo.findOne({
+        where: { role: UserRole.BUBBLE_ADMIN },
+      });
+
+      if (!adminExists) {
+        const passwordHash = await this.hashPassword(seedPassword);
+        const admin = this.userRepo.create({
+          email: seedEmail,
+          passwordHash,
+          role: UserRole.BUBBLE_ADMIN,
+          tenantId: '00000000-0000-0000-0000-000000000000',
+        });
+        await this.userRepo.save(admin);
+        this.logger.log(`Dev seed: Created bubble_admin user — ${seedEmail}`);
+      }
+    } catch (error) {
+      this.logger.error('Dev seed failed', error);
     }
   }
 
@@ -58,8 +70,34 @@ export class AuthService implements OnModuleInit {
     if (user.status === UserStatus.INACTIVE) {
       return null;
     }
+
+    // Check account lockout
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      return null;
+    }
+
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    return isMatch ? user : null;
+
+    if (!isMatch) {
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+      if (user.failedLoginAttempts >= 5) {
+        user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+        this.logger.warn(
+          `Account locked for ${email} after ${user.failedLoginAttempts} failed attempts`,
+        );
+      }
+      await this.userRepo.save(user);
+      return null;
+    }
+
+    // Reset on successful login
+    if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      user.failedLoginAttempts = 0;
+      user.lockedUntil = null;
+      await this.userRepo.save(user);
+    }
+
+    return user;
   }
 
   async login(dto: LoginDto): Promise<LoginResponseDto> {

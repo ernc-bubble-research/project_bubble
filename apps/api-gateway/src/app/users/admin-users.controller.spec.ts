@@ -3,7 +3,7 @@ import { UserResponseDto } from '@project-bubble/shared';
 import { AdminUsersController } from './admin-users.controller';
 import { UsersService } from './users.service';
 
-describe('AdminUsersController', () => {
+describe('AdminUsersController [P2]', () => {
   let controller: AdminUsersController;
   let service: jest.Mocked<UsersService>;
 
@@ -31,7 +31,7 @@ describe('AdminUsersController', () => {
     controller = new AdminUsersController(service);
   });
 
-  it('POST /admin/tenants/:tenantId/users — should call service with URL tenantId', async () => {
+  it('[1H.1-UNIT-001] POST /admin/tenants/:tenantId/users — should call service with URL tenantId', async () => {
     const dto = { email: 'alice@acme.com', password: 'Password1!', role: 'creator' };
 
     await controller.create(tenantId, dto);
@@ -43,7 +43,7 @@ describe('AdminUsersController', () => {
     );
   });
 
-  it('should allow Bubble Admin to create bubble_admin users', async () => {
+  it('[1H.1-UNIT-002] should allow Bubble Admin to create bubble_admin users', async () => {
     const dto = { email: 'admin@acme.com', password: 'Password1!', role: 'bubble_admin' };
 
     await controller.create(tenantId, dto);
@@ -55,14 +55,14 @@ describe('AdminUsersController', () => {
     );
   });
 
-  it('GET /admin/tenants/:tenantId/users — should list users for specified tenant', async () => {
+  it('[1H.1-UNIT-003] GET /admin/tenants/:tenantId/users — should list users for specified tenant', async () => {
     const result = await controller.findAll(tenantId);
 
     expect(result).toEqual([mockResponse]);
     expect(service.findAllByTenant).toHaveBeenCalledWith(tenantId);
   });
 
-  it('PATCH /admin/tenants/:tenantId/users/:id — should update user', async () => {
+  it('[1H.1-UNIT-004] PATCH /admin/tenants/:tenantId/users/:id — should update user', async () => {
     const dto = { name: 'Updated' };
 
     await controller.update(tenantId, 'user-id', dto);
@@ -75,13 +75,13 @@ describe('AdminUsersController', () => {
     );
   });
 
-  it('DELETE /admin/tenants/:tenantId/users/:id — should deactivate user', async () => {
+  it('[1H.1-UNIT-005] DELETE /admin/tenants/:tenantId/users/:id — should deactivate user', async () => {
     await controller.deactivate(tenantId, 'user-id');
 
     expect(service.deactivate).toHaveBeenCalledWith('user-id', tenantId);
   });
 
-  it('POST /admin/tenants/:tenantId/users/:id/reset-password — should reset password', async () => {
+  it('[1H.1-UNIT-006] POST /admin/tenants/:tenantId/users/:id/reset-password — should reset password', async () => {
     await controller.resetPassword(tenantId, 'user-id', { newPassword: 'NewPass123!' });
 
     expect(service.resetPassword).toHaveBeenCalledWith(

@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -16,6 +17,8 @@ import {
 
 @Injectable()
 export class TenantsService {
+  private readonly logger = new Logger(TenantsService.name);
+
   constructor(
     @InjectRepository(TenantEntity)
     private readonly tenantRepo: Repository<TenantEntity>,
@@ -68,7 +71,7 @@ export class TenantsService {
     return this.tenantRepo.save(tenant);
   }
 
-  async impersonate(tenantId: string): Promise<ImpersonateResponseDto> {
+  async impersonate(tenantId: string, adminId?: string): Promise<ImpersonateResponseDto> {
     const tenant = await this.tenantRepo.findOne({
       where: { id: tenantId },
     });
@@ -80,6 +83,10 @@ export class TenantsService {
         'Cannot impersonate a suspended tenant',
       );
     }
+
+    this.logger.warn(
+      `IMPERSONATION: Admin ${adminId || 'unknown'} impersonated tenant ${tenantId} at ${new Date().toISOString()}`,
+    );
 
     const token = this.jwtService.sign(
       {

@@ -33,7 +33,7 @@ const mockTenants: Tenant[] = [
   },
 ];
 
-describe('DashboardComponent', () => {
+describe('DashboardComponent [P2]', () => {
   let httpTesting: HttpTestingController;
 
   beforeEach(async () => {
@@ -63,14 +63,14 @@ describe('DashboardComponent', () => {
     httpTesting.verify();
   });
 
-  it('should create', () => {
+  it('[1H.1-UNIT-001] should create', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     httpTesting.expectOne('/api/admin/tenants').flush(mockTenants);
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should render stat cards', async () => {
+  it('[1H.1-UNIT-002] should render stat cards', async () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     httpTesting.expectOne('/api/admin/tenants').flush(mockTenants);
@@ -82,7 +82,7 @@ describe('DashboardComponent', () => {
     expect(statCards.length).toBe(4);
   });
 
-  it('should render tenant table with data', async () => {
+  it('[1H.1-UNIT-003] should render tenant table with data', async () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     httpTesting.expectOne('/api/admin/tenants').flush(mockTenants);
@@ -94,7 +94,7 @@ describe('DashboardComponent', () => {
     expect(rows.length).toBe(2);
   });
 
-  it('should show empty state when no tenants', async () => {
+  it('[1H.1-UNIT-004] should show empty state when no tenants', async () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     httpTesting.expectOne('/api/admin/tenants').flush([]);
@@ -105,7 +105,7 @@ describe('DashboardComponent', () => {
     expect(compiled.textContent).toContain('No tenants yet');
   });
 
-  it('should filter tenants by status', async () => {
+  it('[1H.1-UNIT-005] should filter tenants by status', async () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     httpTesting.expectOne('/api/admin/tenants').flush(mockTenants);
@@ -122,7 +122,7 @@ describe('DashboardComponent', () => {
     expect(rows[0].textContent).toContain('Acme Corp');
   });
 
-  it('should compute stat card values correctly', async () => {
+  it('[1H.1-UNIT-006] should compute stat card values correctly', async () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     httpTesting.expectOne('/api/admin/tenants').flush(mockTenants);
@@ -134,7 +134,7 @@ describe('DashboardComponent', () => {
     expect(component.suspendedTenants()).toBe(1);
   });
 
-  it('should open create modal when button clicked', async () => {
+  it('[1H.1-UNIT-007] should open create modal when button clicked', async () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     httpTesting.expectOne('/api/admin/tenants').flush(mockTenants);

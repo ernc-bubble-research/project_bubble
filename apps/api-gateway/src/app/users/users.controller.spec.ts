@@ -3,7 +3,7 @@ import { UserResponseDto } from '@project-bubble/shared';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
-describe('UsersController', () => {
+describe('UsersController [P2]', () => {
   let controller: UsersController;
   let service: jest.Mocked<UsersService>;
 
@@ -32,7 +32,7 @@ describe('UsersController', () => {
     controller = new UsersController(service);
   });
 
-  it('POST /app/users — should call service with JWT tenantId', async () => {
+  it('[1H.1-UNIT-001] POST /app/users — should call service with JWT tenantId', async () => {
     const dto = { email: 'alice@acme.com', password: 'Password1!', role: 'creator' };
 
     await controller.create(dto, mockRequest);
@@ -44,14 +44,14 @@ describe('UsersController', () => {
     );
   });
 
-  it('GET /app/users — should return user list for tenant', async () => {
+  it('[1H.1-UNIT-002] GET /app/users — should return user list for tenant', async () => {
     const result = await controller.findAll(mockRequest);
 
     expect(result).toEqual([mockResponse]);
     expect(service.findAllByTenant).toHaveBeenCalledWith(tenantId);
   });
 
-  it('PATCH /app/users/:id — should update user', async () => {
+  it('[1H.1-UNIT-003] PATCH /app/users/:id — should update user', async () => {
     const dto = { role: 'customer_admin', name: 'Alice Updated' };
 
     await controller.update('user-id', dto, mockRequest);
@@ -64,13 +64,13 @@ describe('UsersController', () => {
     );
   });
 
-  it('DELETE /app/users/:id — should deactivate user', async () => {
+  it('[1H.1-UNIT-004] DELETE /app/users/:id — should deactivate user', async () => {
     await controller.deactivate('user-id', mockRequest);
 
     expect(service.deactivate).toHaveBeenCalledWith('user-id', tenantId);
   });
 
-  it('POST /app/users/:id/reset-password — should reset password', async () => {
+  it('[1H.1-UNIT-005] POST /app/users/:id/reset-password — should reset password', async () => {
     await controller.resetPassword('user-id', { newPassword: 'NewPass123!' }, mockRequest);
 
     expect(service.resetPassword).toHaveBeenCalledWith(

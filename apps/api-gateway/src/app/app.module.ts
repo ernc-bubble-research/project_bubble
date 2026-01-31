@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { DbLayerModule } from '@project-bubble/db-layer';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -27,6 +28,7 @@ import { InvitationsModule } from './invitations/invitations.module';
       }),
       inject: [ConfigService],
     }),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
     DbLayerModule,
     AuthModule,
     TenantsModule,
@@ -37,6 +39,7 @@ import { InvitationsModule } from './invitations/invitations.module';
   providers: [
     AppService,
     { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}

@@ -281,6 +281,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 *   *Action:* File is moved to **"Archive/Trash"** status (Soft Delete).
 *   *Retention:* File remains recoverable for [N] days (Admin Configurable), then is physically purged.
 *   *Warning:* Deletion removes it for *everyone* in the tenant (Shared Drive model).
+**And** all logging is sanitized to prevent PII/sensitive document content from appearing in logs (NFR assessment deferred item — first story handling real data)
 
 #### Story 2.2: Vector Ingestion (Reference Assets)
 **As a** Creator,
@@ -639,6 +640,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Given** a user performs an action
 **Then** an immutable log entry is created in the `audit_logs` table
 **And** it contains `user_id`, `tenant_id`, `action_type`, and `timestamp`
+**And** impersonation events are fully audited: who impersonated, which tenant, start/end time, actions performed during impersonation (NFR assessment deferred item — replaces interim `logger.warn` placeholder from hardening story)
 
 #### Story 7.3: Service Status Monitor
 **As a** Creator,
@@ -650,6 +652,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Given** the worker detects repeated 500 errors from Gemini
 **Then** the System Status is updated to `DEGRADED`
 **And** a global banner appears in the Workflows UI
+**And** a health check endpoint (`/health`) is available using `@nestjs/terminus` that checks database connectivity and external service status (NFR assessment deferred item — prerequisite for service monitoring)
 
 #### Story 7.4: Execution Trace Viewer [Prototype]
 **As a** Customer Admin,
@@ -662,6 +665,22 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Then** I see a chronological log of every Node execution
 **And** for each Node, I can expand to see the **Exact Input** (Prompts sent to LLM) and **Raw Output** (Response from LLM)
 **And** I can see the Token Usage cost for that step
+
+#### Story 7.5: Refresh Token Rotation (Auth Hardening)
+**As a** User,
+**I want** my session to be extended seamlessly via refresh tokens,
+**So that** I don't get abruptly logged out after the access token expires.
+
+**Acceptance Criteria:**
+
+**Given** a user authenticates successfully
+**Then** the system issues both an access token (short-lived) and a refresh token (long-lived, stored securely)
+**And** when the access token expires, the frontend automatically requests a new one using the refresh token
+**And** refresh tokens are rotated on each use (old token invalidated)
+**And** refresh tokens are revoked on password change or explicit logout
+**And** the system maintains a refresh token allowlist or denylist in the database
+
+**Note:** This story replaces the interim 7-day JWT expiry set in the hardening story. NFR assessment deferred item.
 
 #### Story 7.1: LLM Provider Configuration [Future]
 **As a** Bubble Admin,

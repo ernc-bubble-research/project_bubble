@@ -11,7 +11,7 @@ import {
   Menu,
 } from 'lucide-angular';
 
-describe('AdminLayoutComponent', () => {
+describe('AdminLayoutComponent [P2]', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AdminLayoutComponent, RouterModule.forRoot([])],
@@ -31,12 +31,12 @@ describe('AdminLayoutComponent', () => {
     }).compileComponents();
   });
 
-  it('should create', () => {
+  it('[1H.1-UNIT-001] should create', () => {
     const fixture = TestBed.createComponent(AdminLayoutComponent);
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should render 4 nav items', () => {
+  it('[1H.1-UNIT-002] should render 4 nav items', () => {
     const fixture = TestBed.createComponent(AdminLayoutComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
@@ -44,7 +44,7 @@ describe('AdminLayoutComponent', () => {
     expect(navItems.length).toBe(4);
   });
 
-  it('should render sidebar with correct nav labels', () => {
+  it('[1H.1-UNIT-003] should render sidebar with correct nav labels', () => {
     const fixture = TestBed.createComponent(AdminLayoutComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
@@ -59,14 +59,14 @@ describe('AdminLayoutComponent', () => {
     ]);
   });
 
-  it('should contain a router-outlet', () => {
+  it('[1H.1-UNIT-004] should contain a router-outlet', () => {
     const fixture = TestBed.createComponent(AdminLayoutComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 
-  it('should toggle mobile menu', () => {
+  it('[1H.1-UNIT-005] should toggle mobile menu', () => {
     const fixture = TestBed.createComponent(AdminLayoutComponent);
     const component = fixture.componentInstance;
     expect(component.mobileMenuOpen()).toBe(false);

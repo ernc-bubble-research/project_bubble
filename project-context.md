@@ -122,6 +122,29 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **E2E Tests:** In `apps/*-e2e/`.
 *   **Mocks:** Use `jest.mock` or `MockProvider` from `@golevelup/ts-jest`. NEVER connect to real DB in Unit Tests.
 
+## NFR Hardening Rules (from Epic 1 NFR Assessment — 2026-01-31)
+
+### Security Rules
+*   **NEVER** hardcode credentials, API keys, or secrets in source code. All secrets must come from environment variables only.
+*   **NEVER** expose secrets in frontend bundles (`environment.ts`). Admin API keys, JWT secrets, etc. must only exist server-side.
+*   **ALWAYS** use `crypto.timingSafeEqual()` for secret/token comparisons (not `===`).
+*   **ALWAYS** validate that critical environment variables (`JWT_SECRET`, `ADMIN_API_KEY`) are set and not default values on application startup. Refuse to start if missing.
+*   **ALWAYS** use `helmet()` middleware and explicit CORS configuration in `main.ts`.
+*   **ALWAYS** use `@nestjs/throttler` rate limiting on authentication endpoints (login, invitation accept, password set).
+*   **ALWAYS** enforce strong password policy: min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special character.
+
+### Reliability Rules
+*   **ALWAYS** wrap multi-step database operations in transactions (use `TransactionManager`). Especially: any flow that creates/updates multiple records or combines DB write + external service call.
+*   **ALWAYS** handle email sending failures gracefully — never leave orphaned records if email delivery fails.
+*   **ALWAYS** wrap `bootstrap()` in try-catch with `process.exit(1)` on failure.
+*   **ALWAYS** add error handling to `onModuleInit` seed/setup logic.
+
+### Deferred Items Tracking (NFR Assessment)
+*   **Impersonation audit trail** → Epic 7 Story 7.2 (interim: `logger.warn` on impersonation)
+*   **Health check endpoint** → Epic 7 Story 7.3 (prerequisite for service monitoring)
+*   **Refresh token rotation** → Epic 7 Story 7.5 (interim: 7-day JWT expiry)
+*   **Log sanitization** → Epic 2 Story 2.1 AC (first story with real document data)
+
 ## Anti-Patterns (Do Not Do)
 
 *   ❌ **No Schema per Tenant:** Do not create dynamic schemas. Use `tenant_id` column.

@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { timingSafeEqual } from 'crypto';
 
 @Injectable()
 export class AdminApiKeyGuard implements CanActivate {
@@ -22,10 +23,16 @@ export class AdminApiKeyGuard implements CanActivate {
     const apiKey = request.headers['x-admin-api-key'];
     const expectedKey = this.config.get<string>('ADMIN_API_KEY');
 
-    if (apiKey && apiKey === expectedKey) {
-      // Set synthetic admin user so downstream RolesGuard sees bubble_admin role
-      request.user = { userId: 'api-key', tenantId: null, role: 'bubble_admin' };
-      return true;
+    if (apiKey && expectedKey && apiKey.length === expectedKey.length) {
+      const isMatch = timingSafeEqual(
+        Buffer.from(apiKey),
+        Buffer.from(expectedKey),
+      );
+      if (isMatch) {
+        // Set synthetic admin user so downstream RolesGuard sees bubble_admin role
+        request.user = { userId: 'api-key', tenantId: null, role: 'bubble_admin' };
+        return true;
+      }
     }
 
     throw new UnauthorizedException(

@@ -6,27 +6,30 @@ import { UnauthorizedException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UserEntity, UserRole, UserStatus } from '@project-bubble/db-layer';
+import { createMockUser, MOCK_PASSWORD_HASH } from '@project-bubble/db-layer/testing';
 import { AuthService } from './auth.service';
 
-describe('AuthService', () => {
+describe('AuthService [P0]', () => {
   let service: AuthService;
   let repo: jest.Mocked<Repository<UserEntity>>;
   let jwtService: jest.Mocked<JwtService>;
 
-  const hashedPassword = bcrypt.hashSync('Admin123!', 10);
-
-  const mockUser: UserEntity = {
+  const mockUser = createMockUser({
     id: '11111111-1111-1111-1111-111111111111',
     email: 'admin@bubble.io',
-    passwordHash: hashedPassword,
+    passwordHash: MOCK_PASSWORD_HASH,
     role: UserRole.BUBBLE_ADMIN,
     tenantId: '00000000-0000-0000-0000-000000000000',
-    status: UserStatus.ACTIVE,
-    createdAt: new Date('2026-01-31'),
-    updatedAt: new Date('2026-01-31'),
-  } as UserEntity;
+  });
 
-  beforeEach(async () => {
+  const createModule = async (configOverrides: Record<string, string | undefined> = {}) => {
+    const defaultConfig: Record<string, string | undefined> = {
+      NODE_ENV: 'development',
+      SEED_ADMIN_EMAIL: 'admin@bubble.io',
+      SEED_ADMIN_PASSWORD: 'Admin123!',
+      ...configOverrides,
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -47,11 +50,17 @@ describe('AuthService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn().mockReturnValue('development'),
+            get: jest.fn().mockImplementation((key: string) => defaultConfig[key]),
           },
         },
       ],
     }).compile();
+
+    return module;
+  };
+
+  beforeEach(async () => {
+    const module = await createModule();
 
     service = module.get<AuthService>(AuthService);
     repo = module.get(getRepositoryToken(UserEntity));
@@ -59,7 +68,7 @@ describe('AuthService', () => {
   });
 
   describe('onModuleInit', () => {
-    it('should seed admin user when NODE_ENV=development and no admin exists', async () => {
+    it('[1H.1-UNIT-001] should seed admin user when NODE_ENV=development and seed env vars are set', async () => {
       repo.findOne.mockResolvedValue(null);
       repo.create.mockReturnValue(mockUser);
       repo.save.mockResolvedValue(mockUser);
@@ -79,7 +88,7 @@ describe('AuthService', () => {
       expect(repo.save).toHaveBeenCalled();
     });
 
-    it('should skip seed when admin user already exists', async () => {
+    it('[1H.1-UNIT-002] should skip seed when admin user already exists', async () => {
       repo.findOne.mockResolvedValue(mockUser);
 
       await service.onModuleInit();
@@ -88,29 +97,8 @@ describe('AuthService', () => {
       expect(repo.save).not.toHaveBeenCalled();
     });
 
-    it('should skip seed when NODE_ENV is not development', async () => {
-      const module: TestingModule = await Test.createTestingModule({
-        providers: [
-          AuthService,
-          {
-            provide: getRepositoryToken(UserEntity),
-            useValue: {
-              findOne: jest.fn(),
-              create: jest.fn(),
-              save: jest.fn(),
-            },
-          },
-          {
-            provide: JwtService,
-            useValue: { sign: jest.fn() },
-          },
-          {
-            provide: ConfigService,
-            useValue: { get: jest.fn().mockReturnValue('production') },
-          },
-        ],
-      }).compile();
-
+    it('[1H.1-UNIT-003] should skip seed when NODE_ENV is not development', async () => {
+      const module = await createModule({ NODE_ENV: 'production' });
       const prodService = module.get<AuthService>(AuthService);
       const prodRepo: jest.Mocked<Repository<UserEntity>> = module.get(
         getRepositoryToken(UserEntity),
@@ -121,10 +109,42 @@ describe('AuthService', () => {
       expect(prodRepo.findOne).not.toHaveBeenCalled();
       expect(prodRepo.create).not.toHaveBeenCalled();
     });
+
+    it('[1H.1-UNIT-004] should skip seed when SEED_ADMIN_EMAIL is not set', async () => {
+      const module = await createModule({ SEED_ADMIN_EMAIL: undefined });
+      const svc = module.get<AuthService>(AuthService);
+      const r: jest.Mocked<Repository<UserEntity>> = module.get(
+        getRepositoryToken(UserEntity),
+      );
+
+      await svc.onModuleInit();
+
+      expect(r.findOne).not.toHaveBeenCalled();
+      expect(r.create).not.toHaveBeenCalled();
+    });
+
+    it('[1H.1-UNIT-005] should skip seed when SEED_ADMIN_PASSWORD is not set', async () => {
+      const module = await createModule({ SEED_ADMIN_PASSWORD: undefined });
+      const svc = module.get<AuthService>(AuthService);
+      const r: jest.Mocked<Repository<UserEntity>> = module.get(
+        getRepositoryToken(UserEntity),
+      );
+
+      await svc.onModuleInit();
+
+      expect(r.findOne).not.toHaveBeenCalled();
+      expect(r.create).not.toHaveBeenCalled();
+    });
+
+    it('[1H.1-UNIT-006] should handle seed error gracefully without crashing', async () => {
+      repo.findOne.mockRejectedValue(new Error('DB connection failed'));
+
+      await expect(service.onModuleInit()).resolves.not.toThrow();
+    });
   });
 
   describe('login', () => {
-    it('should return JWT and user info for valid credentials', async () => {
+    it('[1H.1-UNIT-007] should return JWT and user info for valid credentials', async () => {
       repo.findOne.mockResolvedValue(mockUser);
 
       const result = await service.login({
@@ -146,7 +166,7 @@ describe('AuthService', () => {
       });
     });
 
-    it('should throw UnauthorizedException for wrong password', async () => {
+    it('[1H.1-UNIT-008] should throw UnauthorizedException for wrong password', async () => {
       repo.findOne.mockResolvedValue(mockUser);
 
       await expect(
@@ -154,7 +174,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it('should throw UnauthorizedException for non-existent email (same error message)', async () => {
+    it('[1H.1-UNIT-009] should throw UnauthorizedException for non-existent email (same error message)', async () => {
       repo.findOne.mockResolvedValue(null);
 
       await expect(
@@ -164,7 +184,7 @@ describe('AuthService', () => {
   });
 
   describe('validateUser', () => {
-    it('should return user when credentials match', async () => {
+    it('[1H.1-UNIT-010] should return user when credentials match', async () => {
       repo.findOne.mockResolvedValue(mockUser);
 
       const result = await service.validateUser(
@@ -175,7 +195,7 @@ describe('AuthService', () => {
       expect(result).toEqual(mockUser);
     });
 
-    it('should return null when password does not match', async () => {
+    it('[1H.1-UNIT-011] should return null when password does not match', async () => {
       repo.findOne.mockResolvedValue(mockUser);
 
       const result = await service.validateUser(
@@ -186,7 +206,7 @@ describe('AuthService', () => {
       expect(result).toBeNull();
     });
 
-    it('should return null when email does not exist', async () => {
+    it('[1H.1-UNIT-012] should return null when email does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
 
       const result = await service.validateUser(
@@ -197,7 +217,7 @@ describe('AuthService', () => {
       expect(result).toBeNull();
     });
 
-    it('should return null when user is inactive', async () => {
+    it('[1H.1-UNIT-013] should return null when user is inactive', async () => {
       const inactiveUser = {
         ...mockUser,
         status: UserStatus.INACTIVE,
@@ -211,10 +231,93 @@ describe('AuthService', () => {
 
       expect(result).toBeNull();
     });
+
+    it('[1H.1-UNIT-014] should increment failedLoginAttempts on wrong password', async () => {
+      const user = { ...mockUser, failedLoginAttempts: 0, lockedUntil: null } as UserEntity;
+      repo.findOne.mockResolvedValue(user);
+
+      await service.validateUser('admin@bubble.io', 'WrongPass');
+
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ failedLoginAttempts: 1 }),
+      );
+    });
+
+    it('[1H.1-UNIT-015] should lock account after 5 failed attempts', async () => {
+      const user = { ...mockUser, failedLoginAttempts: 4, lockedUntil: null } as UserEntity;
+      repo.findOne.mockResolvedValue(user);
+
+      await service.validateUser('admin@bubble.io', 'WrongPass');
+
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          failedLoginAttempts: 5,
+          lockedUntil: expect.any(Date),
+        }),
+      );
+    });
+
+    it('[1H.1-UNIT-016] should return null when account is locked', async () => {
+      const futureDate = new Date(Date.now() + 10 * 60 * 1000);
+      const lockedUser = {
+        ...mockUser,
+        failedLoginAttempts: 5,
+        lockedUntil: futureDate,
+      } as UserEntity;
+      repo.findOne.mockResolvedValue(lockedUser);
+
+      const result = await service.validateUser(
+        'admin@bubble.io',
+        'Admin123!',
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('[1H.1-UNIT-017] should allow login after lock expires', async () => {
+      const pastDate = new Date(Date.now() - 1000);
+      const expiredLockUser = {
+        ...mockUser,
+        failedLoginAttempts: 5,
+        lockedUntil: pastDate,
+      } as UserEntity;
+      repo.findOne.mockResolvedValue(expiredLockUser);
+
+      const result = await service.validateUser(
+        'admin@bubble.io',
+        'Admin123!',
+      );
+
+      expect(result).toEqual(expiredLockUser);
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        }),
+      );
+    });
+
+    it('[1H.1-UNIT-018] should reset failedLoginAttempts on successful login', async () => {
+      const user = { ...mockUser, failedLoginAttempts: 3, lockedUntil: null } as UserEntity;
+      repo.findOne.mockResolvedValue(user);
+
+      const result = await service.validateUser(
+        'admin@bubble.io',
+        'Admin123!',
+      );
+
+      expect(result).toBeTruthy();
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        }),
+      );
+    });
   });
 
   describe('hashPassword', () => {
-    it('should produce a valid bcrypt hash', async () => {
+    it('[1H.1-UNIT-019] should produce a valid bcrypt hash', async () => {
       const hash = await service.hashPassword('TestPassword1!');
 
       expect(hash).toBeDefined();
@@ -222,7 +325,7 @@ describe('AuthService', () => {
       expect(await bcrypt.compare('TestPassword1!', hash)).toBe(true);
     });
 
-    it('should produce different hashes for same input', async () => {
+    it('[1H.1-UNIT-020] should produce different hashes for same input', async () => {
       const hash1 = await service.hashPassword('SamePassword1!');
       const hash2 = await service.hashPassword('SamePassword1!');
 

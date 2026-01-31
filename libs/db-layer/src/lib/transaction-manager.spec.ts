@@ -2,7 +2,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import { TransactionManager } from './transaction-manager';
 import { tenantContextStorage, TenantContext } from './tenant-context';
 
-describe('TransactionManager', () => {
+describe('TransactionManager [P0]', () => {
   let txManager: TransactionManager;
   let dataSource: jest.Mocked<DataSource>;
   let mockManager: jest.Mocked<EntityManager>;
@@ -20,7 +20,7 @@ describe('TransactionManager', () => {
   });
 
   describe('run(tenantId, callback)', () => {
-    it('should execute SET LOCAL with the provided tenant ID', async () => {
+    it('[1H.1-UNIT-001] should execute SET LOCAL with the provided tenant ID', async () => {
       const callback = jest.fn().mockResolvedValue('result');
 
       const result = await txManager.run('tenant-123', callback);
@@ -35,7 +35,7 @@ describe('TransactionManager', () => {
   });
 
   describe('run(callback) — reads from AsyncLocalStorage', () => {
-    it('should read tenant from AsyncLocalStorage context', async () => {
+    it('[1H.1-UNIT-002] should read tenant from AsyncLocalStorage context', async () => {
       const callback = jest.fn().mockResolvedValue('result');
 
       const ctx: TenantContext = {
@@ -54,7 +54,7 @@ describe('TransactionManager', () => {
       );
     });
 
-    it('should skip SET LOCAL when bypassRls is true (bubble_admin)', async () => {
+    it('[1H.1-UNIT-003] should skip SET LOCAL when bypassRls is true (bubble_admin)', async () => {
       const callback = jest.fn().mockResolvedValue('result');
 
       const ctx: TenantContext = {
@@ -70,7 +70,7 @@ describe('TransactionManager', () => {
       expect(mockManager.query).not.toHaveBeenCalled();
     });
 
-    it('should skip SET LOCAL when no AsyncLocalStorage context', async () => {
+    it('[1H.1-UNIT-004] should skip SET LOCAL when no AsyncLocalStorage context', async () => {
       const callback = jest.fn().mockResolvedValue('result');
 
       const result = await txManager.run(callback);
@@ -81,7 +81,7 @@ describe('TransactionManager', () => {
   });
 
   describe('callback receives scoped EntityManager', () => {
-    it('should pass the transaction EntityManager to the callback', async () => {
+    it('[1H.1-UNIT-005] should pass the transaction EntityManager to the callback', async () => {
       let receivedManager: EntityManager | undefined;
 
       await txManager.run('tenant-1', async (manager) => {
@@ -93,7 +93,7 @@ describe('TransactionManager', () => {
   });
 
   describe('transaction rollback on error', () => {
-    it('should propagate errors from the callback', async () => {
+    it('[1H.1-UNIT-006] should propagate errors from the callback', async () => {
       await expect(
         txManager.run('tenant-1', async () => {
           throw new Error('DB failure');

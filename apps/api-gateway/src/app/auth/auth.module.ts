@@ -16,11 +16,8 @@ import { InvitationsModule } from '../invitations/invitations.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>(
-          'JWT_SECRET',
-          'dev_secret_key_change_in_prod',
-        ),
-        signOptions: { expiresIn: '24h' },
+        secret: config.getOrThrow<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '7d' },
       }),
     }),
     TypeOrmModule.forFeature([UserEntity]),

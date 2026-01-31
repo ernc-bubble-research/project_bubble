@@ -5,7 +5,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { InvitationsService } from '../invitations/invitations.service';
 
-describe('AuthController', () => {
+describe('AuthController [P2]', () => {
   let controller: AuthController;
   let service: jest.Mocked<AuthService>;
 
@@ -33,7 +33,7 @@ describe('AuthController', () => {
   });
 
   describe('POST /auth/login', () => {
-    it('should call service and return response', async () => {
+    it('[1H.1-UNIT-001] should call service and return response', async () => {
       const mockResponse: LoginResponseDto = {
         accessToken: 'mock-token',
         user: {
@@ -57,7 +57,7 @@ describe('AuthController', () => {
       });
     });
 
-    it('should propagate UnauthorizedException', async () => {
+    it('[1H.1-UNIT-002] should propagate UnauthorizedException', async () => {
       service.login.mockRejectedValue(
         new UnauthorizedException('Invalid email or password'),
       );

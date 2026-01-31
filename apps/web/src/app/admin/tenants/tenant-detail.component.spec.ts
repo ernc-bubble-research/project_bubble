@@ -19,7 +19,7 @@ import { TenantService } from '../../core/services/tenant.service';
 @Component({ standalone: true, template: '' })
 class DummyComponent {}
 
-describe('TenantDetailComponent', () => {
+describe('TenantDetailComponent [P2]', () => {
   let component: TenantDetailComponent;
   let fixture: ComponentFixture<TenantDetailComponent>;
   let tenantServiceMock: Record<string, jest.Mock>;
@@ -75,15 +75,15 @@ describe('TenantDetailComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
+  it('[1H.1-UNIT-001] should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load tenant on init', () => {
+  it('[1H.1-UNIT-002] should load tenant on init', () => {
     expect(component.tenant()).toEqual(mockTenant);
   });
 
-  it('should sync form signals from loaded tenant', () => {
+  it('[1H.1-UNIT-003] should sync form signals from loaded tenant', () => {
     expect(component.editName()).toBe('Acme Corp');
     expect(component.editContact()).toBe('');
     expect(component.editPlanTier()).toBe('free');
@@ -92,14 +92,14 @@ describe('TenantDetailComponent', () => {
     expect(component.editRetentionDays()).toBe(30);
   });
 
-  it('should render breadcrumb with tenant name', () => {
+  it('[1H.1-UNIT-004] should render breadcrumb with tenant name', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.breadcrumb-current')?.textContent).toContain(
       'Acme Corp'
     );
   });
 
-  it('should render header card with tenant name and status', () => {
+  it('[1H.1-UNIT-005] should render header card with tenant name and status', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.tenant-name')?.textContent).toContain(
       'Acme Corp'
@@ -107,38 +107,38 @@ describe('TenantDetailComponent', () => {
     expect(el.querySelector('app-status-badge')).toBeTruthy();
   });
 
-  it('should render Impersonate button', () => {
+  it('[1H.1-UNIT-006] should render Impersonate button', () => {
     const el: HTMLElement = fixture.nativeElement;
     const impersonateBtn = el.querySelector('.btn-danger-outline');
     expect(impersonateBtn).toBeTruthy();
     expect(impersonateBtn?.textContent).toContain('Impersonate');
   });
 
-  it('should render tab navigation with 5 tabs', () => {
+  it('[1H.1-UNIT-007] should render tab navigation with 5 tabs', () => {
     const el: HTMLElement = fixture.nativeElement;
     const tabs = el.querySelectorAll('.tab-btn');
     expect(tabs.length).toBe(5);
     expect(tabs[0].textContent?.trim()).toBe('General');
   });
 
-  it('should show General tab content by default', () => {
+  it('[1H.1-UNIT-008] should show General tab content by default', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.form-card')).toBeTruthy();
   });
 
-  it('should have Save Changes button disabled when form is pristine', () => {
+  it('[1H.1-UNIT-009] should have Save Changes button disabled when form is pristine', () => {
     const el: HTMLElement = fixture.nativeElement;
     const saveBtn = el.querySelector('.btn-primary') as HTMLButtonElement;
     expect(saveBtn.disabled).toBe(true);
   });
 
-  it('should detect dirty state when name is changed', () => {
+  it('[1H.1-UNIT-010] should detect dirty state when name is changed', () => {
     expect(component.isGeneralDirty()).toBe(false);
     component.editName.set('New Name');
     expect(component.isGeneralDirty()).toBe(true);
   });
 
-  it('should reset form on cancelGeneral', () => {
+  it('[1H.1-UNIT-011] should reset form on cancelGeneral', () => {
     component.editName.set('Changed');
     expect(component.isGeneralDirty()).toBe(true);
     component.cancelGeneral();
@@ -146,7 +146,7 @@ describe('TenantDetailComponent', () => {
     expect(component.isGeneralDirty()).toBe(false);
   });
 
-  it('should call tenantService.update on saveGeneral', () => {
+  it('[1H.1-UNIT-012] should call tenantService.update on saveGeneral', () => {
     const updatedTenant = { ...mockTenant, name: 'New Name' };
     tenantServiceMock['update'].mockReturnValue(of(updatedTenant));
 
@@ -159,26 +159,26 @@ describe('TenantDetailComponent', () => {
     );
   });
 
-  it('should open impersonate dialog when button clicked', () => {
+  it('[1H.1-UNIT-013] should open impersonate dialog when button clicked', () => {
     expect(component.showImpersonateDialog()).toBe(false);
     component.openImpersonateDialog();
     expect(component.showImpersonateDialog()).toBe(true);
   });
 
-  it('should render Suspend button for active tenant', () => {
+  it('[1H.1-UNIT-014] should render Suspend button for active tenant', () => {
     const el: HTMLElement = fixture.nativeElement;
     const buttons = Array.from(el.querySelectorAll('.header-actions .btn'));
     const suspendBtn = buttons.find((b) => b.textContent?.trim() === 'Suspend');
     expect(suspendBtn).toBeTruthy();
   });
 
-  it('should open suspend dialog', () => {
+  it('[1H.1-UNIT-015] should open suspend dialog', () => {
     expect(component.showSuspendDialog()).toBe(false);
     component.openSuspendDialog();
     expect(component.showSuspendDialog()).toBe(true);
   });
 
-  it('should switch to entitlements tab', () => {
+  it('[1H.1-UNIT-016] should switch to entitlements tab', () => {
     component.setTab('entitlements');
     fixture.detectChanges();
 
@@ -186,13 +186,13 @@ describe('TenantDetailComponent', () => {
     expect(el.querySelector('.section-title')?.textContent).toContain('Run Quota');
   });
 
-  it('should detect entitlements dirty state', () => {
+  it('[1H.1-UNIT-017] should detect entitlements dirty state', () => {
     expect(component.isEntitlementsDirty()).toBe(false);
     component.editMaxRuns.set(200);
     expect(component.isEntitlementsDirty()).toBe(true);
   });
 
-  it('should reset entitlements on cancelEntitlements', () => {
+  it('[1H.1-UNIT-018] should reset entitlements on cancelEntitlements', () => {
     component.editMaxRuns.set(200);
     expect(component.isEntitlementsDirty()).toBe(true);
     component.cancelEntitlements();
@@ -200,7 +200,7 @@ describe('TenantDetailComponent', () => {
     expect(component.isEntitlementsDirty()).toBe(false);
   });
 
-  it('should call tenantService.update on saveEntitlements', () => {
+  it('[1H.1-UNIT-019] should call tenantService.update on saveEntitlements', () => {
     const updatedTenant = { ...mockTenant, maxMonthlyRuns: 200 };
     tenantServiceMock['update'].mockReturnValue(of(updatedTenant));
 

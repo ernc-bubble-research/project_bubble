@@ -6,7 +6,7 @@ import {
 } from '@angular/common/http/testing';
 import { TenantService, Tenant } from './tenant.service';
 
-describe('TenantService', () => {
+describe('TenantService [P1]', () => {
   let service: TenantService;
   let httpTesting: HttpTestingController;
 
@@ -23,11 +23,11 @@ describe('TenantService', () => {
     httpTesting.verify();
   });
 
-  it('should be created', () => {
+  it('[1H.1-UNIT-001] should be created', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should GET all tenants', () => {
+  it('[1H.1-UNIT-002] should GET all tenants', () => {
     const mockTenants: Tenant[] = [
       {
         id: '1',
@@ -47,7 +47,7 @@ describe('TenantService', () => {
     req.flush(mockTenants);
   });
 
-  it('should GET one tenant by id', () => {
+  it('[1H.1-UNIT-003] should GET one tenant by id', () => {
     const mockTenant: Tenant = {
       id: 'abc-123',
       name: 'Acme',
@@ -65,7 +65,7 @@ describe('TenantService', () => {
     req.flush(mockTenant);
   });
 
-  it('should POST to create a tenant', () => {
+  it('[1H.1-UNIT-004] should POST to create a tenant', () => {
     const payload = { name: 'New Corp' };
     const mockResponse: Tenant = {
       id: 'new-id',

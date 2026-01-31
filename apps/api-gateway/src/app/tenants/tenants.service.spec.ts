@@ -8,13 +8,14 @@ import {
 } from '@nestjs/common';
 import { QueryFailedError, Repository } from 'typeorm';
 import { TenantEntity, TenantStatus, PlanTier } from '@project-bubble/db-layer';
+import { createMockTenant } from '@project-bubble/db-layer/testing';
 import { TenantsService } from './tenants.service';
 
-describe('TenantsService', () => {
+describe('TenantsService [P1]', () => {
   let service: TenantsService;
   let repo: jest.Mocked<Repository<TenantEntity>>;
 
-  const mockTenant: TenantEntity = {
+  const mockTenant = createMockTenant({
     id: '123e4567-e89b-12d3-a456-426614174000',
     name: 'Acme Corp',
     status: TenantStatus.ACTIVE,
@@ -25,7 +26,7 @@ describe('TenantsService', () => {
     assetRetentionDays: 30,
     createdAt: new Date('2026-01-30'),
     updatedAt: new Date('2026-01-30'),
-  };
+  });
 
   const mockJwtService = {
     sign: jest.fn().mockReturnValue('mock-jwt-token'),
@@ -56,7 +57,7 @@ describe('TenantsService', () => {
   });
 
   describe('create', () => {
-    it('should create a tenant successfully', async () => {
+    it('[1H.1-UNIT-001] should create a tenant successfully', async () => {
       repo.findOne.mockResolvedValue(null);
       repo.create.mockReturnValue(mockTenant);
       repo.save.mockResolvedValue(mockTenant);
@@ -71,7 +72,7 @@ describe('TenantsService', () => {
       expect(repo.save).toHaveBeenCalledWith(mockTenant);
     });
 
-    it('should throw ConflictException for duplicate name', async () => {
+    it('[1H.1-UNIT-002] should throw ConflictException for duplicate name', async () => {
       repo.findOne.mockResolvedValue(mockTenant);
 
       await expect(service.create({ name: 'Acme Corp' })).rejects.toThrow(
@@ -79,7 +80,7 @@ describe('TenantsService', () => {
       );
     });
 
-    it('should throw ConflictException on unique constraint race condition', async () => {
+    it('[1H.1-UNIT-003] should throw ConflictException on unique constraint race condition', async () => {
       repo.findOne.mockResolvedValue(null);
       repo.create.mockReturnValue(mockTenant);
 
@@ -92,7 +93,7 @@ describe('TenantsService', () => {
       );
     });
 
-    it('should rethrow non-unique-constraint errors', async () => {
+    it('[1H.1-UNIT-004] should rethrow non-unique-constraint errors', async () => {
       repo.findOne.mockResolvedValue(null);
       repo.create.mockReturnValue(mockTenant);
 
@@ -107,7 +108,7 @@ describe('TenantsService', () => {
   });
 
   describe('findAll', () => {
-    it('should return all tenants', async () => {
+    it('[1H.1-UNIT-005] should return all tenants', async () => {
       repo.find.mockResolvedValue([mockTenant]);
 
       const result = await service.findAll();
@@ -118,7 +119,7 @@ describe('TenantsService', () => {
   });
 
   describe('findOne', () => {
-    it('should return a tenant by id', async () => {
+    it('[1H.1-UNIT-006] should return a tenant by id', async () => {
       repo.findOne.mockResolvedValue(mockTenant);
 
       const result = await service.findOne(mockTenant.id);
@@ -129,7 +130,7 @@ describe('TenantsService', () => {
       });
     });
 
-    it('should throw NotFoundException for missing tenant', async () => {
+    it('[1H.1-UNIT-007] should throw NotFoundException for missing tenant', async () => {
       repo.findOne.mockResolvedValue(null);
 
       await expect(service.findOne('nonexistent-id')).rejects.toThrow(
@@ -139,7 +140,7 @@ describe('TenantsService', () => {
   });
 
   describe('impersonate', () => {
-    it('should return a token for an active tenant', async () => {
+    it('[1H.1-UNIT-008] should return a token for an active tenant', async () => {
       repo.findOne.mockResolvedValue(mockTenant);
 
       const result = await service.impersonate(mockTenant.id);
@@ -157,7 +158,21 @@ describe('TenantsService', () => {
       );
     });
 
-    it('should throw NotFoundException for non-existent tenant', async () => {
+    it('[1H.1-UNIT-009] should log a warning with admin ID when impersonating', async () => {
+      repo.findOne.mockResolvedValue(mockTenant);
+      const loggerSpy = jest.spyOn(service['logger'], 'warn');
+
+      await service.impersonate(mockTenant.id, 'admin-user-123');
+
+      expect(loggerSpy).toHaveBeenCalledWith(
+        expect.stringContaining('IMPERSONATION: Admin admin-user-123 impersonated tenant'),
+      );
+      expect(loggerSpy).toHaveBeenCalledWith(
+        expect.stringContaining(mockTenant.id),
+      );
+    });
+
+    it('[1H.1-UNIT-010] should throw NotFoundException for non-existent tenant', async () => {
       repo.findOne.mockResolvedValue(null);
 
       await expect(service.impersonate('nonexistent-id')).rejects.toThrow(
@@ -165,7 +180,7 @@ describe('TenantsService', () => {
       );
     });
 
-    it('should throw BadRequestException for suspended tenant', async () => {
+    it('[1H.1-UNIT-011] should throw BadRequestException for suspended tenant', async () => {
       const suspendedTenant = {
         ...mockTenant,
         status: TenantStatus.SUSPENDED,
@@ -179,7 +194,7 @@ describe('TenantsService', () => {
   });
 
   describe('update', () => {
-    it('should update a tenant with partial data (name only)', async () => {
+    it('[1H.1-UNIT-012] should update a tenant with partial data (name only)', async () => {
       const updated = { ...mockTenant, name: 'New Name' };
       repo.findOne.mockResolvedValue({ ...mockTenant });
       repo.save.mockResolvedValue(updated);
@@ -191,7 +206,7 @@ describe('TenantsService', () => {
       expect(repo.save).toHaveBeenCalled();
     });
 
-    it('should update entitlements fields only', async () => {
+    it('[1H.1-UNIT-013] should update entitlements fields only', async () => {
       const updated = { ...mockTenant, maxMonthlyRuns: 200, assetRetentionDays: 90 };
       repo.findOne.mockResolvedValue({ ...mockTenant });
       repo.save.mockResolvedValue(updated);
@@ -205,7 +220,7 @@ describe('TenantsService', () => {
       expect(result.assetRetentionDays).toBe(90);
     });
 
-    it('should throw NotFoundException for non-existent tenant', async () => {
+    it('[1H.1-UNIT-014] should throw NotFoundException for non-existent tenant', async () => {
       repo.findOne.mockResolvedValue(null);
 
       await expect(
@@ -213,7 +228,7 @@ describe('TenantsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should update status from active to suspended', async () => {
+    it('[1H.1-UNIT-015] should update status from active to suspended', async () => {
       const updated = { ...mockTenant, status: TenantStatus.SUSPENDED };
       repo.findOne.mockResolvedValue({ ...mockTenant });
       repo.save.mockResolvedValue(updated);
@@ -223,7 +238,7 @@ describe('TenantsService', () => {
       expect(result.status).toBe(TenantStatus.SUSPENDED);
     });
 
-    it('should update status from suspended to active', async () => {
+    it('[1H.1-UNIT-016] should update status from suspended to active', async () => {
       const suspendedTenant = { ...mockTenant, status: TenantStatus.SUSPENDED };
       const activated = { ...mockTenant, status: TenantStatus.ACTIVE };
       repo.findOne.mockResolvedValue({ ...suspendedTenant });

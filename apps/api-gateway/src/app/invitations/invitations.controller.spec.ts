@@ -3,7 +3,7 @@ import { InvitationsController } from './invitations.controller';
 import { InvitationsService } from './invitations.service';
 import { InvitationStatus } from '@project-bubble/db-layer';
 
-describe('InvitationsController', () => {
+describe('InvitationsController [P2]', () => {
   let controller: InvitationsController;
   let service: Record<string, jest.Mock>;
 
@@ -38,12 +38,12 @@ describe('InvitationsController', () => {
     controller = module.get<InvitationsController>(InvitationsController);
   });
 
-  it('should be defined', () => {
+  it('[1H.1-UNIT-001] should be defined', () => {
     expect(controller).toBeDefined();
   });
 
   describe('create', () => {
-    it('should create an invitation', async () => {
+    it('[1H.1-UNIT-002] should create an invitation', async () => {
       const dto = { email: 'bob@example.com', role: 'creator' };
       const result = await controller.create(dto, mockReq as any);
 
@@ -58,7 +58,7 @@ describe('InvitationsController', () => {
   });
 
   describe('findAll', () => {
-    it('should return all invitations for tenant', async () => {
+    it('[1H.1-UNIT-003] should return all invitations for tenant', async () => {
       const result = await controller.findAll(mockReq as any);
 
       expect(result).toEqual([mockInvitationResponse]);
@@ -67,7 +67,7 @@ describe('InvitationsController', () => {
   });
 
   describe('resend', () => {
-    it('should resend an invitation', async () => {
+    it('[1H.1-UNIT-004] should resend an invitation', async () => {
       await controller.resend('inv-1', mockReq as any);
 
       expect(service.resend).toHaveBeenCalledWith('inv-1', 'tenant-1');
@@ -75,7 +75,7 @@ describe('InvitationsController', () => {
   });
 
   describe('revoke', () => {
-    it('should revoke an invitation', async () => {
+    it('[1H.1-UNIT-005] should revoke an invitation', async () => {
       await controller.revoke('inv-1', mockReq as any);
 
       expect(service.revoke).toHaveBeenCalledWith('inv-1', 'tenant-1');

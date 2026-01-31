@@ -40,6 +40,12 @@ export class UserEntity {
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
   status!: UserStatus;
 
+  @Column({ name: 'failed_login_attempts', default: 0 })
+  failedLoginAttempts!: number;
+
+  @Column({ name: 'locked_until', type: 'timestamp', nullable: true })
+  lockedUntil!: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

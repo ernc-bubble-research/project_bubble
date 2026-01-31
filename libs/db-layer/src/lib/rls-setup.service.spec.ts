@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { RlsSetupService } from './rls-setup.service';
 
-describe('RlsSetupService', () => {
+describe('RlsSetupService [P0]', () => {
   let service: RlsSetupService;
   let dataSource: jest.Mocked<DataSource>;
   let configService: jest.Mocked<ConfigService>;
@@ -19,7 +19,7 @@ describe('RlsSetupService', () => {
     service = new RlsSetupService(dataSource, configService);
   });
 
-  it('should execute RLS SQL on module init in development mode', async () => {
+  it('[1H.1-UNIT-001] should execute RLS SQL on module init in development mode', async () => {
     configService.get.mockReturnValue('development');
 
     await service.onModuleInit();
@@ -60,7 +60,7 @@ describe('RlsSetupService', () => {
     );
   });
 
-  it('should skip RLS setup in production', async () => {
+  it('[1H.1-UNIT-002] should skip RLS setup in production', async () => {
     configService.get.mockReturnValue('production');
 
     await service.onModuleInit();
@@ -68,7 +68,7 @@ describe('RlsSetupService', () => {
     expect(dataSource.query).not.toHaveBeenCalled();
   });
 
-  it('should skip RLS setup in test environment', async () => {
+  it('[1H.1-UNIT-003] should skip RLS setup in test environment', async () => {
     configService.get.mockReturnValue('test');
 
     await service.onModuleInit();
@@ -76,12 +76,90 @@ describe('RlsSetupService', () => {
     expect(dataSource.query).not.toHaveBeenCalled();
   });
 
-  it('should propagate database errors', async () => {
+  it('[1H.1-UNIT-004] should propagate database errors', async () => {
     configService.get.mockReturnValue('development');
     dataSource.query.mockRejectedValue(new Error('DB connection failed'));
 
     await expect(service.onModuleInit()).rejects.toThrow(
       'DB connection failed',
     );
+  });
+
+  describe('RLS policy scope verification', () => {
+    beforeEach(() => {
+      configService.get.mockReturnValue('development');
+    });
+
+    it('[1H.1-UNIT-005] auth_select_all targets users table with FOR SELECT only', async () => {
+      await service.onModuleInit();
+
+      const authSelectCall = dataSource.query.mock.calls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes('auth_select_all'),
+      );
+      expect(authSelectCall).toBeDefined();
+      const sql = authSelectCall![0] as string;
+      expect(sql).toContain("tablename = 'users'");
+      expect(sql).toContain('FOR SELECT');
+      expect(sql).not.toContain('FOR INSERT');
+      expect(sql).not.toContain('FOR UPDATE');
+      expect(sql).not.toContain('FOR DELETE');
+    });
+
+    it('[1H.1-UNIT-006] auth_accept_invitations targets invitations table with FOR SELECT only', async () => {
+      await service.onModuleInit();
+
+      const authAcceptCall = dataSource.query.mock.calls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes('auth_accept_invitations'),
+      );
+      expect(authAcceptCall).toBeDefined();
+      const sql = authAcceptCall![0] as string;
+      expect(sql).toContain("tablename = 'invitations'");
+      expect(sql).toContain('FOR SELECT');
+      expect(sql).not.toContain('FOR INSERT');
+      expect(sql).not.toContain('FOR DELETE');
+    });
+
+    it('[1H.1-UNIT-007] auth_insert_users targets users table with FOR INSERT only', async () => {
+      await service.onModuleInit();
+
+      const authInsertCall = dataSource.query.mock.calls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes('auth_insert_users'),
+      );
+      expect(authInsertCall).toBeDefined();
+      const sql = authInsertCall![0] as string;
+      expect(sql).toContain("tablename = 'users'");
+      expect(sql).toContain('FOR INSERT');
+      expect(sql).not.toContain('FOR SELECT');
+      expect(sql).not.toContain('FOR DELETE');
+    });
+
+    it('[1H.1-UNIT-008] auth_update_invitations targets invitations table with FOR UPDATE only', async () => {
+      await service.onModuleInit();
+
+      const authUpdateCall = dataSource.query.mock.calls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes('auth_update_invitations'),
+      );
+      expect(authUpdateCall).toBeDefined();
+      const sql = authUpdateCall![0] as string;
+      expect(sql).toContain("tablename = 'invitations'");
+      expect(sql).toContain('FOR UPDATE');
+      expect(sql).not.toContain('FOR INSERT');
+      expect(sql).not.toContain('FOR DELETE');
+    });
+
+    it('[1H.1-UNIT-009] tenant_isolation policies use current_setting for tenant scoping', async () => {
+      await service.onModuleInit();
+
+      const tenantPolicyCalls = dataSource.query.mock.calls.filter(
+        (call) => typeof call[0] === 'string' && call[0].includes('tenant_isolation'),
+      );
+      expect(tenantPolicyCalls).toHaveLength(2);
+
+      for (const call of tenantPolicyCalls) {
+        const sql = call[0] as string;
+        expect(sql).toContain('current_setting');
+        expect(sql).toContain('app.current_tenant');
+      }
+    });
   });
 });

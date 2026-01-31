@@ -11,7 +11,7 @@ import { AuthService } from '../../core/services/auth.service';
 @Component({ standalone: true, template: '' })
 class DummyComponent {}
 
-describe('SetPasswordComponent', () => {
+describe('SetPasswordComponent [P1]', () => {
   let fixture: ComponentFixture<SetPasswordComponent>;
   let component: SetPasswordComponent;
   let authServiceMock: Record<string, jest.Mock>;
@@ -53,22 +53,22 @@ describe('SetPasswordComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create the component', () => {
+  it('[1H.1-UNIT-001] should create the component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should read token from query params', () => {
+  it('[1H.1-UNIT-002] should read token from query params', () => {
     expect(component.token).toBe('valid-token-123');
   });
 
-  it('should render password form with two password fields', () => {
+  it('[1H.1-UNIT-003] should render password form with two password fields', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('input#newPassword')).toBeTruthy();
     expect(el.querySelector('input#confirmPassword')).toBeTruthy();
     expect(el.querySelector('button[type="submit"]')).toBeTruthy();
   });
 
-  it('should require password fields', () => {
+  it('[1H.1-UNIT-004] should require password fields', () => {
     component.onSubmit();
     fixture.detectChanges();
 
@@ -76,7 +76,7 @@ describe('SetPasswordComponent', () => {
     expect(component.passwordForm.get('confirmPassword')?.hasError('required')).toBe(true);
   });
 
-  it('should enforce minimum length of 8 characters', () => {
+  it('[1H.1-UNIT-005] should enforce minimum length of 8 characters', () => {
     component.passwordForm.get('newPassword')?.setValue('Short1');
     component.passwordForm.get('newPassword')?.markAsTouched();
     fixture.detectChanges();
@@ -84,7 +84,7 @@ describe('SetPasswordComponent', () => {
     expect(component.passwordForm.get('newPassword')?.hasError('minlength')).toBe(true);
   });
 
-  it('should enforce password complexity (uppercase + lowercase + number)', () => {
+  it('[1H.1-UNIT-006] should enforce password complexity (uppercase + lowercase + number)', () => {
     component.passwordForm.get('newPassword')?.setValue('alllowercase');
     component.passwordForm.get('newPassword')?.markAsTouched();
 
@@ -94,7 +94,7 @@ describe('SetPasswordComponent', () => {
     expect(component.passwordForm.get('newPassword')?.hasError('passwordComplexity')).toBe(false);
   });
 
-  it('should validate that passwords match', () => {
+  it('[1H.1-UNIT-007] should validate that passwords match', () => {
     component.passwordForm.get('newPassword')?.setValue('ValidPass1');
     component.passwordForm.get('confirmPassword')?.setValue('DifferentPass1');
     component.passwordForm.get('confirmPassword')?.markAsTouched();
@@ -105,7 +105,7 @@ describe('SetPasswordComponent', () => {
     expect(component.passwordForm.hasError('passwordMismatch')).toBe(false);
   });
 
-  it('should call AuthService.setPassword on valid submit', () => {
+  it('[1H.1-UNIT-008] should call AuthService.setPassword on valid submit', () => {
     authServiceMock['setPassword'].mockReturnValue(of(undefined));
     jest.spyOn(router, 'navigate').mockResolvedValue(true);
 
@@ -118,7 +118,7 @@ describe('SetPasswordComponent', () => {
     expect(authServiceMock['setPassword']).toHaveBeenCalledWith('valid-token-123', 'ValidPass1');
   });
 
-  it('should redirect to /auth/login with message on success', () => {
+  it('[1H.1-UNIT-009] should redirect to /auth/login with message on success', () => {
     authServiceMock['setPassword'].mockReturnValue(of(undefined));
     const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
 
@@ -133,7 +133,7 @@ describe('SetPasswordComponent', () => {
     });
   });
 
-  it('should show error message on failure', () => {
+  it('[1H.1-UNIT-010] should show error message on failure', () => {
     authServiceMock['setPassword'].mockReturnValue(throwError(() => new Error('Failed')));
 
     component.passwordForm.setValue({
@@ -147,7 +147,7 @@ describe('SetPasswordComponent', () => {
     expect(component.isLoading).toBe(false);
   });
 
-  it('should toggle password visibility', () => {
+  it('[1H.1-UNIT-011] should toggle password visibility', () => {
     expect(component.showNewPassword).toBe(false);
     component.toggleNewPassword();
     expect(component.showNewPassword).toBe(true);

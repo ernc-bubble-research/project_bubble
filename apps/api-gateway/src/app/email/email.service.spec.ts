@@ -10,7 +10,7 @@ jest.mock('nodemailer', () => ({
   })),
 }));
 
-describe('EmailService', () => {
+describe('EmailService [P1]', () => {
   let service: EmailService;
 
   const mockConfigService = {
@@ -40,12 +40,12 @@ describe('EmailService', () => {
     service = module.get<EmailService>(EmailService);
   });
 
-  it('should be defined', () => {
+  it('[1H.1-UNIT-001] should be defined', () => {
     expect(service).toBeDefined();
   });
 
   describe('sendInvitationEmail', () => {
-    it('should send an email with correct parameters', async () => {
+    it('[1H.1-UNIT-002] should send an email with correct parameters', async () => {
       mockSendMail.mockResolvedValue({ messageId: 'test-123' });
 
       await service.sendInvitationEmail(
@@ -66,7 +66,7 @@ describe('EmailService', () => {
       expect(callArgs.html).toContain('http://localhost:4200/auth/set-password');
     });
 
-    it('should throw when sendMail fails', async () => {
+    it('[1H.1-UNIT-003] should throw when sendMail fails', async () => {
       mockSendMail.mockRejectedValue(new Error('SMTP error'));
 
       await expect(

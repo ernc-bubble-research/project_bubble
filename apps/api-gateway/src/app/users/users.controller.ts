@@ -10,6 +10,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import {
   CreateUserDto,
   UpdateUserDto,
@@ -22,6 +23,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UsersService } from './users.service';
 
+@ApiTags('App - Users')
+@ApiBearerAuth()
 @Controller('app/users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.CUSTOMER_ADMIN, UserRole.BUBBLE_ADMIN)
@@ -29,6 +32,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a user in current tenant' })
   create(
     @Body() dto: CreateUserDto,
     @Request() req: { user: { tenantId: string; role: string } },
@@ -41,6 +45,7 @@ export class UsersController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'List users in current tenant' })
   findAll(
     @Request() req: { user: { tenantId: string } },
   ): Promise<UserResponseDto[]> {
@@ -48,6 +53,7 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a user' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
@@ -62,6 +68,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Deactivate a user' })
   deactivate(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { tenantId: string } },
@@ -70,6 +77,7 @@ export class UsersController {
   }
 
   @Post(':id/reset-password')
+  @ApiOperation({ summary: 'Reset user password' })
   resetPassword(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ResetPasswordDto,

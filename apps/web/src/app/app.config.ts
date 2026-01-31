@@ -8,7 +8,6 @@ import {
   withInterceptors,
 } from '@angular/common/http';
 import { appRoutes } from './app.routes';
-import { adminApiKeyInterceptor } from './core/interceptors/admin-api-key.interceptor';
 import { jwtInterceptor } from './core/interceptors/jwt.interceptor';
 import {
   LucideIconProvider,
@@ -44,7 +43,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(appRoutes),
-    provideHttpClient(withInterceptors([jwtInterceptor, adminApiKeyInterceptor])),
+    provideHttpClient(withInterceptors([jwtInterceptor])),
     {
       provide: LUCIDE_ICONS,
       multi: true,

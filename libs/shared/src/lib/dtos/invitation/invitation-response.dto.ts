@@ -1,10 +1,12 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
 export class InvitationResponseDto {
-  id!: string;
-  email!: string;
-  role!: string;
-  status!: string;
-  invitedBy!: string;
-  inviterName?: string;
-  expiresAt!: string;
-  createdAt!: string;
+  @ApiProperty() id!: string;
+  @ApiProperty() email!: string;
+  @ApiProperty() role!: string;
+  @ApiProperty() status!: string;
+  @ApiProperty() invitedBy!: string;
+  @ApiPropertyOptional() inviterName?: string;
+  @ApiProperty() expiresAt!: string;
+  @ApiProperty() createdAt!: string;
 }

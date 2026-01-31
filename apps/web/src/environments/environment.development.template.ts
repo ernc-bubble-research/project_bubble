@@ -3,5 +3,4 @@
 export const environment = {
   production: false,
   apiUrl: '/api',
-  adminApiKey: 'REPLACE_WITH_ADMIN_API_KEY_FROM_ENV',
 };

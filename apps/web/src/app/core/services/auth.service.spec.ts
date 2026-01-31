@@ -8,7 +8,7 @@ import {
 } from '@angular/common/http/testing';
 import { AuthService } from './auth.service';
 
-describe('AuthService', () => {
+describe('AuthService [P0]', () => {
   let service: AuthService;
   let httpTesting: HttpTestingController;
 
@@ -59,7 +59,7 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('should store token on successful login', () => {
+    it('[1H.1-UNIT-001] should store token on successful login', () => {
       service.login('admin@bubble.io', 'Admin123!').subscribe((res) => {
         expect(res.accessToken).toBe('jwt-token');
         expect(localStorage.getItem('bubble_access_token')).toBe('jwt-token');
@@ -84,7 +84,7 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
-    it('should clear stored token', () => {
+    it('[1H.1-UNIT-002] should clear stored token', () => {
       localStorage.setItem('bubble_access_token', 'some-token');
 
       service.logout();
@@ -94,35 +94,35 @@ describe('AuthService', () => {
   });
 
   describe('getToken', () => {
-    it('should return stored token', () => {
+    it('[1H.1-UNIT-003] should return stored token', () => {
       localStorage.setItem('bubble_access_token', 'test-token');
 
       expect(service.getToken()).toBe('test-token');
     });
 
-    it('should return null when no token stored', () => {
+    it('[1H.1-UNIT-004] should return null when no token stored', () => {
       expect(service.getToken()).toBeNull();
     });
   });
 
   describe('isAuthenticated', () => {
-    it('should return true when token is valid and not expired', () => {
+    it('[1H.1-UNIT-005] should return true when token is valid and not expired', () => {
       localStorage.setItem('bubble_access_token', mockToken);
 
       expect(service.isAuthenticated()).toBe(true);
     });
 
-    it('should return false when token is expired', () => {
+    it('[1H.1-UNIT-006] should return false when token is expired', () => {
       localStorage.setItem('bubble_access_token', expiredToken);
 
       expect(service.isAuthenticated()).toBe(false);
     });
 
-    it('should return false when no token exists', () => {
+    it('[1H.1-UNIT-007] should return false when no token exists', () => {
       expect(service.isAuthenticated()).toBe(false);
     });
 
-    it('should return false for malformed token', () => {
+    it('[1H.1-UNIT-008] should return false for malformed token', () => {
       localStorage.setItem('bubble_access_token', 'not-a-jwt');
 
       expect(service.isAuthenticated()).toBe(false);
@@ -130,7 +130,7 @@ describe('AuthService', () => {
   });
 
   describe('getCurrentUser', () => {
-    it('should decode user from valid token', () => {
+    it('[1H.1-UNIT-009] should decode user from valid token', () => {
       localStorage.setItem('bubble_access_token', mockToken);
 
       const user = service.getCurrentUser();
@@ -143,7 +143,7 @@ describe('AuthService', () => {
       expect(u.tenantId).toBe('tid');
     });
 
-    it('should return null when no token', () => {
+    it('[1H.1-UNIT-010] should return null when no token', () => {
       expect(service.getCurrentUser()).toBeNull();
     });
   });

@@ -6,7 +6,7 @@ import { of, throwError } from 'rxjs';
 import { InviteUserDialogComponent } from './invite-user-dialog.component';
 import { InvitationService } from '../../core/services/invitation.service';
 
-describe('InviteUserDialogComponent', () => {
+describe('InviteUserDialogComponent [P2]', () => {
   let fixture: ComponentFixture<InviteUserDialogComponent>;
   let component: InviteUserDialogComponent;
   let invitationServiceMock: Record<string, jest.Mock>;
@@ -39,15 +39,15 @@ describe('InviteUserDialogComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create the component', () => {
+  it('[1H.1-UNIT-001] should create the component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have an invalid form initially (email required)', () => {
+  it('[1H.1-UNIT-002] should have an invalid form initially (email required)', () => {
     expect(component.form.valid).toBe(false);
   });
 
-  it('should validate email format', () => {
+  it('[1H.1-UNIT-003] should validate email format', () => {
     component.form.get('email')?.setValue('invalid');
     expect(component.form.get('email')?.hasError('email')).toBe(true);
 
@@ -55,11 +55,11 @@ describe('InviteUserDialogComponent', () => {
     expect(component.form.get('email')?.valid).toBe(true);
   });
 
-  it('should have creator as default role', () => {
+  it('[1H.1-UNIT-004] should have creator as default role', () => {
     expect(component.form.get('role')?.value).toBe('creator');
   });
 
-  it('should call InvitationService.create on valid submit', () => {
+  it('[1H.1-UNIT-005] should call InvitationService.create on valid submit', () => {
     invitationServiceMock.create.mockReturnValue(
       of({ id: 'inv-1', email: 'bob@example.com', role: 'creator', status: 'pending' }),
     );
@@ -81,7 +81,7 @@ describe('InviteUserDialogComponent', () => {
     expect(emitSpy).toHaveBeenCalled();
   });
 
-  it('should show error on 409 conflict', () => {
+  it('[1H.1-UNIT-006] should show error on 409 conflict', () => {
     invitationServiceMock.create.mockReturnValue(
       throwError(() => ({
         status: 409,
@@ -100,7 +100,7 @@ describe('InviteUserDialogComponent', () => {
     expect(component.errorMessage()).toBe('A user with this email already exists');
   });
 
-  it('should show generic error for non-409 failures', () => {
+  it('[1H.1-UNIT-007] should show generic error for non-409 failures', () => {
     invitationServiceMock.create.mockReturnValue(
       throwError(() => ({ status: 500 })),
     );
@@ -116,12 +116,12 @@ describe('InviteUserDialogComponent', () => {
     expect(component.errorMessage()).toBe('Failed to send invitation. Please try again.');
   });
 
-  it('should not submit invalid form', () => {
+  it('[1H.1-UNIT-008] should not submit invalid form', () => {
     component.onSubmit();
     expect(invitationServiceMock.create).not.toHaveBeenCalled();
   });
 
-  it('should emit closed when close is called', () => {
+  it('[1H.1-UNIT-009] should emit closed when close is called', () => {
     const emitSpy = jest.spyOn(component.closed, 'emit');
     component.close();
     expect(emitSpy).toHaveBeenCalled();
