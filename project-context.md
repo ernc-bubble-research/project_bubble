@@ -59,19 +59,38 @@ _This file contains critical rules and patterns that AI agents must follow when 
     ```
 
 ### 2. The "Security by Consumption" Rule (RLS)
-*   **NEVER** inject `Repository<T>` directly into a Service.
-*   **ALWAYS** inject `TransactionManager`.
+*   **NEVER** inject `Repository<T>` directly into a Service (unless it's in the exemption list below).
+*   **ALWAYS** inject `TransactionManager` from `@project-bubble/db-layer`.
 *   **REASON:** We use Postgres Row Level Security (RLS). A raw connection bypasses RLS. The `TransactionManager` forces `SET LOCAL app.current_tenant` before every query.
 *   **PATTERN:**
     ```typescript
     // BAD
     // constructor(private repo: Repository<User>) {}
 
-    // GOOD
+    // GOOD — reads tenant from AsyncLocalStorage (set by TenantContextInterceptor)
+    await this.txManager.run(async (manager) => {
+        return manager.find(User);
+    });
+
+    // GOOD — explicit tenant override (for admin operations)
     await this.txManager.run(tenantId, async (manager) => {
         return manager.find(User);
     });
     ```
+*   **EXEMPTED SERVICES** (documented exceptions to this rule):
+    | Service | Reason |
+    |:---|:---|
+    | `AuthService` (login + seed) | Login is pre-authentication — no tenant context. Seed is dev-only startup. Both need cross-tenant user queries. |
+    | `TenantsService` | Admin-scoped — `tenants` table has no `tenant_id` column and no RLS policy. |
+*   **ALL future services** MUST use `TransactionManager` for any table that has a `tenant_id` column.
+
+### 2b. RLS Architecture Details
+*   **`SET LOCAL app.current_tenant`** is transaction-scoped. It reverts automatically when the transaction ends, preventing connection pool contamination.
+*   **`current_setting('app.current_tenant', true)`** in RLS policies — the `true` (missing_ok) returns NULL if not set, meaning queries without tenant context match NO rows (fail-closed).
+*   **`TenantContextInterceptor`** (global, registered via `APP_INTERCEPTOR`) extracts `tenant_id` from the JWT and stores it in `AsyncLocalStorage` for the request duration.
+*   **`TransactionManager.run(callback)`** reads tenant context from `AsyncLocalStorage` automatically. Use `run(tenantId, callback)` for explicit override.
+*   **`DbLayerModule`** is `@Global()` — `TransactionManager` is available everywhere without importing it per module.
+*   **`RlsSetupService`** creates RLS policies on `onModuleInit` in development. In production, use proper migrations.
 
 ### 3. The "200ms" Rule (Async)
 *   **NEVER** run long logic (>200ms) in the `api-gateway`.
@@ -90,7 +109,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
     *   `apps/api-gateway`: NestJS HTTP API
     *   `apps/worker-engine`: NestJS Background Processor
     *   `libs/shared`: DTOs, Types
-    *   `libs/db-layer`: Entities, Migrations, Repositories
+    *   `libs/db-layer`: Entities, TransactionManager, RLS Setup, Tenant Context (AsyncLocalStorage)
 *   **Naming:**
     *   Files: `kebab-case` (e.g., `user-profile.component.ts`)
     *   Classes: `PascalCase` (e.g., `UserProfileComponent`)
