@@ -81,12 +81,15 @@ export class TenantsService {
       );
     }
 
-    const token = this.jwtService.sign({
-      sub: 'admin',
-      tenant_id: tenantId,
-      role: 'impersonator',
-      impersonating: true,
-    });
+    const token = this.jwtService.sign(
+      {
+        sub: 'admin',
+        tenant_id: tenantId,
+        role: 'impersonator',
+        impersonating: true,
+      },
+      { expiresIn: '60m' },
+    );
 
     return { token, tenant: { id: tenant.id, name: tenant.name } };
   }

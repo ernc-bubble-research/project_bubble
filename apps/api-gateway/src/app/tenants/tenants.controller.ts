@@ -13,11 +13,16 @@ import {
   ImpersonateResponseDto,
   UpdateTenantDto,
 } from '@project-bubble/shared';
+import { UserRole } from '@project-bubble/db-layer';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { AdminApiKeyGuard } from '../guards/admin-api-key.guard';
 import { TenantsService } from './tenants.service';
 
 @Controller('admin/tenants')
-@UseGuards(AdminApiKeyGuard)
+@UseGuards(OptionalJwtAuthGuard, AdminApiKeyGuard, RolesGuard)
+@Roles(UserRole.BUBBLE_ADMIN)
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 

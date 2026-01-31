@@ -146,12 +146,15 @@ describe('TenantsService', () => {
 
       expect(result.token).toBe('mock-jwt-token');
       expect(result.tenant).toEqual({ id: mockTenant.id, name: mockTenant.name });
-      expect(mockJwtService.sign).toHaveBeenCalledWith({
-        sub: 'admin',
-        tenant_id: mockTenant.id,
-        role: 'impersonator',
-        impersonating: true,
-      });
+      expect(mockJwtService.sign).toHaveBeenCalledWith(
+        {
+          sub: 'admin',
+          tenant_id: mockTenant.id,
+          role: 'impersonator',
+          impersonating: true,
+        },
+        { expiresIn: '60m' },
+      );
     });
 
     it('should throw NotFoundException for non-existent tenant', async () => {

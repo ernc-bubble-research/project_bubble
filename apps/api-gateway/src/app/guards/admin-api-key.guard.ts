@@ -12,13 +12,24 @@ export class AdminApiKeyGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
+
+    // Path 1: Valid JWT with bubble_admin role (set by OptionalJwtAuthGuard)
+    if (request.user?.role === 'bubble_admin') {
+      return true;
+    }
+
+    // Path 2: Valid admin API key header (backward compatibility)
     const apiKey = request.headers['x-admin-api-key'];
     const expectedKey = this.config.get<string>('ADMIN_API_KEY');
 
-    if (!apiKey || apiKey !== expectedKey) {
-      throw new UnauthorizedException('Invalid or missing admin API key');
+    if (apiKey && apiKey === expectedKey) {
+      // Set synthetic admin user so downstream RolesGuard sees bubble_admin role
+      request.user = { userId: 'api-key', tenantId: null, role: 'bubble_admin' };
+      return true;
     }
 
-    return true;
+    throw new UnauthorizedException(
+      'Invalid or missing admin API key or JWT token',
+    );
   }
 }
