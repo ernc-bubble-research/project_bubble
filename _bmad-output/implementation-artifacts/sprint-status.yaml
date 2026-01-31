@@ -49,6 +49,37 @@
 #   node type implementations (Scanner/Doer/Reviewer/Output), Postgres checkpointing,
 #   Map/parallel execution pattern, feedback re-run (partial graph execution).
 #   This tech spec MUST be completed before any Epic 4 story is created.
+#
+# BEFORE Epic 4 Story 4.1 or 4.2: Build Mock LLM Provider alongside real providers.
+#   The architecture specifies a Hexagonal LLM pattern (abstract provider interface).
+#   - MockLlmProvider: Returns deterministic canned responses. Free, instant, for dev + unit tests.
+#   - VertexLlmProvider: Real Google Vertex AI calls (paid). For production.
+#   - GoogleAIStudioProvider: Free tier Google AI Studio API. For smoke tests + dev validation.
+#   - Switched via LLM_PROVIDER env var (mock | google-ai-studio | vertex).
+#   - Create a "smoke test" workflow (2 steps, 1-2 small docs) for real LLM validation.
+#   - Mock provider covers engine logic (graph execution, state, retries, feedback loop).
+#   - Google AI Studio (free tier) for real LLM integration testing without cost.
+#   - Vertex AI for production workloads.
+#   LLM TESTING STRATEGY:
+#   - 90% development: MockLlmProvider (free, deterministic, fast)
+#   - 10% validation: GoogleAIStudioProvider (free tier, real LLM responses)
+#   - Production: VertexLlmProvider (paid, scalable)
+#
+# AFTER MVP Delivery (Epics 1-7 complete):
+#   1. Implement Husky git pre-push hook (nx affected:test + nx affected:lint).
+#      Rationale: BMAD workflow already runs full lint/test/build on every story,
+#      but Husky adds a safety net for any future non-BMAD pushes.
+#   2. Story 1.11: CI/CD Pipeline Setup (GitHub Actions).
+#   3. Docker Compose for local full-stack orchestration.
+#   4. Production deployment (cloud hosting, migrations, secrets management).
+#
+# DEFERRED DECISIONS:
+# ===================
+# - Story 1.11 (CI/CD) deferred to post-MVP. BMAD workflow provides equivalent
+#   lint/test/build verification on every story. Solo dev, no PR workflow yet.
+# - Story 1.12 (Invitations) story created, ready-for-dev. Not blocking Epic 2/3.
+# - MVP runs entirely on laptop: Angular + NestJS + Postgres (Docker) + Redis (Docker) + Vertex AI API key.
+# - synchronize:true for dev. Switch to TypeORM migrations before production deployment.
 
 generated: 2026-01-30
 project: project_bubble
@@ -72,7 +103,7 @@ development_status:
   1-8-rls-enforcement-mechanism-security: done
   1-9-user-management-admin-creation: done
   1-10-login-password-pages-auth-ui: done
-  1-11-ci-cd-pipeline-setup: backlog
+  1-11-ci-cd-pipeline-setup: deferred # Moved to post-MVP. BMAD workflow covers lint/test/build per story.
   1-12-user-invitations-email-flow: ready-for-dev
   epic-1-retrospective: optional
 
