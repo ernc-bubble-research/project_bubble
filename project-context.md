@@ -40,7 +40,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **Database:** PostgreSQL 16+ (with `pgvector` extension)
 *   **Queue:** BullMQ (Redis-backed)
 *   **ORM:** TypeORM (Active Record pattern NOT allowed; use Repository pattern)
-*   **AI Engine:** LangGraph.js
+*   **AI Engine:** LLM-Orchestrated Execution (YAML prompts sent directly to LLM via hexagonal `LLMProvider` interface)
 
 ## Critical Implementation Rules
 
@@ -99,9 +99,42 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **PATTERN:** API pushes `{ jobId }` to Redis -> Returns `202 Accepted` -> Worker processes data.
 
 ### 4. The "Hexagonal" Rule (AI)
-*   **NEVER** import `openai` or `langchain` directly in feature modules.
-*   **ALWAYS** use the `LLMProvider` interface.
-*   **REASON:** We need to swap between GPT-4, Claude-3, and Local Llama without rewriting business logic.
+*   **NEVER** import `openai` or `langchain` or provider SDKs directly in feature modules.
+*   **ALWAYS** use the `LLMProvider` interface (mirrors existing `EmbeddingProvider` pattern).
+*   **REASON:** We need to swap between Gemini, GPT-4, Claude, and Local Llama without rewriting business logic.
+
+### 5. Workflow Execution Architecture (Party Mode Decision — 2026-02-01)
+
+#### Core Principle: LLM-Orchestrated Execution
+*   **LangGraph.js is DEFERRED** — not used for MVP. Reserved for potential future epic.
+*   **Workflows are YAML prompts** sent directly to the LLM. The platform handles assembly (YAML + files + knowledge context), the LLM handles execution.
+*   **YAML IS the prompt** — no transformation layer. YAML goes to LLM as-is.
+*   **Prompt quality is Bubble's IP.** Platform = infrastructure + assembly. Prompt engineering = business value.
+
+#### Atomic Workflows & Composition
+*   **Every workflow is atomic** — one LLM call pattern, clear inputs, clear outputs.
+*   **Workflow chains** link atomic workflows sequentially. Output of WorkflowA → input of WorkflowB.
+*   **Chain definitions are metadata only** — they tell the platform "run A, then feed A's outputs into B." No file uploads in chain builder, just connections.
+*   **Workflow outputs are first-class assets** — stored with `source_type: workflow_output` and `workflow_run_id` reference. Visible, downloadable, inspectable between chain steps.
+
+#### Input Role Taxonomy
+*   **`context` inputs:** Shared across all executions (codebook, research goal, knowledge base context). Go into every LLM call as background.
+*   **`subject` inputs:** The items being processed (interview transcripts). Determine the execution pattern.
+*   **Input sources:** `asset` (existing in data vault), `upload` (new file), `text` (free-form entry in UI).
+
+#### Execution Patterns (Derived from Subject Input Config)
+*   **Fan-out:** `subject.accept: single` + `processing: parallel` → N parallel BullMQ jobs (1 per file). Each job gets all context inputs + 1 subject file.
+*   **Fan-in:** `subject.accept: multiple` + `processing: batch` → 1 BullMQ job with all files as context.
+*   **Chain orchestrator:** Lightweight BullMQ `FlowProducer`. Watches step N completion → triggers step N+1 with collected outputs.
+
+#### Context Window Management
+*   **Pre-execution token count check** per job (context + subject files).
+*   **Interactive file selection UI** if over limit — user deselects files until under budget. No silent rejection.
+*   **Map-reduce deferred to post-MVP.**
+
+#### Output Validation
+*   **Structural validation only** — platform checks required sections are present (as defined in YAML output spec).
+*   **No content quality judgment** — that's the prompt's responsibility.
 
 ## File Organization & Naming
 

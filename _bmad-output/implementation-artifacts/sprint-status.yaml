@@ -44,13 +44,14 @@
 #
 # GATE REQUIREMENTS:
 # ==================
-# BEFORE Epic 3: Run /bmad:bmm:workflows:quick-spec for LangGraph.js integration.
-#   Scope: How graph_json maps to LangGraph StateGraph, state schema design,
-#   node type implementations (Scanner/Doer/Reviewer/Output), Postgres checkpointing,
-#   Map/parallel execution pattern, feedback re-run (partial graph execution).
-#   Rationale: Epic 3 builds the UI that PRODUCES GraphJSON; Epic 4 builds the engine
-#   that CONSUMES it. The JSON schema contract must be defined first so the form builder
-#   produces exactly what the execution engine needs. No rework.
+# BEFORE Epic 3: Run /bmad:bmm:workflows:quick-spec for Workflow Definition Schema.
+#   (UPDATED 2026-02-01: LangGraph.js DEFERRED — replaced by LLM-orchestrated execution)
+#   Scope: YAML workflow schema for atomic workflows, input role taxonomy (context vs subject),
+#   execution patterns (fan-out parallel, fan-in batch), workflow chain composition,
+#   output spec and structural validation, context window token budget check.
+#   Rationale: Epic 3 builds the UI that PRODUCES YAML workflow definitions; Epic 4 builds
+#   the engine that CONSUMES them. The YAML schema contract must be defined first so the
+#   form builder produces exactly what the execution engine needs. No rework.
 #   This tech spec MUST be completed before any Epic 3 story is created.
 #
 # BEFORE Epic 4 Story 4.1 or 4.2: Build Mock LLM Provider alongside real providers.
@@ -161,7 +162,7 @@ development_status:
   # Pre-Epic-3 Gates
   # ═══════════════════════════════════════════════════════
   gate-swagger-api-response: done # All 11 controllers, 42 endpoints documented. 406 tests, 0 errors.
-  gate-langgraph-quick-spec: not-started # Defines GraphJSON schema contract. MUST complete before Epic 3 stories.
+  gate-workflow-definition-schema: not-started # Defines YAML workflow schema contract (LangGraph.js DEFERRED). MUST complete before Epic 3 stories.
 
   # ═══════════════════════════════════════════════════════
   # Epic 3: Workflow Definition (The Architect)
