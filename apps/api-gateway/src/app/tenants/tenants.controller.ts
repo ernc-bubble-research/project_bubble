@@ -9,7 +9,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import {
   CreateTenantDto,
   ImpersonateResponseDto,
@@ -32,24 +32,41 @@ export class TenantsController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new tenant' })
+  @ApiResponse({ status: 201, description: 'Tenant created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid tenant data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing credentials' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   create(@Body() dto: CreateTenantDto) {
     return this.tenantsService.create(dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'List all tenants' })
+  @ApiResponse({ status: 200, description: 'List of all tenants' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing credentials' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   findAll() {
     return this.tenantsService.findAll();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get tenant by ID' })
+  @ApiResponse({ status: 200, description: 'Tenant details' })
+  @ApiResponse({ status: 400, description: 'Invalid UUID format' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing credentials' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.tenantsService.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update tenant' })
+  @ApiResponse({ status: 200, description: 'Tenant updated' })
+  @ApiResponse({ status: 400, description: 'Invalid tenant data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing credentials' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateTenantDto,
@@ -59,6 +76,11 @@ export class TenantsController {
 
   @Post(':id/impersonate')
   @ApiOperation({ summary: 'Impersonate a tenant (admin only)' })
+  @ApiResponse({ status: 201, description: 'Impersonation token generated', type: ImpersonateResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid UUID format' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing credentials' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
   impersonate(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { userId: string } },

@@ -10,7 +10,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import {
   CreateUserDto,
   UpdateUserDto,
@@ -33,6 +33,10 @@ export class UsersController {
 
   @Post()
   @ApiOperation({ summary: 'Create a user in current tenant' })
+  @ApiResponse({ status: 201, description: 'User created', type: UserResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid user data or email already exists' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   create(
     @Body() dto: CreateUserDto,
     @Request() req: { user: { tenantId: string; role: string } },
@@ -46,6 +50,9 @@ export class UsersController {
 
   @Get()
   @ApiOperation({ summary: 'List users in current tenant' })
+  @ApiResponse({ status: 200, description: 'List of users', type: [UserResponseDto] })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   findAll(
     @Request() req: { user: { tenantId: string } },
   ): Promise<UserResponseDto[]> {
@@ -54,6 +61,11 @@ export class UsersController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a user' })
+  @ApiResponse({ status: 200, description: 'User updated', type: UserResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid update data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
@@ -69,6 +81,10 @@ export class UsersController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Deactivate a user' })
+  @ApiResponse({ status: 200, description: 'User deactivated', type: UserResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   deactivate(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { tenantId: string } },
@@ -78,6 +94,11 @@ export class UsersController {
 
   @Post(':id/reset-password')
   @ApiOperation({ summary: 'Reset user password' })
+  @ApiResponse({ status: 201, description: 'Password reset successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or weak password' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   resetPassword(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ResetPasswordDto,

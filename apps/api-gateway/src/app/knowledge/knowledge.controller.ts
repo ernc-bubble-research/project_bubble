@@ -103,6 +103,7 @@ export class KnowledgeController {
   @ApiResponse({ status: 400, description: 'Invalid pagination parameters' })
   @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 500, description: 'Database query failure' })
   async listInsights(
     @Request() req: { user: { tenant_id: string } },
     @Query() query: ListInsightsQueryDto,
@@ -120,8 +121,10 @@ export class KnowledgeController {
     description: 'Insights linked to the specified run',
     type: [ValidatedInsightResponseDto],
   })
+  @ApiResponse({ status: 400, description: 'Invalid UUID format' })
   @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 500, description: 'Database query failure' })
   async getInsightsByRun(
     @Param('runId', ParseUUIDPipe) runId: string,
     @Request() req: { user: { tenant_id: string } },
@@ -133,9 +136,10 @@ export class KnowledgeController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Soft-delete a validated insight' })
   @ApiResponse({ status: 204, description: 'Insight soft-deleted' })
-  @ApiResponse({ status: 404, description: 'Insight not found or already deleted' })
+  @ApiResponse({ status: 400, description: 'Invalid UUID format' })
   @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Insight not found or already deleted' })
   async deleteInsight(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { tenant_id: string } },

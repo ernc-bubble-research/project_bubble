@@ -2,7 +2,7 @@
 
 **Project:** `project_bubble`
 **Session Date:** 2026-02-01
-**Status:** Epic 2 COMPLETE — Retrospective done, ready for Epic 3 (gates pending)
+**Status:** Epic 2 COMPLETE — Swagger gate DONE, LangGraph quick-spec gate pending
 
 ## 1. Workflow Protocol
 We follow a **Strict Story-Driven Workflow** using the BMAD methodology.
@@ -29,14 +29,13 @@ We follow a **Strict Story-Driven Workflow** using the BMAD methodology.
 | Gate | Status | Notes |
 |------|--------|-------|
 | LangGraph.js quick-spec | NOT STARTED | Defines GraphJSON schema contract between Epic 3 (builder UI) and Epic 4 (execution engine). MUST complete before any Epic 3 story. |
-| Swagger @ApiResponse gap fix | NOT STARTED | Add missing error response decorators to ALL Epic 1+2 controllers. Rule added to project-context.md. |
+| Swagger @ApiResponse gap fix | DONE | All 11 controllers (42 endpoints) now have complete @ApiResponse, @ApiTags, @ApiBearerAuth, @ApiOperation decorators. 406 tests, 0 errors. |
 | Epic 2 retrospective | DONE | `_bmad-output/implementation-artifacts/epic-2-retro-2026-02-01.md` |
 | Epic 2 NFR assessment | DONE (PASS) | `_bmad-output/epic-2-nfr-assessment.md` |
 
 ## 4. Next Actions
-1. **Run LangGraph.js quick-spec** (`/bmad:bmm:workflows:quick-spec`) — GATE REQUIREMENT
-2. **Fix Swagger @ApiResponse gaps** across all Epic 1+2 controllers
-3. **Create Story 3.1** with `/bmad:bmm:workflows:create-story` (after gates met)
+1. **Run LangGraph.js quick-spec** (`/bmad:bmm:workflows:quick-spec`) — LAST REMAINING GATE
+2. **Create Story 3.1** with `/bmad:bmm:workflows:create-story` (after LangGraph gate met)
 4. Continue through Epics 3 → 4 → 5 → 6 (with Epic 7 parallel to 4-6)
 5. **After MVP delivery:** Husky pre-push hook, Story 1.11 CI/CD, Docker Compose, production deployment
 
@@ -70,5 +69,6 @@ These are NON-NEGOTIABLE. Documented in `project-context.md` under "Process Disc
 
 ## 8. Known Issues
 - SCSS budget warning on tenant-detail.component.scss (5.46 kB vs 4 kB budget) — cosmetic, not blocking
-- api-gateway: 65 lint warnings (all `no-explicit-any` in test mocks) — accepted for test code
+- shared: 1 lint warning (unused `IsEnum` import in list-assets-query.dto.ts)
+- api-gateway: 65 lint warnings (all `no-explicit-any` in test mocks + 2 unused eslint-disable directives) — accepted for test code
 - `synchronize:true` in TypeORM — must switch to migrations before production (tracked for Epic 7)

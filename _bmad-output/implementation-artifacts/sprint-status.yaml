@@ -158,6 +158,12 @@ development_status:
   epic-2-retrospective: done # Retrospective completed 2026-02-01. 3 critical process failures documented. Action items defined.
 
   # ═══════════════════════════════════════════════════════
+  # Pre-Epic-3 Gates
+  # ═══════════════════════════════════════════════════════
+  gate-swagger-api-response: done # All 11 controllers, 42 endpoints documented. 406 tests, 0 errors.
+  gate-langgraph-quick-spec: not-started # Defines GraphJSON schema contract. MUST complete before Epic 3 stories.
+
+  # ═══════════════════════════════════════════════════════
   # Epic 3: Workflow Definition (The Architect)
   # FRs: FR1, FR2, FR4, FR5, FR6, FR35, FR42
   # ═══════════════════════════════════════════════════════

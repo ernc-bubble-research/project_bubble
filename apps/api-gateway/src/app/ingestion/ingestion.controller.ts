@@ -37,6 +37,7 @@ export class IngestionController {
   @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   @ApiResponse({ status: 404, description: 'Asset not found' })
+  @ApiResponse({ status: 500, description: 'Queue or embedding service failure' })
   async indexAsset(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { tenant_id: string } },
@@ -60,6 +61,7 @@ export class IngestionController {
   @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   @ApiResponse({ status: 404, description: 'Asset not found' })
+  @ApiResponse({ status: 500, description: 'De-indexing service failure' })
   async deIndexAsset(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { tenant_id: string } },
