@@ -121,6 +121,27 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **Unit Tests:** Co-located with code (`*.spec.ts`).
 *   **E2E Tests:** In `apps/*-e2e/`.
 *   **Mocks:** Use `jest.mock` or `MockProvider` from `@golevelup/ts-jest`. NEVER connect to real DB in Unit Tests.
+*   **Test IDs:** Every `it()` must include a structured test ID: `[{story}-UNIT-{seq}]` (e.g., `[2.1-UNIT-001]`). Use sub-letters for related tests: `[2.1-UNIT-001a]`, `[2.1-UNIT-001b]`.
+*   **Priority Markers:** Every top-level `describe()` must include a priority tag: `[P0]` (critical path), `[P1]` (high), `[P2]` (medium), `[P3]` (low).
+*   **BDD Format (Epic 3+):** New test files should use Given/When/Then comments to structure test bodies. Existing tests do not need to be retrofitted.
+    ```typescript
+    it('[3.1-UNIT-001] should create a report when valid input provided', async () => {
+      // Given
+      mockManager.findOne.mockResolvedValue(mockEntity);
+      // When
+      const result = await service.create(dto, tenantId);
+      // Then
+      expect(result.id).toBeDefined();
+    });
+    ```
+*   **Controller Test Pattern:** For thin delegation controllers, prefer direct constructor instantiation over `Test.createTestingModule()`. Reserve TestingModule for controllers with complex DI (guards, interceptors, pipes).
+    ```typescript
+    // Preferred for thin controllers
+    controller = new MyController(mockService as any);
+    ```
+*   **Data Factories:** Use shared factory functions with override pattern (e.g., `createMockAsset({ isIndexed: false })`). Factories live in `libs/db-layer/src/testing/`.
+*   **DTO Validation Tests:** Test DTO constraints using `plainToInstance` + `validate` from `class-validator`/`class-transformer`. Place in separate `*.dto.spec.ts` files when >15 validation tests.
+*   **File Size Limit:** Keep spec files under 300 lines. Split by concern (controller vs DTO, service vs integration) when approaching the limit.
 
 ## NFR Hardening Rules (from Epic 1 NFR Assessment — 2026-01-31)
 
@@ -139,16 +160,50 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **ALWAYS** wrap `bootstrap()` in try-catch with `process.exit(1)` on failure.
 *   **ALWAYS** add error handling to `onModuleInit` seed/setup logic.
 
+### API Documentation Rules
+*   **ALWAYS** add `@ApiResponse` decorators for ALL response codes on every controller endpoint: `200`/`201`/`202` (success), `400` (validation error), `401` (unauthorized), `403` (forbidden). Add `500` where external service failures are possible.
+*   **ALWAYS** use `@ApiTags`, `@ApiBearerAuth()`, `@ApiOperation()` on every controller.
+*   **REASON:** Swagger is the API contract for both frontend consumers and future integrations. Incomplete docs lead to incorrect client implementations and wasted debugging time.
+
 ### Deferred Items Tracking (NFR Assessment)
 *   **Impersonation audit trail** → Epic 7 Story 7.2 (interim: `logger.warn` on impersonation)
 *   **Health check endpoint** → Epic 7 Story 7.3 (prerequisite for service monitoring)
 *   **Refresh token rotation** → Epic 7 Story 7.5 (interim: 7-day JWT expiry)
 *   **Log sanitization** → Epic 2 Story 2.1 AC (first story with real document data)
 
+## Process Discipline Rules (from Epic 2 Retrospective — 2026-02-01)
+
+### Quality Standard
+*   **NEVER** use language like "acceptable for MVP", "sufficient for prototype", "adequate for current phase", or "defer to later phase" in any quality gate, assessment, or review output.
+*   **MVP defines feature scope, NOT quality bar.** The quality bar is always production-grade. No exceptions.
+*   **Quality gates produce PASS or FAIL only.** No CONCERNS with deferral recommendations. If it doesn't pass, fix it now or get explicit user approval to defer.
+
+### YOLO Mode Definition
+*   **YOLO mode auto-confirms:** Routine prompts (e.g., "proceed to next task?", "confirm environment?").
+*   **YOLO mode NEVER bypasses:** (1) Code review fix decisions — user always sees findings and chooses action, (2) Quality gate verdicts, (3) Any decision point where user input changes the outcome.
+
+### Reporting Requirements
+*   **Every test/lint run MUST report complete metrics** in this format:
+    ```
+    Tests:    api-gateway: X | web: X | db-layer: X | shared: X
+    Errors:   api-gateway: X | web: X | db-layer: X | shared: X
+    Warnings: api-gateway: X | web: X | db-layer: X | shared: X
+    ```
+*   **No metrics may be omitted.** Warnings are bugs — they must be reported and investigated.
+*   **A bug that exists in 5 places is 5 bugs**, not a "consistent pattern." Flag it, fix it.
+
+### Code Review Protocol
+*   **ALWAYS present findings to user before fixing** — even in YOLO mode.
+*   User chooses per finding: auto-fix, create action item, or show details.
+*   **NEVER auto-fix without consent.** This is a mandatory decision point.
+
 ## Anti-Patterns (Do Not Do)
 
 *   ❌ **No Schema per Tenant:** Do not create dynamic schemas. Use `tenant_id` column.
 *   ❌ **No Active Record:** Do not use `user.save()`. Use `repository.save(user)`.
 *   ❌ **No Direct Worker HTTP:** The API must not HTTP call the Worker. Use Redis.
+*   ❌ **No "Acceptable for MVP" Language:** Never rationalize quality gaps by referencing MVP scope.
+*   ❌ **No Silent Metric Omission:** Never report only errors while hiding warnings.
+*   ❌ **No Auto-Fix Without Consent:** Never fix code review findings without presenting them to the user first.
 
 

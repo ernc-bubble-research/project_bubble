@@ -6,6 +6,7 @@ const EMBEDDING_DIMENSIONS = 768;
 const MAX_BATCH_SIZE = 100;
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
+const EMBED_TIMEOUT_MS = 30_000; // 30 second timeout per batch
 
 @Injectable()
 export class GeminiEmbeddingProvider implements EmbeddingProvider {
@@ -36,10 +37,35 @@ export class GeminiEmbeddingProvider implements EmbeddingProvider {
     for (let i = 0; i < texts.length; i += MAX_BATCH_SIZE) {
       const batch = texts.slice(i, i + MAX_BATCH_SIZE);
       const batchResults = await this.embedBatchWithRetry(batch);
+
+      // Validate embedding dimensions
+      for (const vec of batchResults) {
+        if (vec.length !== EMBEDDING_DIMENSIONS) {
+          throw new Error(
+            `Embedding dimension mismatch: expected ${EMBEDDING_DIMENSIONS}, got ${vec.length}`,
+          );
+        }
+      }
+
       results.push(...batchResults);
     }
 
     return results;
+  }
+
+  private async withTimeout<T>(promise: Promise<T>): Promise<T> {
+    let timer: NodeJS.Timeout;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`Embedding API timed out after ${EMBED_TIMEOUT_MS}ms`)),
+        EMBED_TIMEOUT_MS,
+      );
+    });
+    try {
+      return await Promise.race([promise, timeout]);
+    } finally {
+      clearTimeout(timer!);
+    }
   }
 
   private async embedBatchWithRetry(
@@ -48,15 +74,17 @@ export class GeminiEmbeddingProvider implements EmbeddingProvider {
   ): Promise<number[][]> {
     try {
       if (texts.length === 1) {
-        const result = await this.genAIModel.embedContent(texts[0]);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result: any = await this.withTimeout(this.genAIModel.embedContent(texts[0]));
         return [result.embedding.values];
       }
 
-      const result = await this.genAIModel.batchEmbedContents({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result: any = await this.withTimeout(this.genAIModel.batchEmbedContents({
         requests: texts.map((text) => ({
           content: { role: 'user', parts: [{ text }] },
         })),
-      });
+      }));
 
       return result.embeddings.map((e: { values: number[] }) => e.values);
     } catch (error) {

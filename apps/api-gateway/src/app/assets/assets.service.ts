@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { TransactionManager, AssetEntity, AssetStatus } from '@project-bubble/db-layer';
@@ -54,25 +54,41 @@ export class AssetsService {
     const fileUuid = uuidv4();
     const tenantDir = join(UPLOADS_ROOT, tenantId);
     await mkdir(tenantDir, { recursive: true });
-    const storageName = `${fileUuid}-${file.originalname}`;
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storageName = `${fileUuid}-${safeName}`;
     const storagePath = join(tenantDir, storageName);
     await writeFile(storagePath, file.buffer);
 
-    const asset = await this.txManager.run(tenantId, async (manager) => {
-      const entity = manager.create(AssetEntity, {
-        tenantId,
-        folderId: dto.folderId || null,
-        originalName: file.originalname,
-        storagePath,
-        mimeType: file.mimetype,
-        fileSize: file.size,
-        sha256Hash,
-        isIndexed: false,
-        status: AssetStatus.ACTIVE,
-        uploadedBy: userId,
+    let asset: AssetEntity;
+    try {
+      asset = await this.txManager.run(tenantId, async (manager) => {
+        const entity = manager.create(AssetEntity, {
+          tenantId,
+          folderId: dto.folderId || null,
+          originalName: file.originalname,
+          storagePath,
+          mimeType: file.mimetype,
+          fileSize: file.size,
+          sha256Hash,
+          isIndexed: false,
+          status: AssetStatus.ACTIVE,
+          uploadedBy: userId,
+        });
+        return manager.save(AssetEntity, entity);
       });
-      return manager.save(AssetEntity, entity);
-    });
+    } catch (error) {
+      // Clean up orphan file if DB save fails
+      try {
+        await unlink(storagePath);
+      } catch {
+        this.logger.warn({
+          message: 'Failed to clean up orphan file after DB save failure',
+          storagePath,
+          tenantId,
+        });
+      }
+      throw error;
+    }
 
     this.logger.log({
       message: 'Asset uploaded',
@@ -88,19 +104,28 @@ export class AssetsService {
 
   async findAll(
     tenantId: string,
-    folderId?: string,
-    status?: string,
+    options?: {
+      folderId?: string;
+      status?: string;
+      limit?: number;
+      offset?: number;
+    },
   ): Promise<AssetResponseDto[]> {
+    const limit = options?.limit ?? 50;
+    const offset = options?.offset ?? 0;
+
     return this.txManager.run(tenantId, async (manager) => {
       const qb = manager
         .createQueryBuilder(AssetEntity, 'asset')
-        .orderBy('asset.createdAt', 'DESC');
+        .orderBy('asset.createdAt', 'DESC')
+        .take(limit)
+        .skip(offset);
 
-      if (folderId) {
-        qb.andWhere('asset.folderId = :folderId', { folderId });
+      if (options?.folderId) {
+        qb.andWhere('asset.folderId = :folderId', { folderId: options.folderId });
       }
-      if (status) {
-        qb.andWhere('asset.status = :status', { status });
+      if (options?.status) {
+        qb.andWhere('asset.status = :status', { status: options.status });
       } else {
         qb.andWhere('asset.status = :status', { status: AssetStatus.ACTIVE });
       }

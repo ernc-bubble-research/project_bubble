@@ -14,9 +14,9 @@ import {
   Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { UserRole } from '@project-bubble/db-layer';
-import { UploadAssetDto, UpdateAssetDto } from '@project-bubble/shared';
+import { UploadAssetDto, UpdateAssetDto, AssetResponseDto, ListAssetsQueryDto } from '@project-bubble/shared';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -33,7 +33,12 @@ export class AssetsController {
   @Post()
   @ApiOperation({ summary: 'Upload a file' })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
+  @ApiResponse({ status: 201, description: 'File uploaded successfully', type: AssetResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid file (type, size, or missing)' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 409, description: 'Duplicate file (SHA-256 hash conflict)' })
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   upload(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: UploadAssetDto,
@@ -49,20 +54,28 @@ export class AssetsController {
 
   @Get()
   @ApiOperation({ summary: 'List assets' })
+  @ApiResponse({ status: 200, description: 'Paginated list of assets', type: [AssetResponseDto] })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   findAll(
     @Request() req: { user: { tenant_id: string } },
-    @Query('folderId') folderId?: string,
-    @Query('status') status?: string,
+    @Query() query: ListAssetsQueryDto,
   ) {
-    return this.assetsService.findAll(
-      req.user.tenant_id,
-      folderId,
-      status,
-    );
+    return this.assetsService.findAll(req.user.tenant_id, {
+      folderId: query.folderId,
+      status: query.status,
+      limit: query.limit,
+      offset: query.offset,
+    });
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get asset by ID' })
+  @ApiResponse({ status: 200, description: 'Asset details', type: AssetResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Asset not found' })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { tenant_id: string } },
@@ -72,6 +85,11 @@ export class AssetsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update asset metadata' })
+  @ApiResponse({ status: 200, description: 'Asset updated', type: AssetResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid update data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Asset not found' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateAssetDto,
@@ -82,6 +100,11 @@ export class AssetsController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Archive asset (soft delete)' })
+  @ApiResponse({ status: 200, description: 'Asset archived', type: AssetResponseDto })
+  @ApiResponse({ status: 400, description: 'Asset already archived' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Asset not found' })
   archive(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { tenant_id: string } },
@@ -91,6 +114,11 @@ export class AssetsController {
 
   @Post(':id/restore')
   @ApiOperation({ summary: 'Restore archived asset' })
+  @ApiResponse({ status: 200, description: 'Asset restored', type: AssetResponseDto })
+  @ApiResponse({ status: 400, description: 'Asset is not archived' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Asset not found' })
   restore(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { tenant_id: string } },

@@ -1,3 +1,2 @@
-export * from './lib/shared';
 export * from './lib/dtos';
 export * from './lib/types';

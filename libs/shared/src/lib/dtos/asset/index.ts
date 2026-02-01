@@ -6,3 +6,4 @@ export { UpdateFolderDto } from './update-folder.dto';
 export { FolderResponseDto } from './folder-response.dto';
 export { IndexAssetResponseDto } from './index-asset-response.dto';
 export { KnowledgeChunkResponseDto } from './knowledge-chunk-response.dto';
+export { ListAssetsQueryDto } from './list-assets-query.dto';

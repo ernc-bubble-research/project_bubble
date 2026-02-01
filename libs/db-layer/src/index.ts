@@ -1,4 +1,3 @@
-export * from './lib/db-layer';
 export * from './lib/entities';
 export * from './lib/tenant-context';
 export * from './lib/transaction-manager';

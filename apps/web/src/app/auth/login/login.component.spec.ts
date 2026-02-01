@@ -80,7 +80,7 @@ describe('LoginComponent [P1]', () => {
           useValue: {
             snapshot: {
               queryParamMap: {
-                get: (_key: string) => null,
+                get: () => null,
               },
             },
           },
@@ -199,7 +199,7 @@ describe('LoginComponent [P1]', () => {
   });
 
   it('[1H.1-UNIT-009] should redirect to returnUrl after login when present', () => {
-    const { fixture: f, authService: returnUrlMock } = createLoginFixture({
+    const { fixture: f } = createLoginFixture({
       queryParams: { returnUrl: '/admin/tenants/123' },
       authService: {
         login: jest.fn().mockReturnValue(of({ accessToken: 'fake-token' })),

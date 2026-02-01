@@ -33,6 +33,10 @@ export class IngestionController {
     description: 'Indexing job queued successfully',
     type: IndexAssetResponseDto,
   })
+  @ApiResponse({ status: 400, description: 'Asset already indexed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Asset not found' })
   async indexAsset(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { tenant_id: string } },
@@ -52,6 +56,10 @@ export class IngestionController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Remove file from Knowledge Base (de-index)' })
   @ApiResponse({ status: 200, description: 'Asset de-indexed successfully' })
+  @ApiResponse({ status: 400, description: 'Asset is not indexed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Asset not found' })
   async deIndexAsset(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { tenant_id: string } },

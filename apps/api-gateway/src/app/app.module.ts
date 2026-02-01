@@ -14,6 +14,7 @@ import { UsersModule } from './users/users.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { AssetsModule } from './assets/assets.module';
 import { IngestionModule } from './ingestion/ingestion.module';
+import { KnowledgeModule } from './knowledge/knowledge.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { IngestionModule } from './ingestion/ingestion.module';
     InvitationsModule,
     AssetsModule,
     IngestionModule,
+    KnowledgeModule,
   ],
   controllers: [AppController],
   providers: [

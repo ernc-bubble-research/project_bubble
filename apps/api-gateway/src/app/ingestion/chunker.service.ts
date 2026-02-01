@@ -20,21 +20,37 @@ const MIN_CHUNK_SIZE = 100;
 
 @Injectable()
 export class ChunkerService {
+  /**
+   * Sanitize extracted text before chunking/embedding.
+   * Strips null bytes, control characters (except newline/tab),
+   * and collapses excessive whitespace.
+   */
+  sanitize(text: string): string {
+    return text
+      .replace(/\0/g, '') // null bytes
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // control chars (preserve \t \n \r)
+      .replace(/\r\n/g, '\n') // normalize line endings
+      .replace(/ {3,}/g, '  ') // collapse excessive spaces (keep up to 2)
+      .trim();
+  }
+
   chunk(text: string, options?: ChunkOptions): TextChunk[] {
     const chunkSize = options?.chunkSize ?? DEFAULT_CHUNK_SIZE;
     const overlap = options?.overlap ?? DEFAULT_OVERLAP;
 
-    if (!text || text.trim().length === 0) {
+    const sanitized = this.sanitize(text);
+    if (!sanitized || sanitized.length === 0) {
       return [];
     }
 
     // If text fits in a single chunk, return it directly
-    if (text.length <= chunkSize) {
+    if (sanitized.length <= chunkSize) {
       return [
         {
-          content: text,
+          content: sanitized,
           chunkIndex: 0,
-          metadata: { charStart: 0, charEnd: text.length },
+          metadata: { charStart: 0, charEnd: sanitized.length },
         },
       ];
     }
@@ -43,15 +59,15 @@ export class ChunkerService {
     let start = 0;
     let chunkIndex = 0;
 
-    while (start < text.length) {
-      let end = Math.min(start + chunkSize, text.length);
+    while (start < sanitized.length) {
+      let end = Math.min(start + chunkSize, sanitized.length);
 
       // If we're not at the end of the text, try to find a good break point
-      if (end < text.length) {
-        end = this.findBreakPoint(text, start, end);
+      if (end < sanitized.length) {
+        end = this.findBreakPoint(sanitized, start, end);
       }
 
-      const content = text.slice(start, end);
+      const content = sanitized.slice(start, end);
 
       // Skip tiny trailing fragments
       if (content.trim().length >= MIN_CHUNK_SIZE || chunks.length === 0) {

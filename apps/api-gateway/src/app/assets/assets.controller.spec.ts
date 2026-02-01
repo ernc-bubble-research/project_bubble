@@ -60,28 +60,24 @@ describe('AssetsController [P2]', () => {
 
   describe('findAll', () => {
     it('[2.1-UNIT-028] should call service.findAll with tenant_id and query params', async () => {
-      const result = await controller.findAll(
-        mockReq as any,
-        'folder-1',
-        'active',
-      );
+      const query = { folderId: 'folder-1', status: 'active' } as any;
+      const result = await controller.findAll(mockReq as any, query);
 
       expect(result).toEqual([mockAsset]);
       expect(service.findAll).toHaveBeenCalledWith(
         'tenant-1',
-        'folder-1',
-        'active',
+        { folderId: 'folder-1', status: 'active', limit: undefined, offset: undefined },
       );
     });
 
     it('[2.1-UNIT-029] should call service.findAll without optional params', async () => {
-      const result = await controller.findAll(mockReq as any);
+      const query = {} as any;
+      const result = await controller.findAll(mockReq as any, query);
 
       expect(result).toEqual([mockAsset]);
       expect(service.findAll).toHaveBeenCalledWith(
         'tenant-1',
-        undefined,
-        undefined,
+        { folderId: undefined, status: undefined, limit: undefined, offset: undefined },
       );
     });
   });

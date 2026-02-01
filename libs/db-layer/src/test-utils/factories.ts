@@ -124,6 +124,9 @@ export function createMockKnowledgeChunk(
     chunkIndex: 0,
     metadata: {},
     embedding: null,
+    isVerified: false,
+    verifiedBy: null,
+    deletedAt: null,
     createdAt: new Date('2026-01-31'),
     ...overrides,
   } as KnowledgeChunkEntity;

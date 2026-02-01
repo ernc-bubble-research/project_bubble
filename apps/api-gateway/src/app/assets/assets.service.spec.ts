@@ -203,6 +203,8 @@ describe('AssetsService [P1]', () => {
       const mockQb = {
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
         getMany: jest.fn().mockResolvedValue([mockAsset]),
       };
       mockManager.createQueryBuilder.mockReturnValue(mockQb);
@@ -217,6 +219,8 @@ describe('AssetsService [P1]', () => {
         { status: AssetStatus.ACTIVE },
       );
       expect(mockQb.orderBy).toHaveBeenCalledWith('asset.createdAt', 'DESC');
+      expect(mockQb.take).toHaveBeenCalledWith(50);
+      expect(mockQb.skip).toHaveBeenCalledWith(0);
       expect(mockQb.getMany).toHaveBeenCalled();
     });
 
@@ -225,11 +229,13 @@ describe('AssetsService [P1]', () => {
       const mockQb = {
         andWhere: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
         getMany: jest.fn().mockResolvedValue([mockAsset]),
       };
       mockManager.createQueryBuilder.mockReturnValue(mockQb);
 
-      const result = await service.findAll(tenantId, folderId);
+      const result = await service.findAll(tenantId, { folderId });
 
       expect(result).toEqual([expectedDto]);
       expect(mockQb.andWhere).toHaveBeenCalledWith(
@@ -359,6 +365,29 @@ describe('AssetsService [P1]', () => {
       await expect(
         service.restore(mockAsset.id, tenantId),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('log sanitization [2.1-UNIT-055] [P2]', () => {
+    it('[2.1-UNIT-055] should log only metadata, never file content', async () => {
+      mockManager.findOne.mockResolvedValue(null);
+      mockManager.create.mockReturnValue(mockAsset);
+      mockManager.save.mockResolvedValue(mockAsset);
+
+      const logSpy = jest.spyOn((service as any).logger, 'log');
+
+      await service.upload(mockFile, mockDto as any, tenantId, userId);
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const logArg = logSpy.mock.calls[0][0];
+      expect(logArg).toHaveProperty('id');
+      expect(logArg).toHaveProperty('filename');
+      expect(logArg).toHaveProperty('size');
+      expect(logArg).toHaveProperty('hash');
+      expect(logArg).toHaveProperty('tenantId');
+      expect(logArg).not.toHaveProperty('content');
+      expect(logArg).not.toHaveProperty('buffer');
+      expect(JSON.stringify(logArg)).not.toContain('test content');
     });
   });
 });

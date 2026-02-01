@@ -24,10 +24,10 @@ describe('RlsSetupService [P0]', () => {
 
     await service.onModuleInit();
 
-    // 1 pgvector extension + 3 calls each for enableRls(users, invitations, assets, folders, knowledge_chunks) = 16
+    // 1 pgvector extension + 1 vector index + 3 calls each for enableRls(users, invitations, assets, folders, knowledge_chunks) = 17
     // + 1 createAuthSelectPolicy + 1 createAuthAcceptInvitationsPolicy
     // + 1 createAuthInsertUsersPolicy + 1 createAuthUpdateInvitationsPolicy = 4
-    expect(dataSource.query).toHaveBeenCalledTimes(20);
+    expect(dataSource.query).toHaveBeenCalledTimes(21);
     expect(dataSource.query).toHaveBeenCalledWith(
       'ALTER TABLE "users" ENABLE ROW LEVEL SECURITY',
     );
@@ -97,7 +97,7 @@ describe('RlsSetupService [P0]', () => {
         (call) => typeof call[0] === 'string' && call[0].includes('auth_select_all'),
       );
       expect(authSelectCall).toBeDefined();
-      const sql = authSelectCall![0] as string;
+      const sql = (authSelectCall as string[])[0] as string;
       expect(sql).toContain("tablename = 'users'");
       expect(sql).toContain('FOR SELECT');
       expect(sql).not.toContain('FOR INSERT');
@@ -112,7 +112,7 @@ describe('RlsSetupService [P0]', () => {
         (call) => typeof call[0] === 'string' && call[0].includes('auth_accept_invitations'),
       );
       expect(authAcceptCall).toBeDefined();
-      const sql = authAcceptCall![0] as string;
+      const sql = (authAcceptCall as string[])[0] as string;
       expect(sql).toContain("tablename = 'invitations'");
       expect(sql).toContain('FOR SELECT');
       expect(sql).not.toContain('FOR INSERT');
@@ -126,7 +126,7 @@ describe('RlsSetupService [P0]', () => {
         (call) => typeof call[0] === 'string' && call[0].includes('auth_insert_users'),
       );
       expect(authInsertCall).toBeDefined();
-      const sql = authInsertCall![0] as string;
+      const sql = (authInsertCall as string[])[0] as string;
       expect(sql).toContain("tablename = 'users'");
       expect(sql).toContain('FOR INSERT');
       expect(sql).not.toContain('FOR SELECT');
@@ -140,7 +140,7 @@ describe('RlsSetupService [P0]', () => {
         (call) => typeof call[0] === 'string' && call[0].includes('auth_update_invitations'),
       );
       expect(authUpdateCall).toBeDefined();
-      const sql = authUpdateCall![0] as string;
+      const sql = (authUpdateCall as string[])[0] as string;
       expect(sql).toContain("tablename = 'invitations'");
       expect(sql).toContain('FOR UPDATE');
       expect(sql).not.toContain('FOR INSERT');

@@ -83,6 +83,33 @@
 # - Story 1.12 (Invitations) story created, ready-for-dev. Not blocking Epic 2/3.
 # - MVP runs entirely on laptop: Angular + NestJS + Postgres (Docker) + Redis (Docker) + Vertex AI API key.
 # - synchronize:true for dev. Switch to TypeORM migrations before production deployment.
+#
+# DEFERRED: DEFENSE-IN-DEPTH HARDENING
+# =====================================
+# Story 2.4 code review (M3): Some raw SQL queries (e.g., getByRun) rely on RLS alone
+# for tenant scoping without explicit tenant_id in WHERE clause. While safe due to RLS,
+# adding explicit tenant_id provides defense-in-depth. This should be applied holistically
+# across ALL raw SQL in the codebase (knowledge-search, validated-insight, ingestion)
+# as a dedicated hardening story rather than piecemeal. Add to Epic 7 or a future
+# hardening sprint.
+# Raised during Story 2.4 code review (2026-02-01).
+
+# IMMEDIATE POST-EPIC-2 ACTION:
+# =============================
+# - Swagger @ApiResponse gap fix: Add missing error response decorators (400, 401, 403, 500)
+#   to ALL existing controllers across Epic 1 and Epic 2. Rule added to project-context.md
+#   to prevent this gap in all future epics. Must be done before Epic 3 starts.
+#   Controllers to fix: AuthController, TenantsController, UsersController,
+#   InvitationsController, AssetsController, FoldersController, IngestionController,
+#   KnowledgeController, AppController.
+#   Raised during Story 2.3 code review (2026-02-01).
+#
+# FUTURE EPIC CONSIDERATION:
+# ==========================
+# - Knowledge Base Browsing/Viewing UI: Admin and tenant-facing UI to browse stored
+#   RAG data (indexed chunks, embeddings metadata), search the knowledge base interactively,
+#   and view per-tenant knowledge health. Could be part of Epic 8 or a new epic.
+#   Raised during Story 2.3 creation (2026-02-01).
 
 generated: 2026-01-30
 project: project_bubble
@@ -123,12 +150,12 @@ development_status:
   # Epic 2: Asset & Knowledge Management
   # FRs: FR23, FR48, FR3, FR21, FR22
   # ═══════════════════════════════════════════════════════
-  epic-2: in-progress
+  epic-2: done
   2-1-asset-management-tenant-shared-drive: done
   2-2-vector-ingestion-reference-assets: done
-  2-3-semantic-search-service-vector-rag: backlog
-  2-4-validated-insight-storage-memory: backlog
-  epic-2-retrospective: optional
+  2-3-semantic-search-service-vector-rag: done
+  2-4-validated-insight-storage-memory: done # Code review passed, 406 tests, 0 lint errors
+  epic-2-retrospective: done # Retrospective completed 2026-02-01. 3 critical process failures documented. Action items defined.
 
   # ═══════════════════════════════════════════════════════
   # Epic 3: Workflow Definition (The Architect)

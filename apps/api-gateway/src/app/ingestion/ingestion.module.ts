@@ -18,7 +18,15 @@ import { IngestionController } from './ingestion.controller';
 
 @Module({
   imports: [
-    BullModule.registerQueue({ name: 'ingestion' }),
+    BullModule.registerQueue({
+      name: 'ingestion',
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      },
+    }),
   ],
   controllers: [IngestionController],
   providers: [
@@ -38,6 +46,6 @@ import { IngestionController } from './ingestion.controller';
     IngestionService,
     IngestionProcessor,
   ],
-  exports: [IngestionService],
+  exports: [IngestionService, EMBEDDING_PROVIDER],
 })
 export class IngestionModule {}

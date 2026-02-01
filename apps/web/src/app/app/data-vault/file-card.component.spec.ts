@@ -97,4 +97,19 @@ describe('FileCardComponent [2.2-UNIT-008] [P2]', () => {
 
     expect(component.getIcon()).toBe('file-text');
   });
+
+  it('[2.2-UNIT-008h] should display info tooltip with Knowledge Base explanation', () => {
+    fixture.componentRef.setInput('asset', baseAsset);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const learnBtn = el.querySelector('.btn-learn') as HTMLElement;
+    const infoIcon = el.querySelector('.info-tooltip') as HTMLElement;
+    const expectedText = "Adding to Knowledge Base means Bubble's AI agents will permanently learn from this file across all workflows.";
+
+    expect(learnBtn).toBeTruthy();
+    expect(learnBtn.getAttribute('title')).toBe(expectedText);
+    expect(infoIcon).toBeTruthy();
+    expect(infoIcon.getAttribute('title')).toBe(expectedText);
+  });
 });

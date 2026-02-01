@@ -4,8 +4,12 @@ export class KnowledgeChunkResponseDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   id!: string;
 
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
-  assetId!: string;
+  @ApiProperty({
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    nullable: true,
+    description: 'UUID of the parent asset (null for standalone validated insights)',
+  })
+  assetId!: string | null;
 
   @ApiProperty({ example: 'This is the extracted text content of a chunk...' })
   content!: string;

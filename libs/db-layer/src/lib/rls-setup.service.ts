@@ -26,6 +26,7 @@ export class RlsSetupService implements OnModuleInit {
 
     // Enable pgvector extension before table creation/RLS setup
     await this.enablePgvectorExtension();
+    await this.createVectorIndex();
 
     for (const table of this.tenantScopedTables) {
       await this.enableRls(table);
@@ -153,6 +154,29 @@ export class RlsSetupService implements OnModuleInit {
     } catch (error) {
       this.logger.error('Failed to enable pgvector extension:', error);
       throw error;
+    }
+  }
+
+  private async createVectorIndex(): Promise<void> {
+    try {
+      // HNSW index for cosine similarity search on knowledge_chunks.embedding
+      // Only created if the table and column exist (TypeORM synchronize may not have run yet)
+      await this.dataSource.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'knowledge_chunks' AND column_name = 'embedding'
+          ) THEN
+            EXECUTE 'CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_embedding ON knowledge_chunks USING hnsw (embedding vector_cosine_ops)';
+          END IF;
+        END
+        $$;
+      `);
+      this.logger.log('pgvector HNSW index ensured on knowledge_chunks.embedding');
+    } catch (error) {
+      this.logger.warn('Failed to create vector index (may not exist yet):', error);
+      // Non-fatal — table may not exist during first startup
     }
   }
 
