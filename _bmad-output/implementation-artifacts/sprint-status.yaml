@@ -44,11 +44,14 @@
 #
 # GATE REQUIREMENTS:
 # ==================
-# BEFORE Epic 4: Run /bmad:bmm:workflows:quick-spec for LangGraph.js integration.
+# BEFORE Epic 3: Run /bmad:bmm:workflows:quick-spec for LangGraph.js integration.
 #   Scope: How graph_json maps to LangGraph StateGraph, state schema design,
 #   node type implementations (Scanner/Doer/Reviewer/Output), Postgres checkpointing,
 #   Map/parallel execution pattern, feedback re-run (partial graph execution).
-#   This tech spec MUST be completed before any Epic 4 story is created.
+#   Rationale: Epic 3 builds the UI that PRODUCES GraphJSON; Epic 4 builds the engine
+#   that CONSUMES it. The JSON schema contract must be defined first so the form builder
+#   produces exactly what the execution engine needs. No rework.
+#   This tech spec MUST be completed before any Epic 3 story is created.
 #
 # BEFORE Epic 4 Story 4.1 or 4.2: Build Mock LLM Provider alongside real providers.
 #   The architecture specifies a Hexagonal LLM pattern (abstract provider interface).
@@ -92,7 +95,7 @@ development_status:
   # Epic 1: Tenant Management & Platform Setup
   # FRs: FR30, FR33, FR26, FR27, FR28, FR32, FR51
   # ═══════════════════════════════════════════════════════
-  epic-1: in-progress
+  epic-1: done
   1-1-monorepo-infrastructure-initialization: done
   1-2-tenant-provisioning-api: done
   1-3-bubble-admin-dashboard-the-lobby: done
@@ -120,9 +123,9 @@ development_status:
   # Epic 2: Asset & Knowledge Management
   # FRs: FR23, FR48, FR3, FR21, FR22
   # ═══════════════════════════════════════════════════════
-  epic-2: backlog
-  2-1-asset-management-tenant-shared-drive: backlog
-  2-2-vector-ingestion-reference-assets: backlog
+  epic-2: in-progress
+  2-1-asset-management-tenant-shared-drive: done
+  2-2-vector-ingestion-reference-assets: done
   2-3-semantic-search-service-vector-rag: backlog
   2-4-validated-insight-storage-memory: backlog
   epic-2-retrospective: optional

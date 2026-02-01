@@ -50,3 +50,6 @@ Thumbs.db
 .angular
 
 vitest.config.*.timestamp*
+
+# Uploaded files (local MVP storage)
+uploads/

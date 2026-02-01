@@ -1,0 +1,223 @@
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
+import { createHash } from 'crypto';
+import { mkdir, writeFile } from 'fs/promises';
+import { join } from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import { TransactionManager, AssetEntity, AssetStatus } from '@project-bubble/db-layer';
+import { UploadAssetDto, UpdateAssetDto, AssetResponseDto } from '@project-bubble/shared';
+
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'text/plain',
+  'text/markdown',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+
+const ALLOWED_EXTENSIONS = ['.pdf', '.txt', '.md', '.docx'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const UPLOADS_ROOT = 'uploads';
+
+@Injectable()
+export class AssetsService {
+  private readonly logger = new Logger(AssetsService.name);
+
+  constructor(private readonly txManager: TransactionManager) {}
+
+  async upload(
+    file: Express.Multer.File,
+    dto: UploadAssetDto,
+    tenantId: string,
+    userId: string,
+  ): Promise<AssetResponseDto> {
+    this.validateFile(file);
+
+    const sha256Hash = createHash('sha256').update(file.buffer).digest('hex');
+
+    // Check for duplicates within tenant
+    const existing = await this.txManager.run(tenantId, async (manager) => {
+      return manager.findOne(AssetEntity, {
+        where: { sha256Hash, status: AssetStatus.ACTIVE },
+      });
+    });
+
+    if (existing) {
+      throw new ConflictException('File already exists (duplicate SHA-256 hash detected)');
+    }
+
+    // Write file to disk
+    const fileUuid = uuidv4();
+    const tenantDir = join(UPLOADS_ROOT, tenantId);
+    await mkdir(tenantDir, { recursive: true });
+    const storageName = `${fileUuid}-${file.originalname}`;
+    const storagePath = join(tenantDir, storageName);
+    await writeFile(storagePath, file.buffer);
+
+    const asset = await this.txManager.run(tenantId, async (manager) => {
+      const entity = manager.create(AssetEntity, {
+        tenantId,
+        folderId: dto.folderId || null,
+        originalName: file.originalname,
+        storagePath,
+        mimeType: file.mimetype,
+        fileSize: file.size,
+        sha256Hash,
+        isIndexed: false,
+        status: AssetStatus.ACTIVE,
+        uploadedBy: userId,
+      });
+      return manager.save(AssetEntity, entity);
+    });
+
+    this.logger.log({
+      message: 'Asset uploaded',
+      id: asset.id,
+      filename: asset.originalName,
+      size: asset.fileSize,
+      hash: asset.sha256Hash,
+      tenantId,
+    });
+
+    return this.toResponse(asset);
+  }
+
+  async findAll(
+    tenantId: string,
+    folderId?: string,
+    status?: string,
+  ): Promise<AssetResponseDto[]> {
+    return this.txManager.run(tenantId, async (manager) => {
+      const qb = manager
+        .createQueryBuilder(AssetEntity, 'asset')
+        .orderBy('asset.createdAt', 'DESC');
+
+      if (folderId) {
+        qb.andWhere('asset.folderId = :folderId', { folderId });
+      }
+      if (status) {
+        qb.andWhere('asset.status = :status', { status });
+      } else {
+        qb.andWhere('asset.status = :status', { status: AssetStatus.ACTIVE });
+      }
+
+      const entities = await qb.getMany();
+      return entities.map((e) => this.toResponse(e));
+    });
+  }
+
+  async findOne(id: string, tenantId: string): Promise<AssetResponseDto> {
+    const asset = await this.findEntity(id, tenantId);
+    return this.toResponse(asset);
+  }
+
+  private async findEntity(id: string, tenantId: string): Promise<AssetEntity> {
+    const asset = await this.txManager.run(tenantId, async (manager) => {
+      return manager.findOne(AssetEntity, { where: { id } });
+    });
+
+    if (!asset) {
+      throw new NotFoundException(`Asset with id "${id}" not found`);
+    }
+
+    return asset;
+  }
+
+  async update(
+    id: string,
+    tenantId: string,
+    dto: UpdateAssetDto,
+  ): Promise<AssetResponseDto> {
+    const asset = await this.findEntity(id, tenantId);
+
+    const saved = await this.txManager.run(tenantId, async (manager) => {
+      if (dto.name !== undefined) asset.originalName = dto.name;
+      if (dto.folderId !== undefined) asset.folderId = dto.folderId || null;
+      return manager.save(AssetEntity, asset);
+    });
+    return this.toResponse(saved);
+  }
+
+  async archive(id: string, tenantId: string): Promise<AssetResponseDto> {
+    const asset = await this.findEntity(id, tenantId);
+
+    if (asset.status === AssetStatus.ARCHIVED) {
+      throw new BadRequestException('Asset is already archived');
+    }
+
+    const saved = await this.txManager.run(tenantId, async (manager) => {
+      asset.status = AssetStatus.ARCHIVED;
+      asset.archivedAt = new Date();
+      return manager.save(AssetEntity, asset);
+    });
+    return this.toResponse(saved);
+  }
+
+  async restore(id: string, tenantId: string): Promise<AssetResponseDto> {
+    const asset = await this.findEntity(id, tenantId);
+
+    if (asset.status !== AssetStatus.ARCHIVED) {
+      throw new BadRequestException('Asset is not archived');
+    }
+
+    const saved = await this.txManager.run(tenantId, async (manager) => {
+      asset.status = AssetStatus.ACTIVE;
+      asset.archivedAt = null;
+      return manager.save(AssetEntity, asset);
+    });
+    return this.toResponse(saved);
+  }
+
+  private validateFile(file: Express.Multer.File): void {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      throw new BadRequestException(
+        `File size ${file.size} exceeds maximum allowed size of ${MAX_FILE_SIZE} bytes (10MB)`,
+      );
+    }
+
+    const ext = this.getExtension(file.originalname);
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      throw new BadRequestException(
+        `File extension "${ext}" is not allowed. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`,
+      );
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      throw new BadRequestException(
+        `MIME type "${file.mimetype}" is not allowed. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`,
+      );
+    }
+  }
+
+  private getExtension(filename: string): string {
+    const lastDot = filename.lastIndexOf('.');
+    if (lastDot === -1) return '';
+    return filename.slice(lastDot).toLowerCase();
+  }
+
+  private toResponse(entity: AssetEntity): AssetResponseDto {
+    return {
+      id: entity.id,
+      tenantId: entity.tenantId,
+      folderId: entity.folderId,
+      originalName: entity.originalName,
+      mimeType: entity.mimeType,
+      fileSize: entity.fileSize,
+      sha256Hash: entity.sha256Hash,
+      isIndexed: entity.isIndexed,
+      status: entity.status,
+      archivedAt: entity.archivedAt,
+      uploadedBy: entity.uploadedBy,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+    } as AssetResponseDto;
+  }
+}

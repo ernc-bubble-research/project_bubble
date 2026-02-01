@@ -7,6 +7,10 @@ import {
   PlanTier,
   InvitationEntity,
   InvitationStatus,
+  AssetEntity,
+  AssetStatus,
+  FolderEntity,
+  KnowledgeChunkEntity,
 } from '../lib/entities';
 
 let counter = 0;
@@ -71,6 +75,58 @@ export function createMockInvitation(
     updatedAt: new Date('2026-01-31'),
     ...overrides,
   } as InvitationEntity;
+}
+
+export function createMockAsset(
+  overrides: Partial<AssetEntity> = {},
+): AssetEntity {
+  return {
+    id: nextId(),
+    tenantId: '00000000-0000-0000-0000-000000000000',
+    folderId: null,
+    originalName: `document-${counter}.pdf`,
+    storagePath: `uploads/00000000-0000-0000-0000-000000000000/${counter}-document-${counter}.pdf`,
+    mimeType: 'application/pdf',
+    fileSize: 1024,
+    sha256Hash: 'a'.repeat(64),
+    isIndexed: false,
+    status: AssetStatus.ACTIVE,
+    archivedAt: null,
+    uploadedBy: '00000000-0000-0000-0000-000000000001',
+    createdAt: new Date('2026-01-31'),
+    updatedAt: new Date('2026-01-31'),
+    ...overrides,
+  } as AssetEntity;
+}
+
+export function createMockFolder(
+  overrides: Partial<FolderEntity> = {},
+): FolderEntity {
+  return {
+    id: nextId(),
+    tenantId: '00000000-0000-0000-0000-000000000000',
+    name: `Folder ${counter}`,
+    parentId: null,
+    createdAt: new Date('2026-01-31'),
+    updatedAt: new Date('2026-01-31'),
+    ...overrides,
+  } as FolderEntity;
+}
+
+export function createMockKnowledgeChunk(
+  overrides: Partial<KnowledgeChunkEntity> = {},
+): KnowledgeChunkEntity {
+  return {
+    id: nextId(),
+    tenantId: '00000000-0000-0000-0000-000000000000',
+    assetId: '00000000-0000-0000-0000-000000000001',
+    content: `Mock chunk content ${counter}`,
+    chunkIndex: 0,
+    metadata: {},
+    embedding: null,
+    createdAt: new Date('2026-01-31'),
+    ...overrides,
+  } as KnowledgeChunkEntity;
 }
 
 /** Pre-computed bcrypt hash of 'Admin123!' with 10 rounds */

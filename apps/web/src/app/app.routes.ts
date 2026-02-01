@@ -58,11 +58,29 @@ export const appRoutes: Route[] = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
-  // Zone B: Tenant App (placeholder — Epic 2+)
+  // Zone B: Tenant App
   {
     path: 'app',
     canActivate: [authGuard],
+    loadComponent: () =>
+      import('./app-shell/app-layout.component').then(
+        (m) => m.AppLayoutComponent
+      ),
     children: [
+      {
+        path: 'data-vault',
+        loadComponent: () =>
+          import('./app/data-vault/data-vault.component').then(
+            (m) => m.DataVaultComponent
+          ),
+      },
+      {
+        path: 'data-vault/:folderId',
+        loadComponent: () =>
+          import('./app/data-vault/data-vault.component').then(
+            (m) => m.DataVaultComponent
+          ),
+      },
       {
         path: 'workflows',
         loadComponent: () =>
@@ -70,7 +88,7 @@ export const appRoutes: Route[] = [
             (m) => m.ComingSoonComponent
           ),
       },
-      { path: '', redirectTo: 'workflows', pathMatch: 'full' },
+      { path: '', redirectTo: 'data-vault', pathMatch: 'full' },
     ],
   },
   // Default: redirect to login (guards handle authenticated redirect)

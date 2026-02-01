@@ -95,7 +95,7 @@ describe('adminGuard [P0]', () => {
     expect(result).toBe(true);
   });
 
-  it('[1H.1-UNIT-004] should redirect non-admin users to /app/workflows', () => {
+  it('[1H.1-UNIT-004] should redirect non-admin users to /app/data-vault', () => {
     authServiceMock['getCurrentUser'].mockReturnValue({
       id: '2',
       email: 'creator@test.com',
@@ -113,7 +113,7 @@ describe('adminGuard [P0]', () => {
       )
     );
 
-    expect(createUrlTreeSpy).toHaveBeenCalledWith(['/app/workflows']);
+    expect(createUrlTreeSpy).toHaveBeenCalledWith(['/app/data-vault']);
   });
 });
 
@@ -172,7 +172,7 @@ describe('noAuthGuard [P0]', () => {
     expect(createUrlTreeSpy).toHaveBeenCalledWith(['/admin/dashboard']);
   });
 
-  it('[1H.1-UNIT-007] should redirect non-admin users to /app/workflows', () => {
+  it('[1H.1-UNIT-007] should redirect non-admin users to /app/data-vault', () => {
     authServiceMock['isAuthenticated'].mockReturnValue(true);
     authServiceMock['getCurrentUser'].mockReturnValue({
       id: '2',
@@ -191,10 +191,10 @@ describe('noAuthGuard [P0]', () => {
       )
     );
 
-    expect(createUrlTreeSpy).toHaveBeenCalledWith(['/app/workflows']);
+    expect(createUrlTreeSpy).toHaveBeenCalledWith(['/app/data-vault']);
   });
 
-  it('[1H.1-UNIT-008] should redirect customer_admin to /app/workflows', () => {
+  it('[1H.1-UNIT-008] should redirect customer_admin to /app/data-vault', () => {
     authServiceMock['isAuthenticated'].mockReturnValue(true);
     authServiceMock['getCurrentUser'].mockReturnValue({
       id: '3',
@@ -213,6 +213,6 @@ describe('noAuthGuard [P0]', () => {
       )
     );
 
-    expect(createUrlTreeSpy).toHaveBeenCalledWith(['/app/workflows']);
+    expect(createUrlTreeSpy).toHaveBeenCalledWith(['/app/data-vault']);
   });
 });

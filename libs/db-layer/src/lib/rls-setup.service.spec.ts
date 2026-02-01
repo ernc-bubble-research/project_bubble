@@ -24,10 +24,10 @@ describe('RlsSetupService [P0]', () => {
 
     await service.onModuleInit();
 
-    // 3 calls for enableRls(users) + 3 calls for enableRls(invitations)
+    // 1 pgvector extension + 3 calls each for enableRls(users, invitations, assets, folders, knowledge_chunks) = 16
     // + 1 createAuthSelectPolicy + 1 createAuthAcceptInvitationsPolicy
-    // + 1 createAuthInsertUsersPolicy + 1 createAuthUpdateInvitationsPolicy
-    expect(dataSource.query).toHaveBeenCalledTimes(10);
+    // + 1 createAuthInsertUsersPolicy + 1 createAuthUpdateInvitationsPolicy = 4
+    expect(dataSource.query).toHaveBeenCalledTimes(20);
     expect(dataSource.query).toHaveBeenCalledWith(
       'ALTER TABLE "users" ENABLE ROW LEVEL SECURITY',
     );
@@ -153,7 +153,7 @@ describe('RlsSetupService [P0]', () => {
       const tenantPolicyCalls = dataSource.query.mock.calls.filter(
         (call) => typeof call[0] === 'string' && call[0].includes('tenant_isolation'),
       );
-      expect(tenantPolicyCalls).toHaveLength(2);
+      expect(tenantPolicyCalls).toHaveLength(5);
 
       for (const call of tenantPolicyCalls) {
         const sql = call[0] as string;

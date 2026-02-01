@@ -65,7 +65,7 @@ export class AuthService {
 
   getRoleHome(): string {
     const user = this.getCurrentUser();
-    return user?.role === 'bubble_admin' ? '/admin/dashboard' : '/app/workflows';
+    return user?.role === 'bubble_admin' ? '/admin/dashboard' : '/app/data-vault';
   }
 
   setPassword(token: string, password: string): Observable<void> {

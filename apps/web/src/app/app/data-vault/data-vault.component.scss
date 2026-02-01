@@ -1,0 +1,231 @@
+.data-vault {
+  display: flex;
+  gap: 24px;
+  height: calc(100vh - 96px);
+}
+
+/* ---- Folder sidebar ---- */
+.folder-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.folder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+}
+
+/* ---- Main area ---- */
+.vault-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.vault-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-primary);
+  }
+
+  .file-count {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+
+  input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    color: var(--text-primary);
+    width: 180px;
+
+    &::placeholder {
+      color: var(--text-muted);
+    }
+  }
+}
+
+/* ---- Filter chips ---- */
+.filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.chip {
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-default);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: var(--primary-400);
+    color: var(--primary-600);
+  }
+
+  &.active {
+    background: var(--primary-600);
+    border-color: var(--primary-600);
+    color: #fff;
+  }
+}
+
+.bulk-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.btn-danger-sm {
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--danger-600, #dc2626);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* ---- File area ---- */
+.file-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 16px;
+
+  &.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  &.list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+.loading,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: var(--text-muted);
+  gap: 12px;
+  grid-column: 1 / -1;
+}
+
+/* ---- Shared button ---- */
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+}
+
+/* ---- Upload section ---- */
+.upload-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.upload-type-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  margin-top: 16px;
+  flex-shrink: 0;
+
+  &:focus {
+    border-color: var(--primary-500);
+    outline: none;
+  }
+}
+
+.upload-section app-upload-zone {
+  flex: 1;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 767px) {
+  .data-vault {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .folder-sidebar {
+    width: 100%;
+  }
+}

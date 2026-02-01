@@ -1,0 +1,90 @@
+<div class="data-vault">
+  <!-- Sidebar: Folder tree -->
+  <aside class="folder-sidebar">
+    <div class="folder-header">
+      <h3>Folders</h3>
+      <button class="btn-icon" title="New folder" (click)="showCreateFolder.set(true)">
+        <lucide-icon name="folder-plus" [size]="18"></lucide-icon>
+      </button>
+    </div>
+    <app-folder-tree
+      [folders]="folders()"
+      [activeFolderId]="activeFolderId()"
+      (folderSelect)="onFolderSelect($event)"
+      (folderRename)="onFolderRename($event)"
+    />
+  </aside>
+
+  <!-- Main area -->
+  <section class="vault-main">
+    <!-- Header bar -->
+    <div class="vault-header">
+      <div class="header-left">
+        <h2>Data Vault</h2>
+        <span class="file-count">{{ filteredAssets().length }} files</span>
+      </div>
+      <div class="header-right">
+        <div class="search-box">
+          <lucide-icon name="search" [size]="16"></lucide-icon>
+          <input
+            type="text"
+            placeholder="Search files..."
+            [value]="searchQuery()"
+            (input)="onSearchInput($event)"
+          />
+        </div>
+        <button class="btn-icon" title="Toggle view" (click)="toggleView()">
+          <lucide-icon [name]="viewMode() === 'grid' ? 'list' : 'layout-grid'" [size]="18"></lucide-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bulk actions -->
+    @if (selectedIds().size > 0) {
+      <div class="bulk-actions">
+        <span>{{ selectedIds().size }} selected</span>
+        <button class="btn-primary-sm" (click)="indexSelected()" title="Adding to Knowledge Base means Bubble's AI agents will permanently learn from this file across all workflows.">Learn This</button>
+        <button class="btn-danger-sm" (click)="deleteSelected()">Archive</button>
+      </div>
+    }
+
+    <!-- File grid / list -->
+    <div class="file-area" [ngClass]="viewMode()">
+      @if (loading()) {
+        <div class="loading">Loading...</div>
+      } @else if (filteredAssets().length === 0) {
+        <div class="empty-state">
+          <lucide-icon name="file-x" [size]="48"></lucide-icon>
+          <p>No files found</p>
+        </div>
+      } @else {
+        @for (asset of filteredAssets(); track asset.id) {
+          <app-file-card
+            [asset]="asset"
+            [selected]="selectedIds().has(asset.id)"
+            [viewMode]="viewMode()"
+            [indexing]="indexingIds().has(asset.id)"
+            (toggleSelect)="toggleSelect(asset.id)"
+            (index)="onIndexAsset(asset.id)"
+            (deIndex)="onDeIndexAsset(asset.id)"
+          />
+        }
+      }
+    </div>
+
+    <!-- Upload zone -->
+    <app-upload-zone
+      [folderId]="activeFolderId()"
+      (uploadComplete)="onUploadComplete()"
+    />
+  </section>
+</div>
+
+<!-- Create folder dialog -->
+@if (showCreateFolder()) {
+  <app-create-folder-dialog
+    [parentId]="activeFolderId()"
+    (created)="onFolderCreated()"
+    (cancelled)="showCreateFolder.set(false)"
+  />
+}

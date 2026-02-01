@@ -24,5 +24,5 @@ export const adminGuard: CanActivateFn = () => {
     return true;
   }
 
-  return router.createUrlTree(['/app/workflows']);
+  return router.createUrlTree(['/app/data-vault']);
 };

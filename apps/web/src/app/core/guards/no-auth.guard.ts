@@ -11,6 +11,6 @@ export const noAuthGuard: CanActivateFn = () => {
   }
 
   const user = authService.getCurrentUser();
-  const home = user?.role === 'bubble_admin' ? '/admin/dashboard' : '/app/workflows';
+  const home = user?.role === 'bubble_admin' ? '/admin/dashboard' : '/app/data-vault';
   return router.createUrlTree([home]);
 };

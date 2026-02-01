@@ -262,9 +262,16 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** he is added to my Tenant
 
 ### Epic 2: Asset & Knowledge Management
-**Goal:** Enable tenants to manage their proprietary data and ingest them into the "Company Brain" (Vector Knowledge Base).
-**Strategy:** We distinguish between **Reference Assets** (Vectorized for RAG) and **Instruction Assets** (Codebooks/Dictionaries - Injected or Vectorized based on size).
+**Goal:** Enable tenants to manage their proprietary data and selectively ingest them into the "Company Brain" (Vector Knowledge Base).
+**Strategy:** Files are type-agnostic at upload. Users explicitly choose which files to add to the Knowledge Base ("Learn This" action). The "type" of a file (e.g., codebook, transcript) is assigned at workflow runtime when the user selects inputs for specific workflow steps — NOT at upload time.
 **Technical Note:** Implementation using PostgreSQL (`pgvector`) as a **Vector Store**. "Full Knowledge Graph" (Nodes & Edges) is deferred to MVP v2.
+
+> **DESIGN DECISION (from Story 2.1 review):** The original `assetType` enum (codebook/transcript/knowledge) was removed. Those labels are workflow-specific examples, not universal file categories. Files are just files in the Data Vault. The asset entity tracks `isIndexed` (boolean) to indicate whether a file has been vectorized into the Knowledge Base. Workflow templates define their own input slots (e.g., "Select your codebook", "Select transcripts") via the Input Schema (Story 3.3), and users pick files from the vault at runtime.
+
+> **DESIGN DECISION (Asset Deletion with Report References):**
+> When a user deletes a file that is referenced by workflow reports (via `source_id` in citation objects):
+> - **Option A (MVP):** System warns the user which reports reference the file. If confirmed, the file is deleted but materialized citation quotes in reports survive (already stored in report JSON). "View Full Source" becomes disabled on those citations, showing "Source file was deleted."
+> - **Option B (Future — GDPR Full Erasure):** Delete file AND scrub all materialized quotes from reports. Citations show "[Source removed]." Requires `source_id` linkage to enable querying all citations by asset ID. See Epic 7 for compliance tracking.
 
 #### Story 2.1: Asset Management (Tenant Shared Drive)
 **As a** Customer Admin or User,
@@ -274,28 +281,33 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Acceptance Criteria:**
 **Given** I upload a file (Text/PDF only for MVP)
 **Then** it is stored in the **Assets** (accessible to all tenant users)
+**And** files are type-agnostic — no asset type tagging at upload time
 **And** the system supports **Parallel Uploads**
-**And** I can organize it into **Folders**
+**And** I can organize it into **Folders** (max 3 levels of nesting)
 **And** the system calculates a **SHA-256 Hash** to prevent duplicate uploads (Warning: "File exists")
 **And** I can **Delete** a file:
 *   *Action:* File is moved to **"Archive/Trash"** status (Soft Delete).
 *   *Retention:* File remains recoverable for [N] days (Admin Configurable), then is physically purged.
 *   *Warning:* Deletion removes it for *everyone* in the tenant (Shared Drive model).
+*   *Report Reference Check:* If the file is referenced by workflow reports, the user is warned and must confirm (see Design Decision above).
 **And** all logging is sanitized to prevent PII/sensitive document content from appearing in logs (NFR assessment deferred item — first story handling real data)
 
-#### Story 2.2: Vector Ingestion (Reference Assets)
+#### Story 2.2: Vector Ingestion ("Learn This" — Knowledge Base Indexing)
 **As a** Creator,
-**I want** my uploaded reference assets to be automatically processed and indexed into the Knowledge Base,
+**I want** to explicitly mark files in the Data Vault for indexing into the Knowledge Base,
 **So that** workflow agents can find relevant context from my documents during analysis.
 
 **Acceptance Criteria:**
 
-**Given** a new Asset of type `REFERENCE`
-**When** the Ingestion Worker runs
-**Then** it extracts, chunks, and embeds the text
-**And** stores it in the `knowledge_vectors` table (pgvector)
-**And** `INSTRUCTION` assets (like Codebooks) are stored as raw text (or vectorized if > Token Limit)
-**Note:** For MVP v1, we focus on pure vector retrieval.
+**Given** I select one or more files in the Data Vault
+**When** I click "Add to Knowledge Base" (the "Learn This" action)
+**Then** the system extracts, chunks, and embeds the text from those files
+**And** stores embeddings in the `knowledge_vectors` table (pgvector)
+**And** the asset's `isIndexed` flag is set to `true`
+**And** a visual indicator (e.g., brain icon) shows on indexed files in the Data Vault UI
+**And** the UI provides an info tooltip (ℹ button) explaining: "Adding to Knowledge Base means Bubble's AI agents will permanently learn from this file across all workflows."
+**And** users can also remove a file from the Knowledge Base (de-index), which deletes its vectors and sets `isIndexed = false`
+**Note:** For MVP v1, we focus on pure vector retrieval. Files NOT marked for indexing are simply stored in the vault and used as direct workflow inputs at runtime.
 
 #### Story 2.3: Semantic Search Service (Vector RAG)
 **As a** Workflow Developer,
@@ -330,6 +342,8 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Goal:** Provide "Architects" (Admins) with a user-friendly "Form-Based" tool to define the agents.
 **Approach:** **"Low-Code/No-Code Wizard"**. The Admin uses dropdowns and forms to generate the underlying JSON. No raw code editing required.
 **FRs covered:** FR1, FR2, FR4, FR5, FR6, FR35, FR42
+
+> **GATE REQUIREMENT:** Before starting Epic 3, run `/bmad:bmm:workflows:quick-spec` to produce a LangGraph.js Integration Tech Spec. This must define: `graph_json` → `StateGraph` mapping, state schema, node type implementations (Scanner/Doer/Reviewer/Output), Postgres checkpointing, Map/parallel pattern, and feedback re-run strategy. **Rationale:** Epic 3 builds the admin UI that *produces* the `GraphJSON` definition; Epic 4 builds the engine that *consumes* it. The JSON schema contract must be defined first so the form builder produces exactly what the execution engine will consume. No Epic 3 stories should be created until this spec is approved.
 
 > **DESIGN DECISION (from Story 1.5 revision):** Workflow access control is **workflow-centric**, not tenant-centric. Each workflow template has a `visibility` field: `public` (default, available to all tenants) or `private` (restricted to a specific `allowedTenants: string[]` list). This avoids the N-tenant update problem when rolling out new workflows. The Bubble Admin configures visibility when publishing a workflow in Workflow Studio. The tenant's Entitlements tab shows a read-only view of available workflows. Epic 3 stories (likely Story 3.1 or 3.6) must implement the `visibility` + `allowedTenants` fields on the workflow template entity and the corresponding UI in Workflow Studio.
 
@@ -428,7 +442,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 **FRs covered:** FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR34, FR36, FR37, FR46, FR47
 **NFRs:** NFR-Perf-2, NFR-Rel-1, NFR-Rel-2, NFR-Scale-1
 
-> **GATE REQUIREMENT:** Before starting Epic 4, run `/bmad:bmm:workflows:quick-spec` to produce a LangGraph.js Integration Tech Spec. This must define: graph_json → StateGraph mapping, state schema, node type implementations (Scanner/Doer/Reviewer/Output), Postgres checkpointing, Map/parallel pattern, and feedback re-run strategy. No Epic 4 stories should be created until this spec is approved.
+> **NOTE:** The LangGraph.js Integration Tech Spec gate requirement has been moved to **Epic 3** (see above). The tech spec must be completed before Epic 3 begins, ensuring the `GraphJSON` schema contract is defined before the form builder is built. By the time Epic 4 starts, the spec will already exist and the form builder will produce the correct JSON format for the execution engine to consume.
 
 #### Story 4.1: Workflows & Run Initiation (Dynamic Forms)
 **As a** Creator,
@@ -516,7 +530,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Given** a workflow completes successfully
 **When** the final node runs
 **Then** it aggregates the results into a standardized JSON format
-**And** includes "Citation Objects" `{ source_id, quote, page_num }` for every claim
+**And** includes "Citation Objects" `{ source_id, quote, page_num }` for every claim (`source_id` MUST be the asset UUID from the Data Vault — this enables Option B GDPR full erasure in Story 7.6)
 **And** saves this JSON as a `Report` record linked to the Run
 
 ### Epic 5: Interactive Reporting & Feedback Loop
@@ -665,6 +679,22 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Then** I see a chronological log of every Node execution
 **And** for each Node, I can expand to see the **Exact Input** (Prompts sent to LLM) and **Raw Output** (Response from LLM)
 **And** I can see the Token Usage cost for that step
+
+#### Story 7.6: GDPR Full Erasure — Citation Scrubbing [Future]
+**As a** User with data deletion rights,
+**I want** to delete a file AND have all materialized citation quotes scrubbed from reports that referenced it,
+**So that** my right to erasure is fully respected.
+
+**Acceptance Criteria:**
+
+**Given** I delete a file that is referenced by workflow reports
+**When** I select "Full Erasure" (Option B)
+**Then** the file is permanently deleted
+**And** all citation objects in reports where `source_id` matches this file are scrubbed — quote text replaced with "[Source removed]"
+**And** "View Full Source" is disabled on those citations
+**And** the scrubbing event is logged in the audit trail
+
+**Note:** This story implements Option B from the Epic 2 Design Decision (Asset Deletion with Report References). Option A (MVP) preserves citation quotes when the source file is deleted. This story adds the full erasure capability. Requires `source_id` linkage in citation objects (Story 4.6) to enable querying all citations by asset ID.
 
 #### Story 7.5: Refresh Token Rotation (Auth Hardening)
 **As a** User,

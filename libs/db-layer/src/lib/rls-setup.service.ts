@@ -7,7 +7,7 @@ export class RlsSetupService implements OnModuleInit {
   private readonly logger = new Logger(RlsSetupService.name);
 
   /** Tables that have a tenant_id column and require RLS. Names must match ^[a-z_]+$ */
-  private readonly tenantScopedTables = ['users', 'invitations'];
+  private readonly tenantScopedTables = ['users', 'invitations', 'assets', 'folders', 'knowledge_chunks'];
 
   private static readonly TABLE_NAME_PATTERN = /^[a-z_]+$/;
 
@@ -23,6 +23,9 @@ export class RlsSetupService implements OnModuleInit {
       );
       return;
     }
+
+    // Enable pgvector extension before table creation/RLS setup
+    await this.enablePgvectorExtension();
 
     for (const table of this.tenantScopedTables) {
       await this.enableRls(table);
@@ -137,6 +140,18 @@ export class RlsSetupService implements OnModuleInit {
         'Failed to create auth UPDATE policy on invitations:',
         error,
       );
+      throw error;
+    }
+  }
+
+  private async enablePgvectorExtension(): Promise<void> {
+    try {
+      await this.dataSource.query(
+        `CREATE EXTENSION IF NOT EXISTS vector`,
+      );
+      this.logger.log('pgvector extension enabled');
+    } catch (error) {
+      this.logger.error('Failed to enable pgvector extension:', error);
       throw error;
     }
   }
