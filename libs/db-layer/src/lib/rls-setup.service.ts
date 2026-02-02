@@ -6,8 +6,8 @@ import { DataSource } from 'typeorm';
 export class RlsSetupService implements OnModuleInit {
   private readonly logger = new Logger(RlsSetupService.name);
 
-  /** Tables that have a tenant_id column and require RLS. Names must match ^[a-z_]+$ */
-  private readonly tenantScopedTables = ['users', 'invitations', 'assets', 'folders', 'knowledge_chunks'];
+  /** Tables that have a tenant_id column and require standard tenant_isolation RLS. Names must match ^[a-z_]+$ */
+  private readonly tenantScopedTables = ['users', 'invitations', 'assets', 'folders', 'knowledge_chunks', 'workflow_versions', 'workflow_runs'];
 
   private static readonly TABLE_NAME_PATTERN = /^[a-z_]+$/;
 
@@ -45,6 +45,13 @@ export class RlsSetupService implements OnModuleInit {
 
     // Invitation accept flow needs UPDATE on invitations (mark as ACCEPTED/EXPIRED).
     await this.createAuthUpdateInvitationsPolicy();
+
+    // Workflow tables with custom visibility-based RLS (not standard tenant_isolation).
+    await this.createWorkflowTemplateAccessPolicy();
+    await this.createWorkflowChainAccessPolicy();
+
+    // Seed LLM model registry (idempotent).
+    await this.seedLlmModels();
   }
 
   private async createAuthSelectPolicy(): Promise<void> {
@@ -141,6 +148,101 @@ export class RlsSetupService implements OnModuleInit {
         'Failed to create auth UPDATE policy on invitations:',
         error,
       );
+      throw error;
+    }
+  }
+
+  private async createWorkflowTemplateAccessPolicy(): Promise<void> {
+    try {
+      // Enable + force RLS on workflow_templates
+      await this.dataSource.query(`ALTER TABLE "workflow_templates" ENABLE ROW LEVEL SECURITY`);
+      await this.dataSource.query(`ALTER TABLE "workflow_templates" FORCE ROW LEVEL SECURITY`);
+
+      await this.dataSource.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_policies
+            WHERE tablename = 'workflow_templates' AND policyname = 'template_access'
+          ) THEN
+            CREATE POLICY template_access ON workflow_templates
+              USING (
+                tenant_id = current_setting('app.current_tenant', true)::uuid
+                OR visibility = 'public'
+                OR current_setting('app.current_tenant', true)::uuid = ANY(allowed_tenants)
+              );
+          END IF;
+        END
+        $$;
+      `);
+      this.logger.log(
+        'Custom RLS policy created on "workflow_templates" — visibility-based access',
+      );
+    } catch (error) {
+      this.logger.error('Failed to create workflow template access policy:', error);
+      throw error;
+    }
+  }
+
+  private async createWorkflowChainAccessPolicy(): Promise<void> {
+    try {
+      // Enable + force RLS on workflow_chains
+      await this.dataSource.query(`ALTER TABLE "workflow_chains" ENABLE ROW LEVEL SECURITY`);
+      await this.dataSource.query(`ALTER TABLE "workflow_chains" FORCE ROW LEVEL SECURITY`);
+
+      await this.dataSource.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_policies
+            WHERE tablename = 'workflow_chains' AND policyname = 'chain_access'
+          ) THEN
+            CREATE POLICY chain_access ON workflow_chains
+              USING (
+                tenant_id = current_setting('app.current_tenant', true)::uuid
+                OR visibility = 'public'
+                OR current_setting('app.current_tenant', true)::uuid = ANY(allowed_tenants)
+              );
+          END IF;
+        END
+        $$;
+      `);
+      this.logger.log(
+        'Custom RLS policy created on "workflow_chains" — visibility-based access',
+      );
+    } catch (error) {
+      this.logger.error('Failed to create workflow chain access policy:', error);
+      throw error;
+    }
+  }
+
+  private async seedLlmModels(): Promise<void> {
+    try {
+      // Idempotent seed — only inserts if table is empty
+      const result = await this.dataSource.query(`SELECT COUNT(*)::int as count FROM llm_models`);
+      const count = result[0]?.count ?? 0;
+      if (count > 0) {
+        this.logger.log(`LLM models already seeded (${count} models found)`);
+        return;
+      }
+
+      await this.dataSource.query(`
+        INSERT INTO llm_models (id, provider_key, model_id, display_name, context_window, max_output_tokens, is_active, cost_per_1k_input, cost_per_1k_output)
+        VALUES
+          (gen_random_uuid(), 'google-ai-studio', 'models/gemini-2.0-flash', 'Gemini 2.0 Flash', 1000000, 8192, true, NULL, NULL),
+          (gen_random_uuid(), 'google-ai-studio', 'models/gemini-2.0-pro', 'Gemini 2.0 Pro', 1000000, 8192, true, NULL, NULL),
+          (gen_random_uuid(), 'vertex', 'gemini-2.0-flash', 'Gemini 2.0 Flash (Vertex)', 1000000, 8192, true, NULL, NULL),
+          (gen_random_uuid(), 'vertex', 'gemini-2.0-pro', 'Gemini 2.0 Pro (Vertex)', 1000000, 8192, true, NULL, NULL),
+          (gen_random_uuid(), 'mock', 'mock-model', 'Mock LLM (Testing)', 1000000, 8192, true, NULL, NULL)
+      `);
+      this.logger.log('Seeded 5 LLM models (google-ai-studio, vertex, mock)');
+    } catch (error: unknown) {
+      // Only swallow "relation does not exist" (42P01) — table may not exist on first startup
+      if (error instanceof Error && 'code' in error && (error as { code: string }).code === '42P01') {
+        this.logger.warn('LLM models table does not exist yet — will seed after synchronize');
+        return;
+      }
+      this.logger.error('Failed to seed LLM models:', error);
       throw error;
     }
   }

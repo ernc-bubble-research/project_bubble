@@ -4,3 +4,8 @@ export { InvitationEntity, InvitationStatus } from './invitation.entity';
 export { AssetEntity, AssetStatus } from './asset.entity';
 export { FolderEntity } from './folder.entity';
 export { KnowledgeChunkEntity } from './knowledge-chunk.entity';
+export { WorkflowTemplateEntity, WorkflowTemplateStatus, WorkflowVisibility } from './workflow-template.entity';
+export { WorkflowVersionEntity } from './workflow-version.entity';
+export { WorkflowChainEntity, WorkflowChainStatus } from './workflow-chain.entity';
+export { WorkflowRunEntity, WorkflowRunStatus } from './workflow-run.entity';
+export { LlmModelEntity } from './llm-model.entity';

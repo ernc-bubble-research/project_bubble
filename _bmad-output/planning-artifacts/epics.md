@@ -15,8 +15,8 @@ This document provides the complete epic and story breakdown for project_bubble,
 
 ### Functional Requirements
 
-*   FR1: [Prototype] Bubble Admin can define workflow graph topology using nodes and edges.
-*   FR2: [Prototype] Bubble Admin can configure specific node types (Scanner, Doer, Reviewer) with execution instructions.
+*   FR1: [Prototype] Bubble Admin can define atomic workflow templates via a form-based wizard (metadata, inputs, execution, knowledge, prompt, output).
+*   FR2: [Prototype] Bubble Admin can configure workflow inputs (context/subject roles), execution settings (parallel/batch), and LLM prompt instructions.
 *   FR3: [Prototype] Bubble Admin can define strict input allow-lists (e.g., "only .txt, .docx") and max file size limits.
 *   FR4: [Prototype] Bubble Admin can create custom form inputs (text fields, multiple choice) for workflow initialization.
 *   FR5: [Prototype] Bubble Admin can define output report schemas mapping analysis results to UI components.
@@ -46,8 +46,8 @@ This document provides the complete epic and story breakdown for project_bubble,
 *   FR31: [Prototype] System logs all agent actions (user, timestamp, prompt version, input) for audit trails.
 *   FR32: [Prototype] System supports configuration for data residency (processing region).
 *   FR33: [Prototype] System authenticates users based on assigned roles.
-*   FR34: [Prototype] System can persist intermediate state at each node completion to allow resumption on failure.
-*   FR35: [Prototype] Bubble Admin can configure retry policies (count, backoff) for specific node types.
+*   FR34: [Prototype] System can persist workflow run state (input snapshots, output assets, retry history) to allow debugging and auditing.
+*   FR35: [Prototype] Bubble Admin can configure validation retry count per workflow template and system-wide default.
 *   FR36: [Prototype] Creator can view remaining run quota (e.g. "Runs: 5/10") in the Workflows.
 *   FR37: [Prototype] System pauses execution if tenant usage exceeds Admin-defined hard limits.
 *   FR38: [Prototype] Customer Admin can view full execution traces (Input -> Prompt -> Raw Output) for debugging purposes.
@@ -58,7 +58,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 *   FR44: [Future] Bubble Admin can configure data retention policies.
 *   FR45: [Prototype] System sanitizes and validates all user text inputs to prevent prompt injection.
 *   FR46: [Prototype] System validates all mandatory inputs (Files, Forms) are present before allowing Workflow submission.
-*   FR47: [Prototype] System enforces a "Max Steps per Model Run" limit (e.g., 50 steps).
+*   FR47: [Prototype] System enforces context window token budget checks before execution and max output token limits per workflow.
 *   FR48: [Prototype] System ingests and indexes Company Assets (text extraction + embedding) upon upload.
 *   FR49: [MVP] System displays "Service Status" banners.
 *   FR50: [Future] Bubble Admin can execute "Right to be Forgotten" commands.
@@ -72,10 +72,10 @@ This document provides the complete epic and story breakdown for project_bubble,
 *   **NFR-Sec-1 (RLS):** 100% of database queries must be executed via the RLS-enabled user context.
 *   **NFR-Sec-2 (Encryption):** AES-256 at rest and TLS 1.3 in transit for all assets.
 *   **NFR-Sec-3 (Links):** Magic Links must be cryptographically secure and adhere to expiration.
-*   **NFR-Rel-1 (Checkpoint):** Workflow Engine must persist state to Postgres after every node transition.
+*   **NFR-Rel-1 (Run Tracking):** Workflow Engine must persist run state (input_snapshot, assembled_prompt, raw_llm_response, retry_history) to Postgres for every workflow run.
 *   **NFR-Rel-2 (Retry):** Downstream failures must trigger Exponential Backoff retry policy.
 *   **NFR-Scale-1 (Concurrent):** System must support Admin-configurable concurrent run limits per tenant.
-*   **NFR-Scale-2 (Graph):** System must handle Knowledge Graphs up to 10,000 nodes/edges per tenant.
+*   **NFR-Scale-2 (Knowledge):** System must handle Knowledge Base with up to 10,000 vector chunks per tenant.
 *   **NFR-Comp-1 (Residency):** Infrastructure hosted in EU (Frankfurt/Dublin).
 
 ### Additional Requirements (Architecture)
@@ -93,7 +93,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 | :--- | :--- | :--- |
 | FR30, FR33, FR26, FR27, FR28, FR32, FR51, FR_Admin_Lobby, FR_Impersonate, FR_Entitlements | **Epic 1** | System Foundation, Auth, & Tenants |
 | FR23, FR48, FR48_Library, FR48_Parallel, FR_Archive, FR3, FR21, FR22 | **Epic 2** | Asset & Knowledge Management |
-| FR1, FR2, FR4, FR5, FR6, FR35, FR42, FR_QA_TestID | **Epic 3** | Workflow Definition (The Architect) |
+| FR1, FR2, FR4, FR5, FR6, FR35, FR42, FR_QA_TestID | **Epic 3** | Workflow Definition (Atomic Workflows, Chains, Wizard) |
 | FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR34, FR36, FR37, FR46, FR47, FR_Sec_Sanit | **Epic 4** | Workflow Execution Engine (The Creator) |
 | FR14, FR15, FR16, FR17, FR18, FR19, FR43, FR45 | **Epic 5** | Interactive Reporting & Feedback |
 | FR20, FR39, FR40 | **Epic 6** | Guest Access & Sharing |
@@ -339,199 +339,237 @@ This document provides the complete epic and story breakdown for project_bubble,
 **Note:** This story provides the *storage mechanism*. The feedback *sources* (Report UI, Assumption Verification) are implemented in Epic 5. This story can be implemented and tested with programmatic/API-driven feedback events before the Report UI exists.
 
 ### Epic 3: Workflow Definition (The Architect)
-**Goal:** Provide "Architects" (Admins) with a user-friendly "Form-Based" tool to define the agents.
-**Approach:** **"Low-Code/No-Code Wizard"**. The Admin uses dropdowns and forms to generate the underlying JSON. No raw code editing required.
+**Goal:** Provide Bubble Admins with a form-based Workflow Studio to define atomic workflow templates (YAML definitions) and compose workflow chains. The admin uses a 6-step wizard to produce the YAML that the execution engine (Epic 4) consumes.
+**Approach:** **LLM-Orchestrated Execution** — YAML prompts sent directly to LLM. Admin builds via wizard, platform handles assembly.
 **FRs covered:** FR1, FR2, FR4, FR5, FR6, FR35, FR42
+**Authoritative Reference:** `_bmad-output/implementation-artifacts/tech-spec-workflow-definition-schema.md`
 
-> **GATE REQUIREMENT (UPDATED 2026-02-01 — Party Mode Architectural Pivot):** Before starting Epic 3, run `/bmad:bmm:workflows:quick-spec` to produce a **Workflow Definition Schema Tech Spec**. LangGraph.js has been **DEFERRED** — replaced by LLM-orchestrated execution (YAML prompts sent directly to LLM). This spec must define: (1) YAML workflow schema for atomic workflows, (2) input role taxonomy (`context` vs `subject`), (3) execution patterns (fan-out: parallel, fan-in: batch), (4) workflow chain composition (linking atomic workflows sequentially), (5) output spec and structural validation, (6) context window token budget check. **Rationale:** Epic 3 builds the admin UI that *produces* the YAML workflow definition; Epic 4 builds the engine that *consumes* it. The YAML schema contract must be defined first so the form builder produces exactly what the execution engine will consume. No Epic 3 stories should be created until this spec is approved.
+> **GATE REQUIREMENT (COMPLETED 2026-02-02):** Workflow Definition Schema Tech Spec approved. Party mode DB entity review complete (10 findings applied). All Epic 3 stories reference the tech spec as authoritative source.
 
-> **DESIGN DECISION (from Story 1.5 revision):** Workflow access control is **workflow-centric**, not tenant-centric. Each workflow template has a `visibility` field: `public` (default, available to all tenants) or `private` (restricted to a specific `allowedTenants: string[]` list). This avoids the N-tenant update problem when rolling out new workflows. The Bubble Admin configures visibility when publishing a workflow in Workflow Studio. The tenant's Entitlements tab shows a read-only view of available workflows. Epic 3 stories (likely Story 3.1 or 3.6) must implement the `visibility` + `allowedTenants` fields on the workflow template entity and the corresponding UI in Workflow Studio.
+> **ARCHITECTURE (Party Mode Pivot 2026-02-01):** LangGraph.js **DEFERRED**. Workflows are atomic — single LLM call pattern. YAML IS the prompt — sent to LLM as-is. Platform handles assembly (YAML + files + knowledge context). Input taxonomy: `context` (shared across all jobs) vs `subject` (determines execution pattern). Execution patterns: `parallel` (fan-out, N BullMQ jobs) vs `batch` (fan-in, 1 job). Workflow chains link atomic workflows sequentially via metadata.
 
-#### Story 3.1: Form-Based Workflow Builder
+> **DESIGN DECISION (from Story 1.5 revision):** Workflow access control is **workflow-centric**, not tenant-centric. Each workflow template has a `visibility` field: `public` (default, available to all tenants) or `private` (restricted to a specific `allowedTenants: UUID[]` list). Custom RLS policies enforce visibility. The Bubble Admin configures visibility when publishing a workflow in Workflow Studio. The tenant's Entitlements tab shows a read-only view of accessible workflows.
+
+#### Story 3.1: Workflow Definition Data Foundation
+**As a** Developer,
+**I want** the database entities, TypeScript interfaces, shared DTOs, and YAML schema validator for workflow definitions,
+**So that** the Workflow Studio UI (Story 3.2) and execution engine (Epic 4) have a stable data layer to build on.
+
+**Acceptance Criteria:**
+**Given** the tech spec §6 entity definitions
+**Then** 5 new entities are created: WorkflowTemplateEntity, WorkflowVersionEntity, WorkflowChainEntity, WorkflowRunEntity, LlmModelEntity
+**And** AssetEntity is extended with `sourceType` (enum: user_upload/workflow_output) and `workflowRunId` (nullable FK)
+**And** RLS policies are registered: standard policies for workflow_versions + workflow_runs, custom policies for workflow_templates + workflow_chains (visibility + allowed_tenants)
+**And** TypeScript interfaces (WorkflowDefinition, WorkflowChainDefinition, WorkflowJobPayload) are in libs/shared
+**And** Shared DTOs for CRUD operations are in libs/shared/src/lib/dtos/workflow/
+**And** A YAML schema validator enforces: exactly 1 subject input, required fields present, prompt variables match input names, valid output format
+**And** LlmModel seed data includes at least gemini-2.0-flash and gemini-2.0-pro
+**And** all entities pass unit tests
+
+#### Story 3.2: Workflow Builder Wizard (Admin UI)
 **As a** Bubble Admin,
-**I want** to define the workflow steps using a simple list interface (Add Step -> Select Type),
-**So that** I can build agents without writing code or connecting complex graph nodes.
+**I want** a 6-step wizard in Workflow Studio to create and edit atomic workflow templates,
+**So that** I can build LLM-powered workflows without writing YAML directly.
 
 **Acceptance Criteria:**
-**Given** I am in the Admin Panel -> "Create Workflow"
-**When** I click "Add Step"
-**Then** I can select a Node Type (e.g., "Agent", "Tool", "Reviewer") from a simple dropdown
-**And** the system visualizes the workflow as a linear list or simple sequence
-**And** complex cycles (loops) are handled via pre-defined "Retry/Loop" patterns in the dropdown, not manual edge drawing.
+**Given** I navigate to `/admin/workflow-studio` and click "Create Workflow"
+**Then** a 6-step wizard opens with: (1) Metadata, (2) Inputs, (3) Execution, (4) Knowledge, (5) Prompt, (6) Output
+**And** Step 1 lets me set name, description, and tags
+**And** Step 2 lets me add inputs with: name, label, role (context/subject), source types (asset/upload/text checkboxes), required toggle, file restrictions, text config
+**And** the wizard enforces exactly ONE subject input (validation error if zero or multiple)
+**And** Step 3 lets me select processing mode (parallel/batch), LLM model (dropdown from llm_models table), temperature, max output tokens, max retries
+**And** Step 4 lets me toggle RAG on/off, configure query strategy, similarity threshold, max chunks
+**And** Step 5 provides a large text area for the prompt with `{input_name}` variable highlighting matching Step 2 input names
+**And** Step 6 lets me select output format (markdown/json), define sections (for markdown) or JSON schema (for json), and set filename template
+**And** every non-obvious field has an info tooltip
+**And** the wizard produces a valid YAML workflow definition stored in workflow_versions.definition (JSONB)
+**And** I can navigate back and forth between steps without losing data
 
-#### Story 3.2: Node Configuration Form
+#### Story 3.3: Workflow Template CRUD API
 **As a** Bubble Admin,
-**I want** to configure each step using a standard form, with the option to upload Markdown files for complex prompt instructions,
-**So that** I don't have to copy-paste massive text blocks.
+**I want** API endpoints to create, read, update, list, and soft-delete workflow templates,
+**So that** the Workflow Studio UI can persist and manage workflow definitions.
 
 **Acceptance Criteria:**
-**Given** I select a step (Node)
-**When** the Configuration Panel opens
-**Then** I see structured fields:
-*   **System Prompt:** A large text area for instructions.
-*   **Knowledge Context:** A "File Upload" button to attach a `.md` file. The system reads this file and injects it into the prompt.
-*   **Model:** A dropdown to select `Gemini 1.5 Pro` or `Flash`.
-*   **Tools:** A multi-select checklist to enable capabilities.
-**And** the system **Sanitizes (DOMPurify)** any Markdown content rendered in the UI to prevent XSS.
+**Given** an authenticated Bubble Admin
+**When** I call `POST /admin/workflow-templates` with a valid workflow definition
+**Then** a WorkflowTemplate record is created with status=draft and a WorkflowVersion (v1) is created with the definition JSONB
+**And** `GET /admin/workflow-templates` returns a paginated list of templates with visibility filtering
+**And** `GET /admin/workflow-templates/:id` returns the template with its current version's definition
+**And** `PUT /admin/workflow-templates/:id` creates a new version (v2, v3, etc.) — definitions are immutable once saved
+**And** `DELETE /admin/workflow-templates/:id` performs soft-delete (sets deletedAt timestamp)
+**And** the YAML schema validator runs on every create/update and rejects invalid definitions with detailed error messages
+**And** all endpoints use TransactionManager for tenant-scoped operations
+**And** all endpoints have complete Swagger documentation (@ApiResponse for 200/201/400/401/403)
 
-#### Story 3.2b: The Gatekeeper Pattern (Scanner Configuration)
+#### Story 3.4: Workflow Versioning & Publishing
 **As a** Bubble Admin,
-**I want** to configure the first node as a "Gatekeeper" that validates input semantics (e.g., "Is this a Transcript?"),
-**So that** I don't waste 10k tokens analyzing a shopping list.
+**I want** workflows to be immutable versioned snapshots with publish/draft lifecycle,
+**So that** editing a workflow does not break active runs and I can roll back to previous versions.
 
 **Acceptance Criteria:**
-**Given** I am configuring a "Scanner" Node
-**Then** I can set a **"Validation Prompt"** (e.g., "Check if text contains speaker labels")
-**And** I can set a **"Fail Fast"** message (e.g., "Error: Input is not a transcript")
-**And** the engine runs this check on the first 1,000 tokens only (Low Cost) before proceeding.
+**Given** an existing workflow template with version v1 (status: published)
+**When** the Admin edits and saves changes
+**Then** a new version (v2) is created with status=draft
+**And** the template's currentVersionId still points to v1 until the admin publishes v2
+**And** I can publish v2, which updates the template's currentVersionId
+**And** existing active runs continue using v1 (references are locked to workflow_version_id)
+**And** I can "Rollback" (set currentVersionId back to v1) if v2 is broken
+**And** I can view version history and compare versions
+**And** published workflows appear in the tenant workflow catalog (Epic 4)
 
-#### Story 3.3: Input Schema Wizard (The Dynamic Form Builder)
+#### Story 3.5: Workflow Visibility & Access Control
 **As a** Bubble Admin,
-**I want** to define the inputs using a "Field Builder" (like Typeform),
-**So that** the Workflows knows exactly which Modal fields to render for the user.
+**I want** to configure which tenants can access each workflow template,
+**So that** I can offer different workflow libraries to different customers.
 
 **Acceptance Criteria:**
-**Given** the "Input Settings" tab
-**When** I configure a field (e.g., "Label: Project Name", "Type: Text", "Required: True")
-**Then** the system generates a standard JSON Schema: `{ "project_name": { "type": "string" } }`
-**And** I can select specialized types (File, Asset Picker).
-**And** the system generates a stable `data-testid` attribute (e.g., `data-testid="input-project-name"`) for every field to enable robust E2E testing.
-**And** this schema is saved to the Workflow Definition.
+**Given** I am editing a workflow template
+**When** I configure visibility settings
+**Then** I can set visibility to `public` (all tenants) or `private` (restricted)
+**And** for private workflows, I can select allowed tenants from a multi-select list
+**And** the custom RLS policy enforces: tenants see templates where `visibility=public` OR their `tenant_id` is in `allowed_tenants`
+**And** the Workflow Studio template list shows visibility badges (public/private)
+**And** the Tenant Entitlements tab (Story 1.5) shows a read-only view of accessible workflows
 
-#### Story 3.4: Logic Rule Builder (The Gatekeeper)
-**As a** Workflow Designer,
-**I want** to define conditional logic using a "Rule Builder" interface,
-**So that** I can route bad results to a fixer node without writing JavaScript.
-
-**Acceptance Criteria:**
-**Given** I want to add a check (e.g., "If Quality is Low")
-**When** I configure the "Next Step" logic
-**Then** I see a **Rule Builder UI**:
-*   **If:** [Dropdown: Metric] (e.g., `Quality_Score`)
-*   **Operator:** [Dropdown] (e.g., `Less Than`)
-*   **Value:** [Input] (e.g., `0.8`)
-*   **Then Go To:** [Dropdown: Step Name] (e.g., `Fixer_Node`)
-*   **Else Go To:** [Dropdown: Step Name] (e.g., `End`)
-
-#### Story 3.5: Parallel Execution (Easy Mode)
-**As a** Power User,
-**I want** to enable parallel processing by selecting a collection variable,
-**So that** I don't have to configure complex Map-Reduce graphs.
+#### Story 3.6: Workflow Chain Builder
+**As a** Bubble Admin,
+**I want** to compose workflow chains by linking atomic workflows sequentially,
+**So that** I can build multi-step analysis pipelines (e.g., analyze transcripts then consolidate reports).
 
 **Acceptance Criteria:**
-**Given** a step that receives a List/Array variable (e.g., `files[]`)
-**When** I check **"Run in Parallel"** and select **"Map over: files"**
-**Then** the system automatically configures the Map-Reduce pattern
-**And** I see a configuration for "Max Concurrency" (e.g., 5 items at a time)
+**Given** I navigate to Workflow Studio and click "Create Chain"
+**Then** I can add steps by selecting published atomic workflow templates
+**And** I can configure input mapping for each step (Step 1+): map inputs from previous step outputs, inherited from chain initial inputs, fixed at chain definition time, or runtime user-provided
+**And** no file uploads in the chain builder — only metadata connections between workflow outputs and inputs
+**And** the chain definition is stored in workflow_chains.definition (JSONB)
+**And** chain templates support the same visibility/access control as workflow templates
+**And** I can soft-delete chains
+**And** intermediate outputs between steps are visible and downloadable after chain completion
 
-#### Story 3.6: Workflow Versioning & Locking
-**As a** System Architect,
-**I want** workflows to be immutable versioned snapshots (v1, v2),
-**So that** editing a workflow definition does not break active runs relying on the old logic.
+#### Story 3.7: Workflow Studio Template Library (Admin UI)
+**As a** Bubble Admin,
+**I want** a template library view in Workflow Studio showing all workflow templates and chains,
+**So that** I can browse, search, filter, and manage my workflow catalog.
 
 **Acceptance Criteria:**
-**Given** an existing published workflow (v1)
-**When** the Admin saves changes
-**Then** the system creates a new version (v2)
-**And** new runs use v2
-**And** existing active runs continue using v1 (references are locked to `workflow_version_id`)
-**And** the Admin can "Rollback" (set v1 as active) if v2 is broken
+**Given** I navigate to `/admin/workflow-studio`
+**Then** I see a card grid of all workflow templates with: name, description, tags, status badge (draft/published), visibility badge (public/private), version number, last modified date
+**And** I can filter by status, visibility, and tags
+**And** I can search by name and description
+**And** I can click a template card to open the edit wizard (Story 3.2)
+**And** I can click "Create Workflow" to start the wizard for a new template
+**And** a separate tab/section shows workflow chains with similar card layout
+**And** I can duplicate an existing template to create a new one based on it
 
 ### Epic 4: Workflow Execution Engine (The Creator)
-**Goal:** The heart of the system. Enable "Creators" to run workflows asynchronously, handling file inputs, queue management, and robust state persistence.
+**Goal:** The heart of the system. Enable Creators to browse available workflows, submit runs with dynamic input forms, and execute LLM-orchestrated analysis asynchronously via BullMQ. Handles prompt assembly, fan-out/fan-in execution, output validation with automatic retry, token budget checks, credit pre-checks, and workflow chain orchestration.
 **FRs covered:** FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR34, FR36, FR37, FR46, FR47
 **NFRs:** NFR-Perf-2, NFR-Rel-1, NFR-Rel-2, NFR-Scale-1
+**Authoritative Reference:** `_bmad-output/implementation-artifacts/tech-spec-workflow-definition-schema.md`
 
-> **NOTE (UPDATED 2026-02-01):** The Workflow Definition Schema Tech Spec gate requirement is on **Epic 3** (see above). LangGraph.js has been **DEFERRED** — Epic 4 now implements LLM-orchestrated execution: YAML prompts sent directly to LLM via hexagonal `LLMProvider` interface. The execution engine consumes atomic workflow YAML definitions, handles fan-out/fan-in execution patterns via BullMQ, and supports workflow chain orchestration. By the time Epic 4 starts, the YAML schema will already be defined and the form builder will produce the correct format.
+> **ARCHITECTURE (Party Mode Pivot 2026-02-01):** LangGraph.js **DEFERRED**. The execution engine consumes atomic YAML workflow definitions (produced by Epic 3). Workflows are single LLM call patterns — YAML IS the prompt. Platform handles assembly: read input files/text + RAG context + YAML prompt template -> inject variables -> send to LLM via hexagonal `LLMProvider` interface. Execution patterns: `parallel` (fan-out: N BullMQ jobs, 1 per subject file) vs `batch` (fan-in: 1 BullMQ job with all files). Workflow chains use BullMQ FlowProducer to orchestrate sequential atomic workflow steps.
 
-#### Story 4.1: Workflows & Run Initiation (Dynamic Forms)
+> **GATE REQUIREMENT (BEFORE Story 4.1 or 4.2):** Build Mock LLM Provider alongside real providers. MockLlmProvider (deterministic, free, for dev + unit tests), VertexLlmProvider (production), GoogleAIStudioProvider (free tier, smoke tests). Switched via `LLM_PROVIDER` env var.
+
+#### Story 4.1: Workflow Catalog & Run Initiation (Dynamic Forms)
 **As a** Creator,
-**I want** to select a workflow and see a dynamically generated modal based on the Admin's definition,
-**So that** I don't have to guess what files to upload.
+**I want** to browse available workflows and see a dynamically generated run form based on the workflow's input definitions,
+**So that** I know exactly what files, assets, and text inputs to provide.
 
 **Acceptance Criteria:**
-**Given** I click "Run" on the "QDA Workflow" card
-**Then** a Modal opens rendering the form defined in `InputSchema` (Story 3.3)
-**And** specialized fields render correctly:
-    *   `format: file_upload` -> Renders Multi-File Dropzone.
-    *   `format: asset_picker` -> Renders Dropdown of Tenant Assets.
-**And** every field has the stable `data-testid` defined in the schema (QA Requirement).
-**And** validation prevents submission until all required fields are filled
+**Given** I navigate to `/app/workflows`
+**Then** I see a card grid of published workflows available to my tenant (respecting visibility + allowed_tenants)
+**And** each card shows: name, description, tags
 
-#### Story 4.2: Execution Engine Core (Versioned Runner)
+**Given** I click "Run" on a workflow card
+**Then** a run form opens, dynamically rendering fields from the workflow's `inputs[]` definition:
+*   `source: ["asset"]` renders an Asset Picker (dropdown of tenant Data Vault files)
+*   `source: ["upload"]` renders a File Dropzone (with accept.extensions + max_size_mb restrictions)
+*   `source: ["text"]` renders a Text Area (with placeholder + max_length from text_config)
+*   `source: ["asset", "upload"]` renders both options with a toggle
+**And** the subject input supports multiple file selection (each file becomes a separate job in parallel mode)
+**And** every field has a stable `data-testid` attribute
+**And** validation prevents submission until all required inputs are provided
+
+#### Story 4.2: LLM Provider Interface & Prompt Assembly
+**As a** Developer,
+**I want** a hexagonal LLM provider interface and prompt assembly pipeline,
+**So that** the execution engine can call any LLM provider without coupling to specific SDKs.
+
+**Acceptance Criteria:**
+**Given** the existing EmbeddingProvider hexagonal pattern
+**Then** an LLMProvider interface is created with `generate(prompt, model, options)` method
+**And** three implementations: MockLlmProvider (deterministic canned responses), GoogleAIStudioProvider (free tier), VertexLlmProvider (production)
+**And** provider is selected via `LLM_PROVIDER` env var (mock | google-ai-studio | vertex)
+**And** the prompt assembly pipeline: reads all context input files/text -> reads subject file -> runs RAG query if knowledge.enabled -> replaces `{input_name}` and `{knowledge_context}` variables in prompt template -> sends assembled prompt to LLM
+**And** the LLM model is resolved from the `llm_models` table using execution.model from the workflow definition
+**And** token usage (prompt + completion) is tracked per call
+
+#### Story 4.3: Execution Engine Core (Fan-Out/Fan-In)
 **As a** Creator,
-**I want** my workflow runs to execute reliably in the background using the exact workflow version I selected,
-**So that** I don't have to wait with my browser open and my run isn't affected if an admin updates the workflow.
+**I want** my workflow runs to execute reliably in the background using the correct execution pattern,
+**So that** multiple transcripts are analyzed in parallel or consolidated in a single batch.
 
 **Acceptance Criteria:**
-**Given** a "Job Created" event in BullMQ
-**When** the Worker picks it up
-**Then** it loads the specific `GraphJSON` from `workflow_versions` using the `version_id` in the payload (NOT the current tip)
-**And** executes the nodes, supporting the **"Map over [Variable]"** pattern defined in Story 3.5
-**And** guarantees extracted text from user files is **Sanitized (DOMPurify)** before use/storage
-**And** updates the Run Status to `RUNNING`
+**Given** a run submission with N subject files and `execution.processing: "parallel"`
+**Then** N BullMQ jobs are created (1 per subject file), each receiving ALL context inputs + ONE subject file
+**And** jobs run concurrently up to `execution.max_concurrency` (default: 5)
+**And** each job loads the specific workflow definition from `workflow_versions` using the `version_id` (NOT the current tip)
 
-#### Story 4.3: State Persistence & Resumption (Auto-Save)
+**Given** a run submission with N subject files and `execution.processing: "batch"`
+**Then** 1 BullMQ job is created with ALL context inputs + ALL subject files concatenated
+
+**And** a WorkflowRun record is created with: input_snapshot, status=queued, version_id, tenant_id
+**And** run status transitions: queued -> running -> completed/failed
+**And** the assembled prompt and raw LLM response are stored on the WorkflowRun record for debugging
+
+#### Story 4.4: Pre-Flight Validation & Credit Check
 **As a** Creator,
-**I want** the system to automatically save my workflow's progress after every step,
-**So that** if there's a server issue, my run resumes where it left off instead of starting over.
+**I want** the system to validate my inputs and check my credit balance before accepting a run,
+**So that** I don't waste credits on invalid submissions or get surprised by insufficient quota.
 
 **Acceptance Criteria:**
+**Given** a Creator submits a run
+**When** server-side pre-flight validation runs
+**Then** all inputs are validated against the workflow's input definitions (required fields, file types, max sizes)
+**And** the context window token budget is calculated per job (tech spec §5.1): prompt template + context inputs + subject file + knowledge chunks
+**And** if total tokens exceed the model's context window, the UI shows an interactive file selection dialog to deselect files until under budget
+**And** the tenant's credit/quota balance is checked (FR37) — if exhausted, submission is rejected with clear message
+**And** credits are deducted upfront (Story 1.5 pattern) — refunded if validation fails
+**And** no BullMQ jobs are created until all validations pass
 
-**Given** a workflow is running
-**When** a node completes
-**Then** a serialized snapshot of the `State` is saved to Postgres
-**And** if the worker crashes, it resumes from the last snapshot upon restart
-
-#### Story 4.4: Dynamic Validation (The Runtime Blocker)
+#### Story 4.5: Output Validation & Storage
 **As a** Creator,
-**I want** the system to prevent me from running a workflow if I am missing a required Asset (e.g., "Codebook"),
-**So that** I don't waste credits on a failed run.
+**I want** the system to validate LLM output structure and store results as downloadable assets,
+**So that** I get properly structured reports and can find them in my Data Vault.
 
 **Acceptance Criteria:**
+**Given** the LLM returns a response
+**Then** the platform validates output structure (NOT content quality):
+*   For `format: "markdown"`: checks that all `sections[].required: true` headings are present
+*   For `format: "json"`: parses JSON and validates against `output.json_schema`
+**And** if validation fails, an automatic retry is triggered with a correction prompt (tech spec §4.2)
+**And** retries repeat up to `execution.max_retries` times (default from system settings, overridable per-workflow)
+**And** if all retries fail, the best attempt is stored with a `validation_warning` flag and a visible banner to the user
+**And** successful output is stored as an AssetEntity with `sourceType: workflow_output` and `workflowRunId` FK
+**And** output filename follows `output.filename_template` pattern
+**And** the WorkflowRun record is updated with: output_asset_ids, token_usage, credits_consumed, duration_ms
 
-**Given** a Creator opens the Run Wizard for a workflow that requires a "Codebook" asset
-**When** no asset of type "Codebook" exists in the tenant's Data Vault
-**Then** the Asset Picker field displays an inline error: "Missing Required Asset: [Asset Type]"
-**And** the "Run" button is disabled with a tooltip explaining the missing requirement
-**And** a link to the Data Vault is provided so the user can upload the missing asset
-
-**Given** a Creator has selected all required inputs and clicks "Run"
-**When** the server-side pre-flight validation runs
-**Then** the system re-validates all inputs (files, assets, form fields) against the workflow's InputSchema
-**And** if any validation fails, the submission is rejected with a specific error message per field
-**And** no credits are deducted for a rejected submission
-
-**Given** a Creator's tenant has exhausted their run quota (FR37)
-**When** the Creator attempts to submit a run
-**Then** the "Run" button is disabled
-**And** the UI displays: "Run quota exceeded. Contact your admin to increase your plan."
-**And** no credits are deducted
-
-#### Story 4.5: Context Injection (Markdown Support)
+#### Story 4.6: Workflow Chain Orchestration
 **As a** Creator,
-**I want** workflow agents to automatically receive the knowledge context files (Markdown) attached by the admin during workflow definition,
-**So that** the analysis is informed by methodology guides and domain knowledge without me needing to upload them each time.
+**I want** to run multi-step workflow chains where output from one step feeds into the next,
+**So that** I can execute complex analysis pipelines (e.g., analyze transcripts then consolidate findings).
 
 **Acceptance Criteria:**
-**Given** a Node Definition with an attached `context_file_id` (Markdown)
-**When** the Agent Node is initialized
-**Then** the Worker fetches the file content from Storage (S3/MinIO)
-**And** **Sanitizes it** (Server-Side) to ensure no executable code is present
-**And** appends it to the System Prompt: `\n\n### Context:\n{file_content}`
-
-#### Story 4.6: Output Generation (Raw Data & Citations)
-**As a** Data Analyst,
-**I want** the final output to be saved as a structured JSON containing the text AND specific citations (Page numbers, Quotes),
-**So that** the UI can later verify the evidence.
-
-**Acceptance Criteria:**
-
-**Given** a workflow completes successfully
-**When** the final node runs
-**Then** it aggregates the results into a standardized JSON format
-**And** includes "Citation Objects" `{ source_id, quote, page_num }` for every claim (`source_id` MUST be the asset UUID from the Data Vault — this enables Option B GDPR full erasure in Story 7.6)
-**And** saves this JSON as a `Report` record linked to the Run
+**Given** a Creator initiates a chain run
+**Then** the chain orchestrator (BullMQ FlowProducer) runs Step 0 as a normal atomic workflow
+**And** when Step 0 completes, output assets are stored with `sourceType: workflow_output`
+**And** the orchestrator reads `input_mapping` for Step 1 and populates inputs from their designated sources (previous step outputs, inherited inputs, fixed values, or runtime user input)
+**And** Step 1 runs with populated inputs -> outputs stored -> repeat for all steps
+**And** intermediate outputs between steps are visible and downloadable
+**And** if any step fails, the chain is marked as failed with the failing step identified
+**And** a WorkflowRun record is created for the chain with `chain_id` reference (check constraint: version_id OR chain_id)
 
 ### Epic 5: Interactive Reporting & Feedback Loop
 **Goal:** Deliver the value. Provide a highly responsive report viewer where users can verify evidence ("Traceable Truth") and provide feedback that triggers re-runs.
@@ -573,7 +611,7 @@ This document provides the complete epic and story breakdown for project_bubble,
 1.  **Flagged Assumption Review:** A list of "Low Confidence" items. I can **Edit** the text to provide the correct fact (not just Yes/No).
 2.  **Unflagged Correction (General):** I can proactively add a new constraint or correct a "High Confidence" error (e.g., "Actually, Vendor X is the customer") via a chat/text input.
 3.  **Targeted Section Feedback:** I can select a specific Report Section and provide feedback scoped to that block (FR41), triggering a focused update.
-**And** any correction triggers a re-run (Global or Partial depending on dependency graph).
+**And** any correction triggers a re-run of the atomic workflow with the feedback injected as additional context.
 
 #### Story 5.4: Feedback Processing (The Re-Run)
 **As a** Workflow Engine,
@@ -584,8 +622,8 @@ This document provides the complete epic and story breakdown for project_bubble,
 
 **Given** submitting feedback
 **When** the "Re-Run" triggers
-**Then** the engine re-executes the generation nodes
-**And** injects the Feedback as a high-priority "Correction Context" into the system prompt
+**Then** the engine re-executes the atomic workflow
+**And** injects the Feedback as a high-priority "Correction Context" appended to the assembled prompt
 
 #### Story 5.5: PDF Export Service [Prototype]
 **As a** Creator,
@@ -668,17 +706,22 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** a global banner appears in the Workflows UI
 **And** a health check endpoint (`/health`) is available using `@nestjs/terminus` that checks database connectivity and external service status (NFR assessment deferred item — prerequisite for service monitoring)
 
-#### Story 7.4: Execution Trace Viewer [Prototype]
-**As a** Customer Admin,
-**I want** to view the full execution trace of a workflow run,
-**So that** I can debug why an agent gave a specific answer.
+#### Story 7.4: Admin Execution Inspector [Prototype]
+**As a** Bubble Admin or Customer Admin,
+**I want** to view the full execution details of a workflow run,
+**So that** I can debug prompt quality, inspect LLM responses, and tune workflow definitions.
 
 **Acceptance Criteria:**
 **Given** a specific Run ID
-**When** I view the "Debug/Trace" tab
-**Then** I see a chronological log of every Node execution
-**And** for each Node, I can expand to see the **Exact Input** (Prompts sent to LLM) and **Raw Output** (Response from LLM)
-**And** I can see the Token Usage cost for that step
+**When** I view the "Inspect" tab (Admin Execution Inspector — tech spec §8)
+**Then** I see the run summary: status, duration_ms, credits_consumed, model used
+**And** I can view the **assembled prompt** (the full prompt sent to the LLM after variable injection)
+**And** I can view the **raw LLM response** (unprocessed output)
+**And** I can see the **input snapshot** (what files/text were provided)
+**And** I can see **token usage** breakdown (prompt tokens + completion tokens)
+**And** I can see **retry history** (if output validation triggered retries, each attempt is logged)
+**And** for chain runs, I can inspect each step's execution independently
+**And** the inspector is read-only — no ability to modify runs from this view
 
 #### Story 7.6: GDPR Full Erasure — Citation Scrubbing [Future]
 **As a** User with data deletion rights,
@@ -712,24 +755,26 @@ This document provides the complete epic and story breakdown for project_bubble,
 
 **Note:** This story replaces the interim 7-day JWT expiry set in the hardening story. NFR assessment deferred item.
 
-#### Story 7.1: LLM Provider Configuration [Future]
+#### Story 7.1: LLM Model & Provider Management (Admin UI)
 **As a** Bubble Admin,
-**I want** a UI to configure multiple LLM Providers (e.g., Gemini, OpenAI, Anthropic) and API Keys per tenant or workflow,
-**So that** I can control which models are used, manage costs, and switch providers without downtime.
+**I want** a UI to manage the LLM model registry and configure provider API keys,
+**So that** I can control which models are available for workflows, manage costs, and switch providers.
 
 **Acceptance Criteria:**
 
-**Given** I am on the Admin Portal → System Settings → LLM Providers page
-**When** I add a new LLM Provider
-**Then** I can configure: Provider Name, API Key (encrypted at rest), Default Model, and Rate Limits
-**And** I can assign a provider as the default for a specific Tenant or Workflow
-**And** the system validates the API Key by making a test call before saving
+**Given** I am on the Admin Portal → System Settings → LLM Configuration page
+**When** I manage the model registry
+**Then** I can view all entries in the `llm_models` table (system-wide, not tenant-scoped)
+**And** I can add new models: display_name, provider_key (gemini/openai/anthropic), model_id, context_window, cost_per_1k_input, cost_per_1k_output, is_active toggle
+**And** I can edit existing models (update costs, toggle active/inactive)
+**And** inactive models are hidden from the workflow builder's model dropdown but existing workflows referencing them continue to work
+**And** I can configure provider API keys (encrypted at rest) per provider_key
+**And** the system validates API keys by making a test call before saving
+**And** I can configure system defaults: default model, default validation retry count (tech spec §4.2), default max_output_tokens
 **And** I can set a **Fallback Provider** that activates if the primary returns repeated errors
+**And** failover events are logged in the audit trail
 
-**Given** a Workflow is configured to use Provider A
-**When** Provider A returns 3+ consecutive 500 errors
-**Then** the system automatically switches to the configured Fallback Provider
-**And** logs the failover event in the audit trail
+**Note:** The `llm_models` table and LlmModelEntity are created in Story 3.1. This story adds the admin management UI and provider configuration. See tech spec §5.4 for full specification.
 
 ### Epic 9: Knowledge Graph Evolution (Phase 2 - The Moat)
 **Goal:** Upgrade the flat "Vector Knowledge Base" into a true "Hybrid Knowledge Graph" to enable multi-hop reasoning and "Connecting the Dots" across projects.

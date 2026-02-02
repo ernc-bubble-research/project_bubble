@@ -35,7 +35,7 @@
 #
 # PHASE SCOPE:
 # ============
-# Prototype (Phase 1): Epics 1-7 (7 epics, 40 stories)
+# Prototype (Phase 1): Epics 1-7 (7 epics, stories updated 2026-02-02 for architectural pivot)
 # Phase 2 / Future:    Epics 8, 9, 10, 11 (4 epics, 10 stories)
 #
 # DEPENDENCY CHAIN:
@@ -162,33 +162,36 @@ development_status:
   # Pre-Epic-3 Gates
   # ═══════════════════════════════════════════════════════
   gate-swagger-api-response: done # All 11 controllers, 42 endpoints documented. 406 tests, 0 errors.
-  gate-workflow-definition-schema: not-started # Defines YAML workflow schema contract (LangGraph.js DEFERRED). MUST complete before Epic 3 stories.
+  gate-workflow-definition-schema: done # Tech spec approved 2026-02-02. 12 tasks, 13 ACs, 20 technical decisions. Party mode DB review complete (10 findings applied).
 
   # ═══════════════════════════════════════════════════════
-  # Epic 3: Workflow Definition (The Architect)
+  # Epic 3: Workflow Definition (Atomic Workflows, Chains, Wizard)
   # FRs: FR1, FR2, FR4, FR5, FR6, FR35, FR42
+  # REWRITTEN 2026-02-02: All stories updated for party mode architectural pivot.
+  # Old node-based stories (3.1-3.6 + 3.2b) replaced with atomic workflow architecture.
   # ═══════════════════════════════════════════════════════
-  epic-3: backlog
-  3-1-form-based-workflow-builder: backlog
-  3-2-node-configuration-form: backlog
-  3-2b-the-gatekeeper-pattern-scanner-configuration: backlog
-  3-3-input-schema-wizard-the-dynamic-form-builder: backlog
-  3-4-logic-rule-builder-the-gatekeeper: backlog
-  3-5-parallel-execution-easy-mode: backlog
-  3-6-workflow-versioning-locking: backlog
+  epic-3: in-progress
+  3-1-workflow-definition-data-foundation: done # Code review passed, 7 fixes applied, 453 tests, 0 lint errors
+  3-2-workflow-builder-wizard-admin-ui: backlog
+  3-3-workflow-template-crud-api: backlog
+  3-4-workflow-versioning-publishing: backlog
+  3-5-workflow-visibility-access-control: backlog
+  3-6-workflow-chain-builder: backlog
+  3-7-workflow-studio-template-library: backlog
   epic-3-retrospective: optional
 
   # ═══════════════════════════════════════════════════════
   # Epic 4: Workflow Execution Engine (The Creator)
   # FRs: FR7-FR13, FR34, FR36, FR37, FR46, FR47
+  # REWRITTEN 2026-02-02: Updated for LLM-orchestrated execution, fan-out/fan-in, chain orchestration.
   # ═══════════════════════════════════════════════════════
   epic-4: backlog
-  4-1-workflows-run-initiation-dynamic-forms: backlog
-  4-2-execution-engine-core-versioned-runner: backlog
-  4-3-state-persistence-resumption-auto-save: backlog
-  4-4-dynamic-validation-the-runtime-blocker: backlog
-  4-5-context-injection-markdown-support: backlog
-  4-6-output-generation-raw-data-citations: backlog
+  4-1-workflow-catalog-run-initiation: backlog
+  4-2-llm-provider-interface-prompt-assembly: backlog
+  4-3-execution-engine-core-fan-out-fan-in: backlog
+  4-4-pre-flight-validation-credit-check: backlog
+  4-5-output-validation-storage: backlog
+  4-6-workflow-chain-orchestration: backlog
   epic-4-retrospective: optional
 
   # ═══════════════════════════════════════════════════════
@@ -218,10 +221,10 @@ development_status:
   # FRs: FR29, FR31, FR38, FR49
   # ═══════════════════════════════════════════════════════
   epic-7: backlog
-  7-1-llm-provider-configuration: backlog
+  7-1-llm-model-provider-management: backlog
   7-2-audit-logging-service-security: backlog
   7-3-service-status-monitor: backlog
-  7-4-execution-trace-viewer: backlog
+  7-4-admin-execution-inspector: backlog
   7-5-refresh-token-rotation: backlog # NFR deferred item — replaces interim 7-day JWT expiry from hardening story
   epic-7-retrospective: optional
 

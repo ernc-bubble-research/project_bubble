@@ -83,6 +83,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
     | `AuthService` (login + seed) | Login is pre-authentication — no tenant context. Seed is dev-only startup. Both need cross-tenant user queries. |
     | `InvitationsService` (accept + create) | Accept is pre-authentication (user has no JWT yet). Create checks global email uniqueness cross-tenant. Same pattern as AuthService. |
     | `TenantsService` | Admin-scoped — `tenants` table has no `tenant_id` column and no RLS policy. |
+    | `LlmModelService` (Epic 3+) | System-wide model registry — `llm_models` table has no `tenant_id` column and no RLS policy. All tenants read the same model list. |
 *   **ALL future services** MUST use `TransactionManager` for any table that has a `tenant_id` column.
 
 ### 2b. RLS Architecture Details

@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { FolderEntity } from './folder.entity';
+import { WorkflowRunEntity } from './workflow-run.entity';
 
 export enum AssetStatus {
   ACTIVE = 'active',
@@ -56,6 +57,16 @@ export class AssetEntity {
 
   @Column({ name: 'archived_at', type: 'timestamp', nullable: true })
   archivedAt!: Date | null;
+
+  @Column({ name: 'source_type', type: 'varchar', length: 50, default: 'user_upload' })
+  sourceType!: string;
+
+  @ManyToOne(() => WorkflowRunEntity, { nullable: true })
+  @JoinColumn({ name: 'workflow_run_id' })
+  workflowRun?: WorkflowRunEntity;
+
+  @Column({ name: 'workflow_run_id', type: 'uuid', nullable: true })
+  workflowRunId!: string | null;
 
   @Column({ name: 'uploaded_by', type: 'uuid' })
   uploadedBy!: string;

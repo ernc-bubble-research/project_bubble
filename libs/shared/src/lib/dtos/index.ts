@@ -4,3 +4,4 @@ export * from './user';
 export * from './invitation';
 export * from './asset';
 export * from './knowledge';
+export * from './workflow';
