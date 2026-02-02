@@ -94,6 +94,22 @@
 # as a dedicated hardening story rather than piecemeal. Add to Epic 7 or a future
 # hardening sprint.
 # Raised during Story 2.4 code review (2026-02-01).
+#
+# RETRO NOTE: RECURRING tenantId OMISSION IN WHERE CLAUSES
+# =========================================================
+# This is a RECURRING pattern across multiple stories and epics:
+# - Story 2.4 code review: raw SQL queries missing tenant_id (M3)
+# - Story 3.3 code review: H3 — findOne queries missing tenantId defense-in-depth
+# - Story 3.4 code review: H1/H2 — WorkflowVersionsService had THREE methods missing
+#   tenantId in WHERE clauses (createVersion, findAllByTemplate, findOne)
+# ROOT CAUSE: Dev agent consistently writes queries with only the primary key (id)
+# and omits tenantId from WHERE clauses, relying on RLS alone. Code review catches
+# it every time, but it should not be happening in the first place.
+# ACTION: This pattern must be added to project-context.md as a CRITICAL rule so
+# that dev agents include tenantId in EVERY WHERE clause by default. The rule should
+# be: "ALL TypeORM findOne/find/update/delete WHERE clauses on tenant-scoped entities
+# MUST include tenantId alongside any other conditions. No exceptions."
+# Raised during Story 3.4 code review (2026-02-02).
 
 # IMMEDIATE POST-EPIC-2 ACTION:
 # =============================
@@ -173,9 +189,9 @@ development_status:
   epic-3: in-progress
   3-1-workflow-definition-data-foundation: done # Code review passed, 7 fixes applied, 453 tests, 0 lint errors
   3-2-workflow-builder-wizard-admin-ui: backlog
-  3-3-workflow-template-crud-api: backlog
-  3-4-workflow-versioning-publishing: backlog
-  3-5-workflow-visibility-access-control: backlog
+  3-3-workflow-template-crud-api: done # Code review passed, 6 fixes applied (H1-H3, M1-M2, L1), 504 tests, 0 lint errors
+  3-4-workflow-versioning-publishing: done # Code review passed, 6 fixes applied (H1-H2, M1-M3, L1), 530 tests, 0 lint errors
+  3-5-workflow-visibility-access-control: ready-for-dev
   3-6-workflow-chain-builder: backlog
   3-7-workflow-studio-template-library: backlog
   epic-3-retrospective: optional

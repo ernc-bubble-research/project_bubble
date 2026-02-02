@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { WorkflowVersionResponseDto } from './workflow-version-response.dto';
 
 export class WorkflowTemplateResponseDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
@@ -27,6 +28,9 @@ export class WorkflowTemplateResponseDto {
 
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   createdBy!: string;
+
+  @ApiPropertyOptional({ type: () => WorkflowVersionResponseDto, description: 'Current version details (included on single-resource GET)' })
+  currentVersion?: WorkflowVersionResponseDto;
 
   @ApiProperty()
   createdAt!: Date;

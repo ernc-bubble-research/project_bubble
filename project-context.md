@@ -94,6 +94,20 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **`DbLayerModule`** is `@Global()` — `TransactionManager` is available everywhere without importing it per module.
 *   **`RlsSetupService`** creates RLS policies on `onModuleInit` in development. In production, use proper migrations.
 
+### 2c. Defense-in-Depth: tenantId in ALL WHERE Clauses
+*   **EVERY** TypeORM `findOne`, `find`, `update`, `delete`, `softDelete`, `restore` call on a tenant-scoped entity **MUST** include `tenantId` in the WHERE clause alongside the primary key or other conditions.
+*   **DO NOT** rely on RLS alone. RLS is the safety net; explicit `tenantId` in WHERE is the primary defense.
+*   **PATTERN:**
+    ```typescript
+    // BAD — relies on RLS alone
+    manager.findOne(WorkflowVersionEntity, { where: { id } });
+
+    // GOOD — defense-in-depth
+    manager.findOne(WorkflowVersionEntity, { where: { id, tenantId } });
+    ```
+*   **This applies to:** All entities with a `tenant_id` column. The only exemptions are entities in the "EXEMPTED SERVICES" table above (no `tenant_id` column).
+*   **REASON:** This rule was added after the same defect was found in code review across Stories 2.4, 3.3, and 3.4. It is a recurring pattern that must stop.
+
 ### 3. The "200ms" Rule (Async)
 *   **NEVER** run long logic (>200ms) in the `api-gateway`.
 *   **ALWAYS** offload to `worker-engine`.

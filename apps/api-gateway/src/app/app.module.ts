@@ -15,6 +15,7 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { AssetsModule } from './assets/assets.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
+import { WorkflowsModule } from './workflows/workflows.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
     AssetsModule,
     IngestionModule,
     KnowledgeModule,
+    WorkflowsModule,
   ],
   controllers: [AppController],
   providers: [
