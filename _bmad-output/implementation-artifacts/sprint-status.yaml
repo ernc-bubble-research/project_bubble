@@ -111,6 +111,112 @@
 # MUST include tenantId alongside any other conditions. No exceptions."
 # Raised during Story 3.4 code review (2026-02-02).
 
+# RETRO NOTE: END-TO-END TEST COVERAGE IS ZERO
+# ==============================================
+# Despite 555+ unit tests passing across all projects, the UI is largely
+# non-functional in the browser. Root causes discovered during Story 3.2 review:
+#
+# 1. UNIT TESTS MOCK EVERYTHING: All HTTP calls use provideHttpClientTesting()
+#    or jest mocks. Tests verify component logic in isolation but never hit
+#    a real API. 555 tests can pass while the actual app returns 500 on every endpoint.
+#
+# 2. API GATEWAY CRASHES ON STARTUP: TypeORM entities (WorkflowRunEntity,
+#    WorkflowChainEntity, KnowledgeChunkEntity) were never registered via
+#    forFeature(), so autoLoadEntities:true never created their tables.
+#    RlsSetupService crashes trying to enable RLS on missing tables.
+#    This was NEVER caught because no e2e or integration test starts the server.
+#
+# 3. CIRCULAR DEPENDENCY IN LAZY ROUTES: unsaved-changes.guard.ts statically
+#    imported HasUnsavedChanges from workflow-wizard.component.ts, breaking
+#    Vite's chunk splitting. The "Create Workflow" button silently failed.
+#    Unit tests don't test lazy loading or chunk resolution.
+#
+# 4. SETTINGS PAGE DOESN'T EXIST: Navigation sidebar links to /admin/settings
+#    but no route or component exists. Zero tests catch this because no e2e
+#    test exercises navigation.
+#
+# ACTION REQUIRED: Create end-to-end tests starting from Epic 1 for ALL epics.
+# E2E tests must verify:
+#   - API gateway starts without errors
+#   - All navigation routes resolve to real components
+#   - API endpoints return expected responses (not just 500)
+#   - Authentication flow works end-to-end
+#   - CRUD operations complete round-trips (UI → API → DB → API → UI)
+#
+# QUALITY PROCESS FAILURES:
+#   - "MVP quality" was used as an excuse to skip integration testing
+#   - 81 lint warnings were hidden across the codebase (Epic 1)
+#   - Step validation in workflow wizard was completely bypassed (nextStep(true)
+#     hardcoded) — equivalent to "forgot to implement a story"
+#   - Entity registration gaps went undetected for 3+ epics because unit tests
+#     never exercise the TypeORM connection
+#
+# ADDITIONAL PRE-EXISTING ISSUE: PGVECTOR COLUMN TYPE WRONG SINCE EPIC 2
+# The knowledge_chunks.embedding column was created as float8[] (TypeORM default)
+# instead of vector(768) (pgvector type). This means:
+#   - HNSW index for fast cosine similarity search was NEVER created
+#   - All similarity searches do sequential scans (O(n) instead of O(log n))
+#   - The warning "operator class vector_cosine_ops does not accept data type
+#     double precision[]" appeared on EVERY server startup and was ignored
+# Fix applied: RlsSetupService now ALTERs the column to vector(768) on startup.
+# This was never caught because:
+#   a) Unit tests mock the database
+#   b) No integration test verifies actual pgvector queries
+#   c) The search "worked" (PostgreSQL casts on-the-fly) so nobody noticed
+# Raised during Story 3.2 UI testing (2026-02-02).
+#
+# This is the #1 priority action item for the retrospective.
+# Raised during Story 3.2 code review and UI testing (2026-02-02).
+#
+# RETRO NOTE: LOGOUT BUTTON UX — TEMPORARY PLACEHOLDER
+# =====================================================
+# Current logout button in admin sidebar footer is a plain text button.
+# Planned redesign: replace with user avatar dropdown menu (click avatar → dropdown
+# with profile info, settings, and logout). This should apply to ALL layout components
+# (admin-layout and app-layout) for all user roles (bubble_admin, tenant users).
+# The current ugly standalone button should be removed once the avatar dropdown is built.
+# Raised during Story 3.2 UI testing (2026-02-02).
+#
+# RETRO NOTE: ADDITIONAL RUNTIME BUGS FOUND DURING UI TESTING
+# ============================================================
+# 1. Tags input comma bug: metadata step's ngOnChanges → populateFromState() re-patched
+#    the tags form control from parent state on every keystroke. Since syncToParent()
+#    splits on comma and filters empty strings, typing a comma immediately triggers
+#    a round-trip that strips the trailing comma. User could never type commas.
+# 2. Markdown output sections error: "Cannot find control with name: '0'" —
+#    formArrayName="sections" was missing on the sections container div.
+#    [formGroupName]="i" tried to resolve against root form group instead of FormArray.
+# Both bugs were invisible to unit tests (mocked forms, no real DOM interaction).
+# Raised during Story 3.2 UI testing (2026-02-02).
+#
+# END-OF-EPIC DISCUSSION ITEMS (collected during Epic 3 UI testing)
+# =================================================================
+# The following items were raised by the user during hands-on UI testing and
+# must be discussed at the end of this epic for planning/prioritization:
+#
+# 1. LOGOUT BUTTON UX: Replace standalone text button with user avatar dropdown
+#    menu. Applies to all layouts (admin + app) and all roles.
+#
+# 2. WORKFLOW VISIBILITY UI: Backend supports public/private/restricted +
+#    allowed_tenants, but the workflow wizard has no UI for these fields.
+#    Need to add visibility controls to the wizard or a separate management view.
+#
+# 3. TENANT LIFECYCLE: Add archive/suspend state for churned tenants.
+#    Add hard-delete option for archived tenants (GDPR/data privacy compliance).
+#    Currently only create/read/update exists — no archive or delete.
+#
+# 4. SETTINGS PAGE (REQUIRED): Admin Settings page must be built. Key features:
+#    - LLM model management: add new models to existing providers, edit/deactivate
+#      models, configure provider credentials (Google AI Studio, Vertex, etc.)
+#    - System-level configuration (future: email templates, feature flags, etc.)
+#    The nav link was removed because it pointed to 404 with no backing component.
+#    Must be re-added once the settings feature is implemented.
+#
+# 5. E2E TEST COVERAGE: Create end-to-end tests starting from Epic 1 for all
+#    epics. This is the #1 priority action item (see detailed note above).
+#
+# Raised during Story 3.2 UI testing (2026-02-02).
+
 # IMMEDIATE POST-EPIC-2 ACTION:
 # =============================
 # - Swagger @ApiResponse gap fix: Add missing error response decorators (400, 401, 403, 500)
@@ -188,7 +294,7 @@ development_status:
   # ═══════════════════════════════════════════════════════
   epic-3: in-progress
   3-1-workflow-definition-data-foundation: done # Code review passed, 7 fixes applied, 453 tests, 0 lint errors
-  3-2-workflow-builder-wizard-admin-ui: ready-for-dev
+  3-2-workflow-builder-wizard-admin-ui: review # Code review passed (17 fixes), UI testing fixes applied: class-validator imports, circular dep, entity registration, tags input, formArrayName, logout button. 575+ tests, 0 lint errors.
   3-3-workflow-template-crud-api: done # Code review passed, 6 fixes applied (H1-H3, M1-M2, L1), 504 tests, 0 lint errors
   3-4-workflow-versioning-publishing: done # Code review passed, 6 fixes applied (H1-H2, M1-M3, L1), 530 tests, 0 lint errors
   3-5-workflow-visibility-access-control: done # Code review passed, 5 fixes applied (H1, M1-M3, L1), 539 tests, 0 lint errors

@@ -2,8 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
-import { LoginResponseDto } from '@project-bubble/shared';
-import type { User } from '@project-bubble/shared';
+import type { LoginResponseDto, User } from '@project-bubble/shared';
 
 const TOKEN_KEY = 'bubble_access_token';
 

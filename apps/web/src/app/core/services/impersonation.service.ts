@@ -2,7 +2,7 @@ import { Injectable, inject, signal, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
-import { ImpersonateResponseDto } from '@project-bubble/shared';
+import type { ImpersonateResponseDto } from '@project-bubble/shared';
 
 const IMPERSONATION_TOKEN_KEY = 'impersonation_token';
 const IMPERSONATION_TENANT_KEY = 'impersonation_tenant';

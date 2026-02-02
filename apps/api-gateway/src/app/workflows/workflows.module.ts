@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   WorkflowTemplateEntity,
   WorkflowVersionEntity,
+  WorkflowRunEntity,
+  WorkflowChainEntity,
   LlmModelEntity,
 } from '@project-bubble/db-layer';
 import { WorkflowTemplatesService } from './workflow-templates.service';
@@ -21,6 +23,8 @@ import { WorkflowCatalogController } from './workflow-catalog.controller';
     TypeOrmModule.forFeature([
       WorkflowTemplateEntity,
       WorkflowVersionEntity,
+      WorkflowRunEntity,
+      WorkflowChainEntity,
       LlmModelEntity,
     ]),
   ],

@@ -1,0 +1,159 @@
+<div class="wizard-container">
+  <div class="wizard-header">
+    <button
+      class="btn btn-outline btn-sm"
+      data-testid="wizard-cancel-btn"
+      (click)="cancel()"
+    >
+      <lucide-icon name="arrow-left" [size]="16"></lucide-icon>
+      Back to Studio
+    </button>
+    <h1>{{ editMode() ? 'Edit Workflow' : 'Create Workflow' }}</h1>
+  </div>
+
+  <!-- M6: Stepper with ARIA tablist/tab roles -->
+  <div class="stepper" role="tablist" aria-label="Workflow wizard steps" data-testid="wizard-stepper">
+    @for (step of steps; track step.label; let i = $index) {
+      <div
+        class="step-indicator"
+        role="tab"
+        [class.active]="i === currentStep()"
+        [class.completed]="i < currentStep() || (i <= highestVisitedStep() && i < currentStep())"
+        [class.clickable]="i <= highestVisitedStep()"
+        [attr.aria-selected]="i === currentStep()"
+        [attr.aria-current]="i === currentStep() ? 'step' : null"
+        [attr.aria-disabled]="i > highestVisitedStep()"
+        [attr.data-testid]="'step-indicator-' + i"
+        (click)="goToStep(i)"
+        (keydown.enter)="goToStep(i)"
+        tabindex="0"
+      >
+        <div class="step-circle">
+          @if (i < currentStep()) {
+            <lucide-icon name="check" [size]="14"></lucide-icon>
+          } @else {
+            <span>{{ i + 1 }}</span>
+          }
+        </div>
+        <span class="step-label">{{ step.label }}</span>
+      </div>
+      @if (i < steps.length - 1) {
+        <div
+          class="step-connector"
+          [class.completed]="i < currentStep()"
+          aria-hidden="true"
+        ></div>
+      }
+    }
+  </div>
+
+  <!-- Validation errors -->
+  @if (validationErrors().length > 0) {
+    <div class="validation-errors" role="alert" data-testid="validation-errors">
+      <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+      <div>
+        <strong>Validation errors:</strong>
+        <ul>
+          @for (error of validationErrors(); track error) {
+            <li>{{ error }}</li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+
+  @if (saveError()) {
+    <div class="validation-errors" role="alert" data-testid="save-error">
+      <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+      <span>{{ saveError() }}</span>
+    </div>
+  }
+
+  @if (stepValidationError()) {
+    <div class="step-error" role="alert" data-testid="step-validation-error">
+      <lucide-icon name="alert-triangle" [size]="14"></lucide-icon>
+      <span>{{ stepValidationError() }}</span>
+    </div>
+  }
+
+  <!-- Step content -->
+  <div class="step-content" role="tabpanel" data-testid="step-content">
+    @switch (currentStep()) {
+      @case (0) {
+        <app-wizard-metadata-step
+          [state]="wizardState()"
+          (stateChange)="updateState($event)"
+        />
+      }
+      @case (1) {
+        <app-wizard-inputs-step
+          [state]="wizardState()"
+          (stateChange)="updateState($event)"
+        />
+      }
+      @case (2) {
+        <app-wizard-execution-step
+          [state]="wizardState()"
+          (stateChange)="updateState($event)"
+        />
+      }
+      @case (3) {
+        <app-wizard-knowledge-step
+          [state]="wizardState()"
+          (stateChange)="updateState($event)"
+        />
+      }
+      @case (4) {
+        <app-wizard-prompt-step
+          [state]="wizardState()"
+          (stateChange)="updateState($event)"
+        />
+      }
+      @case (5) {
+        <app-wizard-output-step
+          [state]="wizardState()"
+          (stateChange)="updateState($event)"
+        />
+      }
+    }
+  </div>
+
+  <!-- Navigation buttons -->
+  <div class="wizard-actions">
+    <button
+      class="btn btn-outline"
+      data-testid="wizard-prev-btn"
+      [disabled]="isFirstStep()"
+      (click)="prevStep()"
+    >
+      Back
+    </button>
+    <div class="actions-right">
+      @if (isLastStep()) {
+        <button
+          class="btn btn-primary"
+          data-testid="wizard-save-btn"
+          [disabled]="isSaving()"
+          (click)="save()"
+        >
+          @if (isSaving()) {
+            <lucide-icon name="refresh-cw" [size]="16"></lucide-icon>
+            Saving...
+          } @else {
+            <lucide-icon name="save" [size]="16"></lucide-icon>
+            {{ editMode() ? 'Save New Version' : 'Create Workflow' }}
+          }
+        </button>
+      } @else {
+        <button
+          class="btn btn-primary"
+          data-testid="wizard-next-btn"
+          (click)="nextStep()"
+        >
+          Next
+          <lucide-icon name="chevron-right" [size]="16"></lucide-icon>
+        </button>
+      }
+    </div>
+  </div>
+</div>

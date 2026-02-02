@@ -261,11 +261,24 @@ export class RlsSetupService implements OnModuleInit {
 
   private async createVectorIndex(): Promise<void> {
     try {
-      // HNSW index for cosine similarity search on knowledge_chunks.embedding
-      // Only created if the table and column exist (TypeORM synchronize may not have run yet)
+      // TypeORM synchronize creates embedding as float8[] because it doesn't support
+      // the pgvector 'vector' type natively. We ALTER the column to vector(768) so that
+      // HNSW indexes and pgvector operators (<=> cosine distance) work correctly.
       await this.dataSource.query(`
         DO $$
         BEGIN
+          -- Convert float8[] to vector(768) if needed (TypeORM creates float8[])
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'knowledge_chunks' AND column_name = 'embedding'
+              AND data_type != 'USER-DEFINED'
+          ) THEN
+            ALTER TABLE knowledge_chunks ALTER COLUMN embedding TYPE vector(768)
+              USING embedding::vector(768);
+            RAISE NOTICE 'Converted knowledge_chunks.embedding from float8[] to vector(768)';
+          END IF;
+
+          -- Create HNSW index for cosine similarity search
           IF EXISTS (
             SELECT 1 FROM information_schema.columns
             WHERE table_name = 'knowledge_chunks' AND column_name = 'embedding'

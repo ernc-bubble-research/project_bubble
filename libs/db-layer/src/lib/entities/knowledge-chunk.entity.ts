@@ -32,7 +32,8 @@ export class KnowledgeChunkEntity {
   @Column({ type: 'jsonb', default: '{}' })
   metadata!: Record<string, unknown>;
 
-  // pgvector column — stored as float8[] for TypeORM compatibility.
+  // pgvector column — stored as float8[] by TypeORM, then ALTER'd to vector(768)
+  // by RlsSetupService on startup for HNSW index support.
   // Query with pgvector operators (e.g., <=> for cosine distance) via raw SQL.
   @Column({ type: 'float8', array: true, nullable: true })
   embedding!: number[] | null;

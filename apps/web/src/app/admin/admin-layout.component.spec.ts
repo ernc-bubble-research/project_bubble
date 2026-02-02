@@ -1,21 +1,34 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { AdminLayoutComponent } from './admin-layout.component';
+import { AuthService } from '../core/services/auth.service';
 import {
   LUCIDE_ICONS,
   LucideIconProvider,
   LayoutDashboard,
   Building2,
   GitBranch,
-  Settings,
   Menu,
+  LogOut,
 } from 'lucide-angular';
 
+@Component({ standalone: true, template: '' })
+class DummyComponent {}
+
 describe('AdminLayoutComponent [P2]', () => {
+  const mockAuthService = { logout: jest.fn() };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AdminLayoutComponent, RouterModule.forRoot([])],
+      imports: [
+        AdminLayoutComponent,
+        RouterModule.forRoot([
+          { path: 'auth/login', component: DummyComponent },
+        ]),
+      ],
       providers: [
+        { provide: AuthService, useValue: mockAuthService },
         {
           provide: LUCIDE_ICONS,
           multi: true,
@@ -23,8 +36,8 @@ describe('AdminLayoutComponent [P2]', () => {
             LayoutDashboard,
             Building2,
             GitBranch,
-            Settings,
             Menu,
+            LogOut,
           }),
         },
       ],
@@ -36,12 +49,12 @@ describe('AdminLayoutComponent [P2]', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('[1H.1-UNIT-002] should render 4 nav items', () => {
+  it('[1H.1-UNIT-002] should render 3 nav items', () => {
     const fixture = TestBed.createComponent(AdminLayoutComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const navItems = compiled.querySelectorAll('.nav-item');
-    expect(navItems.length).toBe(4);
+    expect(navItems.length).toBe(3);
   });
 
   it('[1H.1-UNIT-003] should render sidebar with correct nav labels', () => {
@@ -55,7 +68,6 @@ describe('AdminLayoutComponent [P2]', () => {
       'Dashboard',
       'Tenants',
       'Workflow Studio',
-      'System Settings',
     ]);
   });
 
@@ -74,5 +86,24 @@ describe('AdminLayoutComponent [P2]', () => {
     expect(component.mobileMenuOpen()).toBe(true);
     component.closeMobileMenu();
     expect(component.mobileMenuOpen()).toBe(false);
+  });
+
+  it('[1H.1-UNIT-006] should have a logout button', () => {
+    const fixture = TestBed.createComponent(AdminLayoutComponent);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const logoutBtn = compiled.querySelector('[data-testid="logout-btn"]');
+    expect(logoutBtn).toBeTruthy();
+  });
+
+  it('[1H.1-UNIT-007] should call authService.logout and navigate on logout', () => {
+    const fixture = TestBed.createComponent(AdminLayoutComponent);
+    const router = TestBed.inject(Router);
+    jest.spyOn(router, 'navigate').mockResolvedValue(true);
+    const component = fixture.componentInstance;
+    mockAuthService.logout.mockClear();
+    component.logout();
+    expect(mockAuthService.logout).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
   });
 });

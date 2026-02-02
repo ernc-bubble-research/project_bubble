@@ -1,7 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
-import { AssetResponseDto } from '@project-bubble/shared';
+import type { AssetResponseDto } from '@project-bubble/shared';
 
 @Component({
   standalone: true,

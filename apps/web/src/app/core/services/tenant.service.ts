@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Tenant, CreateTenantPayload, UpdateTenantPayload } from '@project-bubble/shared';
+import type { Tenant, CreateTenantPayload, UpdateTenantPayload } from '@project-bubble/shared';
 
 export type { Tenant, CreateTenantPayload, UpdateTenantPayload } from '@project-bubble/shared';
 

@@ -1,0 +1,139 @@
+<div class="step-section">
+  <h2 class="step-title">Output Config</h2>
+  <p class="step-description">Define the output format and structure for the LLM response.</p>
+
+  <form [formGroup]="form" class="form-fields">
+    <div class="form-group">
+      <span class="field-label">Output Format</span>
+      <div class="radio-group">
+        <label class="radio-item">
+          <input type="radio" formControlName="format" value="markdown" data-testid="output-format-markdown" />
+          Markdown
+        </label>
+        <label class="radio-item">
+          <input type="radio" formControlName="format" value="json" data-testid="output-format-json" />
+          JSON
+        </label>
+      </div>
+    </div>
+
+    <!-- Markdown sections -->
+    @if (isMarkdown) {
+      <div class="form-group">
+        <span class="field-label">Output Sections <span class="required">*</span></span>
+        <div class="sections-list" formArrayName="sections" data-testid="output-sections-list">
+          @for (ctrl of sectionsArray.controls; track ctrl; let i = $index) {
+            <div class="section-item" [formGroupName]="i" [attr.data-testid]="'output-section-' + i">
+              <div class="section-fields">
+                <input
+                  type="text"
+                  formControlName="name"
+                  placeholder="Section key (e.g., summary)"
+                  [attr.data-testid]="'section-name-' + i"
+                />
+                <input
+                  type="text"
+                  formControlName="label"
+                  placeholder="Display label"
+                  [attr.data-testid]="'section-label-' + i"
+                />
+                <div class="toggle-group">
+                  <label class="toggle-switch">
+                    <input type="checkbox" formControlName="required" [attr.data-testid]="'section-required-' + i" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="icon-btn danger"
+                [attr.data-testid]="'remove-section-' + i"
+                (click)="removeSection(i)"
+              >
+                <lucide-icon name="trash-2" [size]="14"></lucide-icon>
+              </button>
+            </div>
+          }
+        </div>
+        <button
+          type="button"
+          class="btn btn-outline btn-sm"
+          style="margin-top: 8px"
+          data-testid="add-section-btn"
+          (click)="addSection()"
+        >
+          <lucide-icon name="plus" [size]="14"></lucide-icon>
+          Add Section
+        </button>
+      </div>
+    }
+
+    <!-- JSON schema -->
+    @if (isJson) {
+      <div class="form-group">
+        <span class="field-label">JSON Schema <span class="required">*</span></span>
+        <textarea
+          formControlName="json_schema"
+          class="mono-textarea"
+          rows="8"
+          placeholder='{ "type": "object", "properties": { ... } }'
+          data-testid="output-json-schema"
+          (blur)="validateJson()"
+        ></textarea>
+        @if (jsonError()) {
+          <span class="field-error" data-testid="json-error">{{ jsonError() }}</span>
+        }
+      </div>
+    }
+
+    <div class="form-group">
+      <span class="field-label">
+        Filename Template <span class="required">*</span>
+        <app-info-tooltip text="Output filename pattern. Variables: {subject_name}, {timestamp}" />
+      </span>
+      <input
+        type="text"
+        formControlName="filename_template"
+        placeholder="{subject_name}_analysis_{timestamp}"
+        data-testid="output-filename-input"
+      />
+      @if (form.get('filename_template')?.touched && form.get('filename_template')?.hasError('required')) {
+        <span class="field-error">Filename template is required</span>
+      }
+    </div>
+  </form>
+
+  <!-- Definition Preview Panel -->
+  <div class="preview-panel" data-testid="definition-preview">
+    <div class="preview-header" role="button" [attr.aria-expanded]="previewOpen()" (click)="togglePreview()" (keydown.enter)="togglePreview()" tabindex="0" data-testid="preview-header">
+      <span>Definition Preview</span>
+      <lucide-icon [name]="previewOpen() ? 'chevron-up' : 'chevron-down'" [size]="16"></lucide-icon>
+    </div>
+    @if (previewOpen()) {
+      <div class="preview-body" data-testid="preview-body">
+        <div class="preview-section">
+          <strong>Metadata:</strong> {{ previewData()['name'] }} — {{ previewData()['description'] }}<br />
+          <strong>Tags:</strong> {{ previewData()['tags'] }}
+        </div>
+        <div class="preview-section">
+          <strong>Inputs:</strong> {{ previewData()['inputCount'] }} total
+          ({{ previewData()['subjectCount'] }} subject, {{ previewData()['contextCount'] }} context)
+        </div>
+        <div class="preview-section">
+          <strong>Execution:</strong> {{ previewData()['processing'] }} mode, model: {{ previewData()['model'] }},
+          temperature: {{ previewData()['temperature'] }}
+        </div>
+        <div class="preview-section">
+          <strong>Knowledge:</strong> {{ previewData()['knowledgeEnabled'] }}
+        </div>
+        <div class="preview-section">
+          <strong>Prompt (first 3 lines):</strong><br />
+          <code style="white-space: pre-wrap">{{ previewData()['promptSnippet'] }}</code>
+        </div>
+        <div class="preview-section">
+          <strong>Output:</strong> {{ previewData()['outputFormat'] }} format
+        </div>
+      </div>
+    }
+  </div>
+</div>

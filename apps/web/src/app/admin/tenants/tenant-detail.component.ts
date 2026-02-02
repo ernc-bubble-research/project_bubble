@@ -9,7 +9,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { ImpersonateConfirmDialogComponent } from './impersonate-confirm-dialog.component';
 import { InviteUserDialogComponent } from './invite-user-dialog.component';
-import { UpdateTenantPayload, InvitationResponseDto } from '@project-bubble/shared';
+import type { UpdateTenantPayload, InvitationResponseDto } from '@project-bubble/shared';
 
 @Component({
   standalone: true,

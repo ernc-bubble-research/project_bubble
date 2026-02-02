@@ -1,6 +1,7 @@
 import { Route } from '@angular/router';
 import { authGuard, adminGuard } from './core/guards/auth.guard';
 import { noAuthGuard } from './core/guards/no-auth.guard';
+import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 
 export const appRoutes: Route[] = [
   // Zone A: Auth pages
@@ -54,6 +55,34 @@ export const appRoutes: Route[] = [
           import('./admin/tenants/tenant-detail.component').then(
             (m) => m.TenantDetailComponent
           ),
+      },
+      {
+        path: 'workflows',
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./admin/workflows/workflow-studio.component').then(
+                (m) => m.WorkflowStudioComponent
+              ),
+          },
+          {
+            path: 'create',
+            canDeactivate: [unsavedChangesGuard],
+            loadComponent: () =>
+              import(
+                './admin/workflows/wizard/workflow-wizard.component'
+              ).then((m) => m.WorkflowWizardComponent),
+          },
+          {
+            path: 'edit/:id',
+            canDeactivate: [unsavedChangesGuard],
+            loadComponent: () =>
+              import(
+                './admin/workflows/wizard/workflow-wizard.component'
+              ).then((m) => m.WorkflowWizardComponent),
+          },
+        ],
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],

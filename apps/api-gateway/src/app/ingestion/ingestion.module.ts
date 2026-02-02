@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
+import { KnowledgeChunkEntity } from '@project-bubble/db-layer';
 import { TextExtractorService } from './text-extractor.service';
 import { ChunkerService } from './chunker.service';
 import {
@@ -18,6 +20,7 @@ import { IngestionController } from './ingestion.controller';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([KnowledgeChunkEntity]),
     BullModule.registerQueue({
       name: 'ingestion',
       defaultJobOptions: {

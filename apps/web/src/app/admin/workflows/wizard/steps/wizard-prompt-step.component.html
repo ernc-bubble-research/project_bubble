@@ -1,0 +1,58 @@
+<div class="step-section">
+  <h2 class="step-title">Prompt</h2>
+  <p class="step-description">
+    Write the LLM prompt. Use <code>{{'{'}}input_name{{'}'}}</code> to reference inputs defined in Step 2.
+  </p>
+
+  <!-- Variable chips -->
+  @if (availableVariables().length > 0) {
+    <div class="variable-chips" data-testid="variable-chips">
+      <span class="chips-label">Available variables (click to insert):</span>
+      <div class="chips-list">
+        @for (v of availableVariables(); track v) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip-success]="usedVariables().includes(v)"
+            [class.chip-warning]="unusedVariables().includes(v)"
+            [attr.data-testid]="'variable-chip-' + v"
+            (click)="insertVariable(v)"
+          >
+            {{'{'}}{{ v }}{{'}'}}
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Warnings -->
+  @if (unknownVariables().length > 0) {
+    <div class="field-warning" style="margin-bottom: 8px" data-testid="unknown-variables-warning">
+      <lucide-icon name="alert-triangle" [size]="14"></lucide-icon>
+      Unknown variables in prompt: {{ unknownVariables().join(', ') }}
+    </div>
+  }
+
+  @if (unusedVariables().length > 0) {
+    <div class="field-warning" style="margin-bottom: 8px" data-testid="unused-variables-warning">
+      <lucide-icon name="alert-triangle" [size]="14"></lucide-icon>
+      Unused inputs (required by validator): {{ unusedVariables().join(', ') }}
+    </div>
+  }
+
+  <form [formGroup]="form" class="form-fields">
+    <div class="form-group">
+      <textarea
+        #promptTextarea
+        formControlName="prompt"
+        class="mono-textarea"
+        rows="12"
+        placeholder="You are an expert qualitative researcher...&#10;&#10;Analyze the following transcript: {transcripts}&#10;&#10;Using the codebook: {codebook}&#10;&#10;Provide a structured analysis..."
+        data-testid="prompt-textarea"
+      ></textarea>
+      @if (form.get('prompt')?.touched && form.get('prompt')?.hasError('required')) {
+        <span class="field-error">Prompt is required</span>
+      }
+    </div>
+  </form>
+</div>

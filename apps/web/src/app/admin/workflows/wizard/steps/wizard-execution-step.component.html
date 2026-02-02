@@ -1,0 +1,97 @@
+<div class="step-section">
+  <h2 class="step-title">Execution Config</h2>
+  <p class="step-description">Configure how the LLM processes your workflow.</p>
+
+  <form [formGroup]="form" class="form-fields">
+    <div class="form-group">
+      <span class="field-label">
+        Processing Mode
+        <app-info-tooltip text="Parallel: each subject file processed independently. Batch: all files in one LLM call." />
+      </span>
+      <div class="radio-group">
+        <label class="radio-item">
+          <input type="radio" formControlName="processing" value="parallel" data-testid="exec-processing-parallel" />
+          Parallel
+          <app-info-tooltip text="Each subject file is processed independently in its own LLM call" />
+        </label>
+        <label class="radio-item">
+          <input type="radio" formControlName="processing" value="batch" data-testid="exec-processing-batch" />
+          Batch
+          <app-info-tooltip text="All subject files are combined into a single LLM call" />
+        </label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <span class="field-label">
+        LLM Model <span class="required">*</span>
+      </span>
+      @if (modelsLoading()) {
+        <span class="field-hint">Loading models...</span>
+      }
+      @if (modelsLoadError()) {
+        <span class="field-error" data-testid="models-load-error">{{ modelsLoadError() }}</span>
+      }
+      <select formControlName="model" data-testid="exec-model-select">
+        <option value="">Select a model</option>
+        @for (model of models(); track model.id) {
+          <option [value]="model.modelId">{{ model.displayName }}</option>
+        }
+      </select>
+      @if (form.get('model')?.touched && form.get('model')?.hasError('required')) {
+        <span class="field-error">Model is required</span>
+      }
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <span class="field-label">
+          Temperature
+          <app-info-tooltip text="Controls LLM creativity. Lower = more deterministic, higher = more creative (0.0-2.0)" />
+        </span>
+        <input
+          type="number"
+          formControlName="temperature"
+          min="0"
+          max="2"
+          step="0.1"
+          data-testid="exec-temperature-input"
+        />
+        @if (form.get('temperature')?.touched && (form.get('temperature')?.hasError('min') || form.get('temperature')?.hasError('max'))) {
+          <span class="field-error">Temperature must be between 0 and 2</span>
+        }
+      </div>
+      <div class="form-group">
+        <span class="field-label">
+          Max Output Tokens
+          <app-info-tooltip text="Maximum number of tokens the LLM can generate in its response" />
+        </span>
+        <input
+          type="number"
+          formControlName="max_output_tokens"
+          min="1"
+          data-testid="exec-max-tokens-input"
+        />
+        @if (form.get('max_output_tokens')?.touched && form.get('max_output_tokens')?.hasError('min')) {
+          <span class="field-error">Max output tokens must be at least 1</span>
+        }
+      </div>
+    </div>
+
+    <div class="form-group">
+      <span class="field-label">
+        Max Retries
+        <app-info-tooltip text="How many times to retry if LLM output fails structural validation. Overrides system default" />
+      </span>
+      <input
+        type="number"
+        formControlName="max_retries"
+        min="0"
+        max="10"
+        placeholder="System default"
+        data-testid="exec-max-retries-input"
+      />
+      <span class="field-hint">Leave empty to use system default</span>
+    </div>
+  </form>
+</div>

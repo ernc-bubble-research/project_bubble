@@ -2,7 +2,7 @@ import { Component, input, output, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { FolderResponseDto } from '@project-bubble/shared';
+import type { FolderResponseDto } from '@project-bubble/shared';
 
 @Component({
   standalone: true,

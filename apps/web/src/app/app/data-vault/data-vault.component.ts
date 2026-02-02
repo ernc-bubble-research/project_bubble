@@ -9,7 +9,7 @@ import { UploadZoneComponent } from './upload-zone.component';
 import { FolderTreeComponent } from './folder-tree.component';
 import { FileCardComponent } from './file-card.component';
 import { CreateFolderDialogComponent } from './create-folder-dialog.component';
-import { AssetResponseDto, FolderResponseDto } from '@project-bubble/shared';
+import type { AssetResponseDto, FolderResponseDto } from '@project-bubble/shared';
 
 type ViewMode = 'grid' | 'list';
 

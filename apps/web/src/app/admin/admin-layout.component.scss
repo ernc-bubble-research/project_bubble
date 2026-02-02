@@ -139,6 +139,28 @@
   color: var(--sidebar-text-muted);
 }
 
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-top: 8px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--sidebar-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--sidebar-hover-bg);
+    color: var(--sidebar-text);
+  }
+}
+
 /* ---- Main content ---- */
 .main-content {
   flex: 1;
@@ -179,8 +201,14 @@
 
   .logo-text,
   .nav-label,
-  .user-details {
+  .user-details,
+  .logout-btn span {
     display: none;
+  }
+
+  .logout-btn {
+    justify-content: center;
+    padding: 8px;
   }
 
   .sidebar-header {
