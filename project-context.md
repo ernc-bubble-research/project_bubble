@@ -1,7 +1,7 @@
 ---
 project_name: 'project_bubble'
 user_name: 'Erinckaratoprak'
-date: '2026-01-12'
+date: '2026-02-02'
 sections_completed: ['technology_stack', 'implementation_rules', 'testing', 'quality', 'workflow', 'security']
 existing_patterns_found: 4
 ---
@@ -150,6 +150,58 @@ _This file contains critical rules and patterns that AI agents must follow when 
 #### Output Validation
 *   **Structural validation only** — platform checks required sections are present (as defined in YAML output spec).
 *   **No content quality judgment** — that's the prompt's responsibility.
+
+## Angular Frontend Rules (from Epic 3 — Story 3.2+)
+
+### 6. The "Standalone Everything" Rule (Angular Components)
+*   **NEVER** create NgModules. ALL components must be `standalone: true`.
+*   **ALWAYS** use `inject()` function for dependency injection — NOT constructor injection.
+*   **ALWAYS** use Angular Signals (`signal()`, `computed()`, `input()`, `output()`) for component state. Do NOT use `BehaviorSubject` for local state.
+*   **ALWAYS** use Reactive Forms via `inject(FormBuilder)` for form-heavy components.
+*   **ALWAYS** lazy-load new routes via `loadComponent` in `app.routes.ts`.
+*   **PATTERN:**
+    ```typescript
+    @Component({ standalone: true, imports: [...] })
+    export class MyComponent {
+      private readonly http = inject(HttpClient);
+      private readonly fb = inject(FormBuilder);
+      myState = signal<string>('');
+      derived = computed(() => this.myState().toUpperCase());
+    }
+    ```
+
+### 7. The "Custom Design System" Rule (No UI Libraries)
+*   **NEVER** import Angular Material, PrimeNG, or any third-party UI component library.
+*   **ALWAYS** build UI with plain HTML/SCSS using the existing design system CSS variables from `styles.scss` (e.g., `--brand-blue`, `--primary-600`, `--slate-*`, `--radius-*`, `--shadow-*`).
+*   **ALWAYS** use `lucide-angular` for icons (registered globally in `app.config.ts`).
+*   **REASON:** This project uses a custom design system. Third-party UI libraries conflict with the visual identity and add unnecessary bundle size.
+
+### 8. The "Two-Layer State" Rule (Complex Forms / Wizards)
+*   For multi-step forms or wizards, use a **two-layer state pattern:**
+    *   **Layer 1 (canonical):** A parent-level `signal<T>()` holds the persisted model.
+    *   **Layer 2 (local):** Each child component has its own `FormGroup` for validation and user interaction.
+*   **On "Next" / save:** the child syncs its `FormGroup` values into the parent signal.
+*   **On step entry:** the child initializes its `FormGroup` from the parent signal.
+*   **REASON:** This avoids confusion about which layer is the source of truth and prevents complex cross-component synchronization.
+
+### 9. The "Services Return Observables" Rule (HTTP)
+*   **ALWAYS** create HTTP services as `@Injectable({ providedIn: 'root' })` with `inject(HttpClient)`.
+*   **ALWAYS** return `Observable<T>` from service methods — NOT Promises.
+*   **ALWAYS** import shared types from `@project-bubble/shared`.
+*   **PATTERN:**
+    ```typescript
+    @Injectable({ providedIn: 'root' })
+    export class WorkflowTemplateService {
+      private readonly http = inject(HttpClient);
+      create(dto: CreateWorkflowTemplateDto): Observable<WorkflowTemplateResponseDto> {
+        return this.http.post<WorkflowTemplateResponseDto>('/api/admin/workflow-templates', dto);
+      }
+    }
+    ```
+
+### 10. The "Test IDs Everywhere" Rule (Frontend Testing)
+*   **ALWAYS** add `data-testid` attributes to all interactive elements (buttons, inputs, links, cards).
+*   **REASON:** Enables reliable E2E test selectors without coupling to CSS classes or DOM structure.
 
 ## File Organization & Naming
 
