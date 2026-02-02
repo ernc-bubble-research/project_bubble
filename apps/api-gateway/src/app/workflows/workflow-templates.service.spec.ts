@@ -474,6 +474,141 @@ describe('WorkflowTemplatesService [P0]', () => {
     });
   });
 
+  describe('findPublished', () => {
+    it('[3.5-UNIT-001] [P0] Given published templates exist, when findPublished is called, then returns only published templates via txManager with tenantId', async () => {
+      // Given
+      const publishedTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+      };
+      mockQb.getMany.mockResolvedValue([publishedTemplate]);
+
+      // When
+      const result = await service.findPublished(tenantId, {});
+
+      // Then
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(templateId);
+      expect(txManager.run).toHaveBeenCalledWith(tenantId, expect.any(Function));
+      expect(mockQb.andWhere).toHaveBeenCalledWith('template.status = :status', {
+        status: WorkflowTemplateStatus.PUBLISHED,
+      });
+      expect(mockQb.andWhere).toHaveBeenCalledWith('template.deleted_at IS NULL');
+      expect(mockQb.orderBy).toHaveBeenCalledWith('template.updated_at', 'DESC');
+    });
+
+    it('[3.5-UNIT-002] [P1] Given pagination params, when findPublished is called, then respects limit and offset', async () => {
+      // Given
+      mockQb.getMany.mockResolvedValue([]);
+
+      // When
+      await service.findPublished(tenantId, { limit: 20, offset: 10 });
+
+      // Then
+      expect(mockQb.take).toHaveBeenCalledWith(20);
+      expect(mockQb.skip).toHaveBeenCalledWith(10);
+    });
+  });
+
+  describe('findAccessibleByTenant', () => {
+    it('[3.5-UNIT-003] [P0] Given accessible templates, when findAccessibleByTenant is called, then returns templates accessible to specific tenant', async () => {
+      // Given
+      const publishedTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+      };
+      mockQb.getMany.mockResolvedValue([publishedTemplate]);
+
+      // When
+      const result = await service.findAccessibleByTenant(tenantId);
+
+      // Then
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(templateId);
+      expect(txManager.run).toHaveBeenCalledWith(tenantId, expect.any(Function));
+      expect(mockQb.andWhere).toHaveBeenCalledWith('template.status = :status', {
+        status: WorkflowTemplateStatus.PUBLISHED,
+      });
+      expect(mockQb.andWhere).toHaveBeenCalledWith('template.deleted_at IS NULL');
+      expect(mockQb.orderBy).toHaveBeenCalledWith('template.name', 'ASC');
+    });
+  });
+
+  describe('update - visibility auto-clear', () => {
+    it('[3.5-UNIT-004] [P1] Given private visibility with allowedTenants, when update is called with visibility=private, then preserves allowedTenants', async () => {
+      // Given
+      const allowedIds = ['11111111-1111-1111-1111-111111111111'];
+      const privateTemplate = {
+        ...mockTemplate,
+        visibility: WorkflowVisibility.PRIVATE,
+        allowedTenants: allowedIds,
+      };
+      mockManager.findOne.mockResolvedValue({ ...privateTemplate });
+      mockManager.save.mockResolvedValue({
+        ...privateTemplate,
+        allowedTenants: ['22222222-2222-2222-2222-222222222222'],
+      });
+
+      // When
+      const result = await service.update(templateId, tenantId, {
+        visibility: 'private',
+        allowedTenants: ['22222222-2222-2222-2222-222222222222'],
+      });
+
+      // Then
+      expect(result.allowedTenants).toEqual(['22222222-2222-2222-2222-222222222222']);
+    });
+
+    it('[3.5-UNIT-005] [P0] Given private template with allowedTenants, when update sets visibility=public, then clears allowedTenants to null', async () => {
+      // Given
+      const privateTemplate = {
+        ...mockTemplate,
+        visibility: WorkflowVisibility.PRIVATE,
+        allowedTenants: ['11111111-1111-1111-1111-111111111111'],
+      };
+      mockManager.findOne.mockResolvedValue({ ...privateTemplate });
+      mockManager.save.mockResolvedValue({
+        ...privateTemplate,
+        visibility: WorkflowVisibility.PUBLIC,
+        allowedTenants: null,
+      });
+
+      // When
+      const result = await service.update(templateId, tenantId, {
+        visibility: 'public',
+      });
+
+      // Then
+      expect(result.allowedTenants).toBeNull();
+      expect(result.visibility).toBe(WorkflowVisibility.PUBLIC);
+    });
+
+    it('[3.5-UNIT-005a] [P0] Given private template, when update sends visibility=public AND allowedTenants simultaneously, then allowedTenants is cleared to null', async () => {
+      // Given
+      const privateTemplate = {
+        ...mockTemplate,
+        visibility: WorkflowVisibility.PRIVATE,
+        allowedTenants: ['11111111-1111-1111-1111-111111111111'],
+      };
+      mockManager.findOne.mockResolvedValue({ ...privateTemplate });
+      mockManager.save.mockResolvedValue({
+        ...privateTemplate,
+        visibility: WorkflowVisibility.PUBLIC,
+        allowedTenants: null,
+      });
+
+      // When — both visibility and allowedTenants in same request
+      const result = await service.update(templateId, tenantId, {
+        visibility: 'public',
+        allowedTenants: ['22222222-2222-2222-2222-222222222222'],
+      });
+
+      // Then — allowedTenants must be null because visibility=public takes precedence
+      expect(result.allowedTenants).toBeNull();
+      expect(result.visibility).toBe(WorkflowVisibility.PUBLIC);
+    });
+  });
+
   describe('validateStatusTransition (via update)', () => {
     it('[3.4-UNIT-009] [P0] Given draft template with version, when status set to published, then transition allowed', async () => {
       // Given

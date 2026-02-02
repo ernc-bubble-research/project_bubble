@@ -14,6 +14,7 @@ import {
   AppLlmModelsController,
   AdminLlmModelsController,
 } from './llm-models.controller';
+import { WorkflowCatalogController } from './workflow-catalog.controller';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import {
   controllers: [
     WorkflowTemplatesController,
     WorkflowVersionsController,
+    WorkflowCatalogController,
     AppLlmModelsController,
     AdminLlmModelsController,
   ],

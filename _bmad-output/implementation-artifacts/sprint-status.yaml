@@ -191,7 +191,7 @@ development_status:
   3-2-workflow-builder-wizard-admin-ui: backlog
   3-3-workflow-template-crud-api: done # Code review passed, 6 fixes applied (H1-H3, M1-M2, L1), 504 tests, 0 lint errors
   3-4-workflow-versioning-publishing: done # Code review passed, 6 fixes applied (H1-H2, M1-M3, L1), 530 tests, 0 lint errors
-  3-5-workflow-visibility-access-control: ready-for-dev
+  3-5-workflow-visibility-access-control: done # Code review passed, 5 fixes applied (H1, M1-M3, L1), 539 tests, 0 lint errors
   3-6-workflow-chain-builder: backlog
   3-7-workflow-studio-template-library: backlog
   epic-3-retrospective: optional

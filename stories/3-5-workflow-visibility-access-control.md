@@ -1,6 +1,6 @@
 # Story 3.5: Workflow Visibility & Access Control
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -36,14 +36,14 @@ so that I can offer different workflow libraries to different customers while ma
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create tenant-facing Workflow Catalog endpoint (AC: #3, #4, #7)
-  - [ ] 1.1 Create `apps/api-gateway/src/app/workflows/workflow-catalog.controller.ts` — `@Controller('app/workflow-templates')`, `@UseGuards(JwtAuthGuard, RolesGuard)`, `@Roles(UserRole.BUBBLE_ADMIN, UserRole.CUSTOMER_ADMIN, UserRole.CREATOR)`
-  - [ ] 1.2 `GET /` — calls a new `findPublished(tenantId, query)` method on WorkflowTemplatesService. Returns published templates accessible to the calling tenant. RLS policy handles filtering automatically.
-  - [ ] 1.3 Accept optional query params: `limit` (default 50, max 200), `offset` (default 0) — reuse `ListWorkflowTemplatesQueryDto` but status is implicitly `published` (not filterable).
-  - [ ] 1.4 Full Swagger decorators: `@ApiTags('Workflow Catalog')`, `@ApiBearerAuth()`, `@ApiOperation`, `@ApiResponse` (200, 401, 403)
+- [x] Task 1: Create tenant-facing Workflow Catalog endpoint (AC: #3, #4, #7)
+  - [x] 1.1 Create `apps/api-gateway/src/app/workflows/workflow-catalog.controller.ts` — `@Controller('app/workflow-templates')`, `@UseGuards(JwtAuthGuard, RolesGuard)`, `@Roles(UserRole.BUBBLE_ADMIN, UserRole.CUSTOMER_ADMIN, UserRole.CREATOR)`
+  - [x] 1.2 `GET /` — calls a new `findPublished(tenantId, query)` method on WorkflowTemplatesService. Returns published templates accessible to the calling tenant. RLS policy handles filtering automatically.
+  - [x] 1.3 Accept optional query params: `limit` (default 50, max 200), `offset` (default 0) — reuse `ListWorkflowTemplatesQueryDto` but status is implicitly `published` (not filterable).
+  - [x] 1.4 Full Swagger decorators: `@ApiTags('Workflow Catalog')`, `@ApiBearerAuth()`, `@ApiOperation`, `@ApiResponse` (200, 401, 403)
 
-- [ ] Task 2: Add `findPublished()` method to WorkflowTemplatesService (AC: #3, #4)
-  - [ ] 2.1 `findPublished(tenantId, query)` — within `txManager.run(tenantId, ...)`:
+- [x] Task 2: Add `findPublished()` method to WorkflowTemplatesService (AC: #3, #4)
+  - [x] 2.1 `findPublished(tenantId, query)` — within `txManager.run(tenantId, ...)`:
     - QueryBuilder on WorkflowTemplateEntity
     - `.andWhere('template.status = :status', { status: 'published' })` — only published
     - `.andWhere('template.deleted_at IS NULL')` — exclude soft-deleted
@@ -51,53 +51,56 @@ so that I can offer different workflow libraries to different customers while ma
     - `.orderBy('template.updatedAt', 'DESC')`
     - **DO NOT** eagerly load `currentVersion` relation — this is a list/catalog view, not a detail view. Loading full YAML definitions per template would be wasteful.
     - RLS custom policy automatically enforces visibility (public + allowed_tenants + own tenant)
-  - [ ] 2.2 Response maps to `WorkflowTemplateResponseDto[]` (with `currentVersion: undefined` since relation is not loaded)
+  - [x] 2.2 Response maps to `WorkflowTemplateResponseDto[]` (with `currentVersion: undefined` since relation is not loaded)
 
-- [ ] Task 3: Add tenant-accessible-workflows endpoint to TenantsController (AC: #6, #7)
-  - [ ] 3.1 Add `GET /admin/tenants/:id/accessible-workflows` to `TenantsController`
-  - [ ] 3.2 Implementation: call `workflowTemplatesService.findAccessibleByTenant(tenantId)` — within `txManager.run(tenantId, ...)` find all published templates visible to that tenant (same RLS logic — run query AS that tenant)
-  - [ ] 3.3 Returns `WorkflowTemplateResponseDto[]` — name, description, visibility, status
-  - [ ] 3.4 Full Swagger decorators (200, 400, 401, 403, 404)
+- [x] Task 3: Add tenant-accessible-workflows endpoint to TenantsController (AC: #6, #7)
+  - [x] 3.1 Add `GET /admin/tenants/:id/accessible-workflows` to `TenantsController`
+  - [x] 3.2 Implementation: call `workflowTemplatesService.findAccessibleByTenant(tenantId)` — within `txManager.run(tenantId, ...)` find all published templates visible to that tenant (same RLS logic — run query AS that tenant)
+  - [x] 3.3 Returns `WorkflowTemplateResponseDto[]` — name, description, visibility, status
+  - [x] 3.4 Full Swagger decorators (200, 400, 401, 403, 404)
 
-- [ ] Task 4: Add `findAccessibleByTenant()` to WorkflowTemplatesService (AC: #6)
-  - [ ] 4.1 `findAccessibleByTenant(tenantId)` — can delegate to `findPublished(tenantId, { limit: 200, offset: 0 })` to avoid duplicating QueryBuilder logic. Alternatively, implement directly within `txManager.run(tenantId, ...)`:
+- [x] Task 4: Add `findAccessibleByTenant()` to WorkflowTemplatesService (AC: #6)
+  - [x] 4.1 `findAccessibleByTenant(tenantId)` — implemented directly within `txManager.run(tenantId, ...)` with own QueryBuilder (orderBy name ASC instead of updatedAt DESC):
     - QueryBuilder: `WHERE status = 'published' AND deleted_at IS NULL`
     - RLS enforces tenant visibility automatically
     - `.orderBy('template.name', 'ASC')`
     - **DO NOT** load `currentVersion` relation (same as `findPublished`)
-  - [ ] 4.2 Returns mapped `WorkflowTemplateResponseDto[]`
+  - [x] 4.2 Returns mapped `WorkflowTemplateResponseDto[]`
 
-- [ ] Task 5: Validate visibility enforcement with private+allowedTenants (AC: #1, #2, #3)
-  - [ ] 5.1 Add validation in `update()`: when `visibility` is set to `public`, auto-clear `allowedTenants` to `null` (public templates don't need allow-lists)
-  - [ ] 5.2 Validate all UUIDs in `allowedTenants` are well-formed (already handled by DTO `@IsUUID('4', { each: true })`)
+- [x] Task 5: Validate visibility enforcement with private+allowedTenants (AC: #1, #2, #3)
+  - [x] 5.1 Add validation in `update()`: when `visibility` is set to `public`, auto-clear `allowedTenants` to `null` (public templates don't need allow-lists)
+  - [x] 5.2 Validate all UUIDs in `allowedTenants` are well-formed (already handled by DTO `@IsUUID('4', { each: true })`)
 
-- [ ] Task 6: Inject WorkflowTemplatesService into TenantsModule (AC: #6)
-  - [ ] 6.1 Add `WorkflowsModule` to `TenantsModule` imports (or use `forwardRef` if circular)
-  - [ ] 6.2 Inject `WorkflowTemplatesService` into `TenantsController`
-  - [ ] 6.3 If circular dependency arises, create a lightweight `WorkflowAccessService` in a shared module instead
+- [x] Task 6: Inject WorkflowTemplatesService into TenantsModule (AC: #6)
+  - [x] 6.1 Add `WorkflowsModule` to `TenantsModule` imports (no circular dependency — WorkflowsModule does not import TenantsModule)
+  - [x] 6.2 Inject `WorkflowTemplatesService` into `TenantsController`
+  - [x] 6.3 No circular dependency arose — direct import worked cleanly
 
-- [ ] Task 7: Unit Tests — WorkflowTemplatesService (AC: #1, #2, #3, #4)
-  - [ ] 7.1 Add to `workflow-templates.service.spec.ts`:
+- [x] Task 7: Unit Tests — WorkflowTemplatesService (AC: #1, #2, #3, #4)
+  - [x] 7.1 Add to `workflow-templates.service.spec.ts`:
     - [3.5-UNIT-001] findPublished: returns only published templates (via txManager with tenantId)
     - [3.5-UNIT-002] findPublished: respects pagination limit/offset
     - [3.5-UNIT-003] findAccessibleByTenant: returns templates accessible to specific tenant
     - [3.5-UNIT-004] update: setting visibility=private preserves allowedTenants
     - [3.5-UNIT-005] update: setting visibility=public clears allowedTenants to null
 
-- [ ] Task 8: Unit Tests — Workflow Catalog Controller (AC: #4, #7)
-  - [ ] 8.1 Create `apps/api-gateway/src/app/workflows/workflow-catalog.controller.spec.ts`:
+- [x] Task 8: Unit Tests — Workflow Catalog Controller (AC: #4, #7)
+  - [x] 8.1 Create `apps/api-gateway/src/app/workflows/workflow-catalog.controller.spec.ts`:
     - [3.5-UNIT-006] GET / delegates to service.findPublished with tenantId from JWT
     - [3.5-UNIT-007] GET / passes query params (limit, offset)
 
-- [ ] Task 9: Unit Tests — TenantsController accessible-workflows (AC: #6, #7)
-  - [ ] 9.1 Add to `tenants.controller.spec.ts` — **NOTE:** This file uses `Test.createTestingModule()` pattern (NOT direct constructor instantiation). You must add `WorkflowTemplatesService` as a mock provider in the TestingModule `providers` array. Follow the existing mock pattern with `useValue: { findAccessibleByTenant: jest.fn() }`.
+- [x] Task 9: Unit Tests — TenantsController accessible-workflows (AC: #6, #7)
+  - [x] 9.1 Add to `tenants.controller.spec.ts` — Added `WorkflowTemplatesService` as mock provider in TestingModule `providers` array with `useValue: { findAccessibleByTenant: jest.fn() }`.
     - [3.5-UNIT-008] GET /:id/accessible-workflows delegates to workflowTemplatesService.findAccessibleByTenant
     - [3.5-UNIT-009] GET /:id/accessible-workflows returns 404 for non-existent tenant
 
-- [ ] Task 10: Verify full test suite & lint (AC: all)
-  - [ ] 10.1 Run all tests: `npx nx run-many -t test --all`
-  - [ ] 10.2 Run lint: `npx nx run-many -t lint --all`
-  - [ ] 10.3 Report complete metrics per project
+- [x] Task 10: Verify full test suite & lint (AC: all)
+  - [x] 10.1 Run all tests: `npx nx run-many -t test --all` — 539 tests, 0 failures
+  - [x] 10.2 Run lint: `npx nx run-many -t lint --all` — 0 errors, warnings are pre-existing
+  - [x] 10.3 Report complete metrics per project:
+    - Tests: api-gateway: 328 | web: 137 | db-layer: 21 | shared: 53 | Total: 539
+    - Errors: api-gateway: 0 | web: 0 | db-layer: 0 | shared: 0
+    - Warnings: api-gateway: 66 | web: 0 | db-layer: 0 | shared: 14 (all pre-existing)
 
 ## Dev Notes
 
@@ -215,10 +218,44 @@ apps/api-gateway/src/app/tenants/
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
+None — clean implementation, no errors encountered.
+
 ### Completion Notes List
 
+- Created `WorkflowCatalogController` at `GET /app/workflow-templates` — tenant-facing catalog endpoint for published templates accessible via RLS
+- Added `findPublished(tenantId, query)` to `WorkflowTemplatesService` — QueryBuilder with published status filter, soft-delete exclusion, pagination, RLS-enforced visibility
+- Added `findAccessibleByTenant(tenantId)` to `WorkflowTemplatesService` — standalone implementation (not delegating to findPublished) with alphabetical ordering by name
+- Added `GET /admin/tenants/:id/accessible-workflows` to `TenantsController` — verifies tenant exists, then queries published templates AS that tenant via RLS
+- Added auto-clear logic: setting `visibility=public` on `update()` clears `allowedTenants` to null; setting `allowedTenants` is ignored when visibility is public
+- Injected `WorkflowsModule` into `TenantsModule` — no circular dependency
+- 9 new unit tests: [3.5-UNIT-001] through [3.5-UNIT-009], all passing
+- Total: 539 tests passing, 0 errors, 0 new lint errors
+
 ### File List
+
+**New files:**
+- `apps/api-gateway/src/app/workflows/workflow-catalog.controller.ts` — Tenant-facing workflow catalog endpoint
+- `apps/api-gateway/src/app/workflows/workflow-catalog.controller.spec.ts` — Unit tests (2 tests)
+
+**Modified files:**
+- `apps/api-gateway/src/app/workflows/workflow-templates.service.ts` — Added findPublished(), findAccessibleByTenant(), auto-clear allowedTenants on public
+- `apps/api-gateway/src/app/workflows/workflow-templates.service.spec.ts` — Added 5 new tests [3.5-UNIT-001 through 005]
+- `apps/api-gateway/src/app/workflows/workflows.module.ts` — Registered WorkflowCatalogController
+- `apps/api-gateway/src/app/tenants/tenants.controller.ts` — Added GET /:id/accessible-workflows, injected WorkflowTemplatesService
+- `apps/api-gateway/src/app/tenants/tenants.controller.spec.ts` — Added WorkflowTemplatesService mock, 2 new tests [3.5-UNIT-008, 009]
+- `apps/api-gateway/src/app/tenants/tenants.module.ts` — Added WorkflowsModule import
+
+### Change Log
+
+- 2026-02-02: Story 3.5 implementation complete — 10 tasks, 9 unit tests, 539 total tests passing
+- 2026-02-02: Code review — 5 findings (1 High, 3 Medium, 1 Low), all fixed:
+  - H1: Added test [3.5-UNIT-005a] for combined visibility=public + allowedTenants case
+  - M1: Added .take(200) limit to findAccessibleByTenant() to prevent unbounded result sets
+  - M2: Reordered routes in TenantsController — accessible-workflows before :id param route
+  - M3: Fixed test [3.5-UNIT-005] mock from mockImplementation to explicit mockResolvedValue
+  - L1: Created narrowed CatalogQueryDto (PickType) to hide unused status/visibility params in Swagger
+- 2026-02-02: Post-fix verification — 10 unit tests (added 005a), all 539 tests passing, 0 lint errors

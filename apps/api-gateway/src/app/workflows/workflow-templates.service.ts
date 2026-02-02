@@ -174,8 +174,12 @@ export class WorkflowTemplatesService {
       }
       if (dto.visibility !== undefined) {
         template.visibility = this.parseVisibility(dto.visibility);
+        // Auto-clear allowedTenants when setting visibility to public
+        if (template.visibility === WorkflowVisibility.PUBLIC) {
+          template.allowedTenants = null;
+        }
       }
-      if (dto.allowedTenants !== undefined) {
+      if (dto.allowedTenants !== undefined && template.visibility !== WorkflowVisibility.PUBLIC) {
         template.allowedTenants = dto.allowedTenants ?? null;
       }
 
@@ -312,6 +316,47 @@ export class WorkflowTemplatesService {
       template.currentVersionId = versionId;
       const saved = await manager.save(WorkflowTemplateEntity, template);
       return this.toResponse(saved, version);
+    });
+  }
+
+  async findPublished(
+    tenantId: string,
+    query: Pick<ListWorkflowTemplatesQuery, 'limit' | 'offset'>,
+  ): Promise<WorkflowTemplateResponseDto[]> {
+    const limit = query.limit ?? 50;
+    const offset = query.offset ?? 0;
+
+    return this.txManager.run(tenantId, async (manager) => {
+      const qb = manager
+        .createQueryBuilder(WorkflowTemplateEntity, 'template')
+        .andWhere('template.status = :status', {
+          status: WorkflowTemplateStatus.PUBLISHED,
+        })
+        .andWhere('template.deleted_at IS NULL')
+        .take(limit)
+        .skip(offset)
+        .orderBy('template.updated_at', 'DESC');
+
+      const templates = await qb.getMany();
+      return templates.map((t) => this.toResponse(t));
+    });
+  }
+
+  async findAccessibleByTenant(
+    tenantId: string,
+  ): Promise<WorkflowTemplateResponseDto[]> {
+    return this.txManager.run(tenantId, async (manager) => {
+      const qb = manager
+        .createQueryBuilder(WorkflowTemplateEntity, 'template')
+        .andWhere('template.status = :status', {
+          status: WorkflowTemplateStatus.PUBLISHED,
+        })
+        .andWhere('template.deleted_at IS NULL')
+        .take(200)
+        .orderBy('template.name', 'ASC');
+
+      const templates = await qb.getMany();
+      return templates.map((t) => this.toResponse(t));
     });
   }
 

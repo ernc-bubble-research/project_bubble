@@ -5,10 +5,12 @@ import { TenantStatus, PlanTier } from '@project-bubble/db-layer';
 import { createMockTenant } from '@project-bubble/db-layer/testing';
 import { TenantsController } from './tenants.controller';
 import { TenantsService } from './tenants.service';
+import { WorkflowTemplatesService } from '../workflows/workflow-templates.service';
 
 describe('TenantsController [P2]', () => {
   let controller: TenantsController;
   let service: jest.Mocked<TenantsService>;
+  let workflowTemplatesService: jest.Mocked<Pick<WorkflowTemplatesService, 'findAccessibleByTenant'>>;
 
   const mockTenant = createMockTenant({
     id: '123e4567-e89b-12d3-a456-426614174000',
@@ -37,6 +39,12 @@ describe('TenantsController [P2]', () => {
           },
         },
         {
+          provide: WorkflowTemplatesService,
+          useValue: {
+            findAccessibleByTenant: jest.fn(),
+          },
+        },
+        {
           provide: ConfigService,
           useValue: {
             get: jest.fn().mockReturnValue('test-api-key'),
@@ -47,6 +55,7 @@ describe('TenantsController [P2]', () => {
 
     controller = module.get<TenantsController>(TenantsController);
     service = module.get(TenantsService);
+    workflowTemplatesService = module.get(WorkflowTemplatesService);
   });
 
   describe('create', () => {
@@ -118,6 +127,37 @@ describe('TenantsController [P2]', () => {
 
       await expect(
         controller.update('nonexistent', { name: 'Test' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getAccessibleWorkflows', () => {
+    it('[3.5-UNIT-008] [P1] Given valid tenant, when GET /:id/accessible-workflows is called, then delegates to workflowTemplatesService.findAccessibleByTenant', async () => {
+      // Given
+      const mockWorkflows = [
+        { id: 'wf-1', name: 'Workflow A', status: 'published', visibility: 'public' },
+      ];
+      service.findOne.mockResolvedValue(mockTenant);
+      workflowTemplatesService.findAccessibleByTenant.mockResolvedValue(mockWorkflows as any);
+
+      // When
+      const result = await controller.getAccessibleWorkflows(mockTenant.id);
+
+      // Then
+      expect(result).toEqual(mockWorkflows);
+      expect(service.findOne).toHaveBeenCalledWith(mockTenant.id);
+      expect(workflowTemplatesService.findAccessibleByTenant).toHaveBeenCalledWith(mockTenant.id);
+    });
+
+    it('[3.5-UNIT-009] [P1] Given non-existent tenant, when GET /:id/accessible-workflows is called, then returns 404', async () => {
+      // Given
+      service.findOne.mockRejectedValue(
+        new NotFoundException('Tenant not found'),
+      );
+
+      // When/Then
+      await expect(
+        controller.getAccessibleWorkflows('nonexistent-id'),
       ).rejects.toThrow(NotFoundException);
     });
   });

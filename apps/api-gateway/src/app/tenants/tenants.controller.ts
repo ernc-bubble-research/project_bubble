@@ -14,6 +14,7 @@ import {
   CreateTenantDto,
   ImpersonateResponseDto,
   UpdateTenantDto,
+  WorkflowTemplateResponseDto,
 } from '@project-bubble/shared';
 import { UserRole } from '@project-bubble/db-layer';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
@@ -21,6 +22,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AdminApiKeyGuard } from '../guards/admin-api-key.guard';
 import { TenantsService } from './tenants.service';
+import { WorkflowTemplatesService } from '../workflows/workflow-templates.service';
 
 @ApiTags('Admin - Tenants')
 @ApiBearerAuth()
@@ -28,7 +30,10 @@ import { TenantsService } from './tenants.service';
 @UseGuards(OptionalJwtAuthGuard, AdminApiKeyGuard, RolesGuard)
 @Roles(UserRole.BUBBLE_ADMIN)
 export class TenantsController {
-  constructor(private readonly tenantsService: TenantsService) {}
+  constructor(
+    private readonly tenantsService: TenantsService,
+    private readonly workflowTemplatesService: WorkflowTemplatesService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new tenant' })
@@ -47,6 +52,21 @@ export class TenantsController {
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   findAll() {
     return this.tenantsService.findAll();
+  }
+
+  @Get(':id/accessible-workflows')
+  @ApiOperation({ summary: 'List workflow templates accessible to a specific tenant' })
+  @ApiResponse({ status: 200, description: 'List of accessible workflow templates', type: [WorkflowTemplateResponseDto] })
+  @ApiResponse({ status: 400, description: 'Invalid UUID format' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing credentials' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
+  async getAccessibleWorkflows(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<WorkflowTemplateResponseDto[]> {
+    // Verify tenant exists first
+    await this.tenantsService.findOne(id);
+    return this.workflowTemplatesService.findAccessibleByTenant(id);
   }
 
   @Get(':id')
