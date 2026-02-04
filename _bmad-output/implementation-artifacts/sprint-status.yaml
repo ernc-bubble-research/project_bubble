@@ -215,7 +215,23 @@
 # 5. E2E TEST COVERAGE: Create end-to-end tests starting from Epic 1 for all
 #    epics. This is the #1 priority action item (see detailed note above).
 #
-# Raised during Story 3.2 UI testing (2026-02-02).
+# 6. STORY SIZING: Story 3.2 was too large (6-step wizard + all UI components),
+#    leading to many bugs and extended review cycle. Enforce smaller, more
+#    focused stories going forward to reduce risk and improve quality.
+#
+# 7. UI POLISH PASS: Several UI components look rough/ugly. Need a dedicated
+#    polish pass to improve visual consistency, spacing, and overall UX.
+#
+# 8. KNOWLEDGE BASE INTEGRATION UX: The wizard has a knowledge toggle step but
+#    we haven't designed how users actually attach/select knowledge sources to
+#    a workflow. Need to define the UX for linking indexed assets to workflows.
+#
+# 9. WORKFLOW WIZARD DOCUMENTATION: Create a user guide explaining each wizard
+#    step, field names, variable syntax ({subject_name}, {timestamp}, etc.),
+#    input roles (subject vs context), and expected values so the product can
+#    be properly tested end-to-end.
+#
+# Raised during Story 3.2 UI testing (2026-02-02, 2026-02-04).
 
 # IMMEDIATE POST-EPIC-2 ACTION:
 # =============================
