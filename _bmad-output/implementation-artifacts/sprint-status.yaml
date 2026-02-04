@@ -351,7 +351,7 @@ development_status:
   3-5-workflow-visibility-access-control: done # Code review passed, 5 fixes applied (H1, M1-M3, L1), 539 tests, 0 lint errors
   3-6a-workflow-chain-crud-api: done # Code review passed, 52 tests (24 validator + 21 service + 7 controller), 432 total tests, 0 lint errors
   3-6b-workflow-chain-builder-ui: done # Code review passed 2026-02-04, 8 fixes applied (H1-H2, M1, M3-M4, L1), 228 tests, 0 lint errors
-  3-7-workflow-studio-template-library: ready-for-dev # Story file created 2026-02-04, 12 ACs, 10 tasks, 19 unit tests
+  3-7-workflow-studio-template-library: done # Code review passed 2026-02-04, 9 fixes applied (7 issues + takeUntilDestroyed), 291 tests, 0 lint errors.
   epic-3-retrospective: optional
 
   # ═══════════════════════════════════════════════════════

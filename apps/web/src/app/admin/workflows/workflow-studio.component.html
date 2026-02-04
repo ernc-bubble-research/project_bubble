@@ -1,0 +1,41 @@
+<div class="studio-page" data-testid="workflow-studio-container">
+  <div class="studio-header">
+    <div class="header-content">
+      <h1>Workflow Studio</h1>
+      <p class="studio-subtitle">Create and manage LLM-powered workflow templates and chains</p>
+    </div>
+  </div>
+
+  <div class="studio-tabs">
+    <button
+      class="tab-button"
+      [class.active]="activeTab() === 'templates'"
+      (click)="setActiveTab('templates')"
+      data-testid="workflow-studio-templates-tab"
+    >
+      <lucide-icon name="file-text" [size]="16"></lucide-icon>
+      Templates
+    </button>
+    <button
+      class="tab-button"
+      [class.active]="activeTab() === 'chains'"
+      (click)="setActiveTab('chains')"
+      data-testid="workflow-studio-chains-tab"
+    >
+      <lucide-icon name="link" [size]="16"></lucide-icon>
+      Chains
+    </button>
+  </div>
+
+  <div class="studio-content">
+    @if (activeTab() === 'templates') {
+      <div class="tab-content" data-testid="templates-content">
+        <app-template-list />
+      </div>
+    } @else {
+      <div class="tab-content" data-testid="chains-content">
+        <app-chain-list />
+      </div>
+    }
+  </div>
+</div>
