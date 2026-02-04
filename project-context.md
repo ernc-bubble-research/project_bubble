@@ -273,10 +273,13 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 ## Process Discipline Rules (from Epic 2 Retrospective — 2026-02-01)
 
-### Quality Standard
-*   **NEVER** use language like "acceptable for MVP", "sufficient for prototype", "adequate for current phase", or "defer to later phase" in any quality gate, assessment, or review output.
-*   **MVP defines feature scope, NOT quality bar.** The quality bar is always production-grade. No exceptions.
+### Quality Standard (ZERO TOLERANCE — FIREABLE OFFENSE)
+*   **THE "MVP EXCUSE" IS ABSOLUTELY BANNED.** Using MVP, prototype, or phase-scope as justification for lower quality, skipped analysis, deferred completeness, or any shortcut is **a termination-level offense.** This is not a guideline — it is a hard rule with zero exceptions.
+*   **BANNED PHRASES (non-exhaustive):** "acceptable for MVP", "sufficient for prototype", "adequate for current phase", "defer to later phase", "good enough for now", "we can improve later", "it's okay for MVP", "for MVP purposes", "MVP scope allows", "not needed for MVP", "post-MVP improvement", "acceptable tradeoff for MVP timeline."
+*   **IF** you are about to rationalize a decision using MVP scope as justification — **STOP.** The answer is: do it right, or surface the gap to the user for an explicit decision. There is no middle ground.
+*   **MVP defines feature scope, NOT quality bar.** The quality bar is always production-grade. No exceptions. Ever.
 *   **Quality gates produce PASS or FAIL only.** No CONCERNS with deferral recommendations. If it doesn't pass, fix it now or get explicit user approval to defer.
+*   **REASON:** Repeated use of "MVP" as a shield for incomplete analysis, missing features, and deferred quality has been the single most damaging pattern across Epics 1-3. It ends now.
 
 ### YOLO Mode Definition
 *   **YOLO mode auto-confirms:** Routine prompts (e.g., "proceed to next task?", "confirm environment?").
@@ -310,6 +313,17 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **DO NOT** defer E2E tests to a "later sprint." Build E2E tests WITH the feature.
 *   **REASON:** 555+ unit tests passed while the UI was largely non-functional. Unit tests mock everything and never catch integration issues.
 
+### 12b. The "AC-to-Test Traceability" Rule
+*   **EVERY** story file **MUST** include a traceability table mapping acceptance criteria to test cases:
+    ```markdown
+    ## Test Traceability
+    | AC ID | Test File | Test Description | Status |
+    |-------|-----------|------------------|--------|
+    | AC1   | component.spec.ts:42 | Should validate input | ✓ |
+    ```
+*   **No story may be marked `done`** without a complete traceability table.
+*   **REASON:** Testing code is not the same as testing acceptance criteria. Without traceability, we cannot verify that what was specified was actually tested.
+
 ### 13. The "RxJS Subscription Cleanup" Rule (CRITICAL)
 *   **EVERY** RxJS subscription in Angular components **MUST** use `takeUntilDestroyed()` for cleanup.
 *   **NEVER** leave HTTP subscriptions without cleanup — "completes quickly" is NOT a valid excuse.
@@ -334,15 +348,76 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **REASON:** 39 subscription leaks were discovered across Epics 1-3. Code review repeatedly classified this as "low severity" — it is NOT low severity. Memory leaks, callbacks on destroyed components, and unpredictable behavior result.
 *   **Code review MUST reject** any `.subscribe()` call without `takeUntilDestroyed()`.
 
+### 14. The "Mid-Epic Check-in" Rule
+*   **EVERY 2 stories completed** within an epic triggers a mandatory check-in.
+*   **Check-in agenda (15 min max):**
+    1. What's blocked?
+    2. What's missing from remaining stories?
+    3. Any scope creep detected?
+    4. Technical debt accumulating?
+*   **REASON:** Epic 3 ran 7 stories to completion before identifying 9 remediation stories in retrospective. Mid-epic check-ins catch issues at story 2, 4, 6 — not at the end.
+
+### 15. The "Pre-Epic Completeness Gate" Rule (MANDATORY)
+*   **NO epic enters implementation** until PM + Analyst + UX Designer confirm completeness.
+*   **Gate checklist:**
+    1. All user journeys mapped (before, during, after)
+    2. Missing flows identified (onboarding, error states, empty states, edge cases)
+    3. Infrastructure dependencies verified (does this feature need something that doesn't exist yet?)
+    4. Documentation needs identified (tooltips, help text, user guides)
+    5. Test strategy defined (unit, E2E, integration)
+*   **Any gaps, ambiguities, or missing user journeys** must be surfaced and resolved with the user **before story creation begins.**
+*   **No assumptions.** If something is unclear, uncertain, or unverified — bring it to the user. Do not guess. Do not fill in gaps with assumptions. Do not present unverified information as fact.
+*   **REASON:** Epic 3 shipped 7 stories fast, then generated 9 remediation stories (128% ratio). Proper upfront analysis prevents rework multiplication.
+
+### 16. The "No Assumptions" Rule (ALL AGENTS)
+*   **NEVER** present assumptions, guesses, or unverified information as fact.
+*   **IF** you haven't verified something in the actual codebase, documentation, or with the user, you **MUST** say "I believe" or "I need to verify" — NOT "it is."
+*   **ANY gap, issue, or uncertainty — no matter how minor — MUST be brought to the user's attention** for discussion before proceeding.
+*   **Hallucination is a critical failure.** Fabricating data, file names, feature names, or template names that don't exist in the codebase is unacceptable.
+*   **REASON:** During Epic 3 retro, an agent fabricated a "Customer Support Bot" template that did not exist in the codebase and presented it as fact. This kind of error can drive incorrect stories, wasted effort, and user confusion.
+
+### 17. The "Documentation Ships With Features" Rule
+*   **EVERY** story with user-facing UI **MUST** include a documentation subtask covering:
+    *   Inline help text / tooltips for non-obvious fields
+    *   Empty state messaging
+    *   Error state messaging
+*   **Documentation written after the fact is archaeology. Documentation written with the feature is engineering.**
+*   **REASON:** Story 3.9 (wizard documentation + tooltips) was created in retrospective — meaning the wizard shipped without any explanation of what fields mean.
+
+### 18. The "Story Pre-Flight Check" Rule
+*   **BEFORE** starting any story implementation, verify:
+    1. Dependencies met? (infrastructure, APIs, services)
+    2. User journey complete? (what happens before, during, after?)
+    3. Documentation needed? (tooltips, help text, empty states?)
+    4. Test strategy clear? (unit, E2E, what to test?)
+*   **IF any answer is "no" or "unclear"**, surface to user before proceeding.
+
+### 19. The "Epic Dependency Check" Rule
+*   **BEFORE** any epic starts, ask: *"What infrastructure does this feature depend on that doesn't exist yet?"*
+*   **IF** the answer is non-empty, that infrastructure **goes into the epic** — not deferred to a later epic.
+*   **REASON:** Epic 3 built a workflow engine that can't configure its own LLM provider, an admin panel without logout, and tenant management without archive/delete. Infrastructure must come before features.
+
+### 20. The "Missing Journey Analysis" Rule
+*   **During epic-to-story decomposition**, run adversarial analysis:
+    *   For every story ask: *"What does the user do before this? After this? What if they get stuck?"*
+    *   If there's no answer, there's a missing story.
+*   **This analysis must NOT include assumptions.** If a gap or even a slight issue is identified, it must be brought to the user's attention for discussion.
+
 ## Anti-Patterns (Do Not Do)
 
 *   ❌ **No Schema per Tenant:** Do not create dynamic schemas. Use `tenant_id` column.
 *   ❌ **No Active Record:** Do not use `user.save()`. Use `repository.save(user)`.
 *   ❌ **No Direct Worker HTTP:** The API must not HTTP call the Worker. Use Redis.
-*   ❌ **No "Acceptable for MVP" Language:** Never rationalize quality gaps by referencing MVP scope.
+*   ❌ **No "MVP Excuse" — EVER (FIREABLE OFFENSE):** Never use MVP, prototype, or phase-scope to rationalize quality gaps, skipped analysis, deferred completeness, or missing features. MVP defines feature scope, NOT quality bar. See Quality Standard section for full policy.
 *   ❌ **No Silent Metric Omission:** Never report only errors while hiding warnings.
 *   ❌ **No Auto-Fix Without Consent:** Never fix code review findings without presenting them to the user first.
 *   ❌ **No Unmanaged Subscriptions:** Never call `.subscribe()` without `takeUntilDestroyed()` in Angular components.
 *   ❌ **No Oversized Stories:** Never create stories exceeding 7 tasks or 10 ACs — split them first.
+*   ❌ **No Assumptions Presented as Facts:** Never state unverified information as truth. Verify in codebase/docs first, or say "I need to verify."
+*   ❌ **No Skipping Pre-Epic Gate:** Never start epic implementation without PM + Analyst + UX sign-off on completeness.
+*   ❌ **No Skipping Mid-Epic Check-ins:** Every 2 stories completed triggers a mandatory check-in. Not optional.
+*   ❌ **No Features Without Documentation:** Every UI story must include tooltips, empty states, and error messaging subtasks.
+*   ❌ **No Stories Without Traceability:** Every story must have AC-to-test mapping table before marking done.
+*   ❌ **No Features Before Infrastructure:** If a feature depends on infrastructure that doesn't exist, build the infrastructure first.
 
 
