@@ -85,6 +85,17 @@
 # - MVP runs entirely on laptop: Angular + NestJS + Postgres (Docker) + Redis (Docker) + Vertex AI API key.
 # - synchronize:true for dev. Switch to TypeORM migrations before production deployment.
 #
+# DEFERRED TO PHASE 2: KNOWLEDGE BASE FEATURES (Epic 3 Retro Item #8)
+# ====================================================================
+# Decision: Knowledge base features (RAG, semantic search integration with workflows)
+# are deferred to Phase 2. This includes:
+#   - Wizard knowledge step (removed from workflow-wizard.component.ts)
+#   - Knowledge source selection UI for workflows
+#   - RAG-powered workflow inputs
+# The backend code (Stories 2-2, 2-3, 2-4) remains intact but is not used in MVP.
+# Workflows will use file uploads from Data Vault as inputs, not RAG search.
+# Raised during Epic 3 retrospective (2026-02-04).
+#
 # DEFERRED: DEFENSE-IN-DEPTH HARDENING
 # =====================================
 # Story 2.4 code review (M3): Some raw SQL queries (e.g., getByRun) rely on RLS alone
@@ -309,8 +320,10 @@ development_status:
   1-10-login-password-pages-auth-ui: done
   1-11-ci-cd-pipeline-setup: deferred # Moved to post-MVP. BMAD workflow covers lint/test/build per story.
   1-12-user-invitations-email-flow: done
+  1-13-tenant-lifecycle-management: ready-for-dev # Added from Epic 3 retro item #3: archive/suspend/delete tenants
   epic-1-retrospective: done
   epic-1-nfr-assessment: done # NFR assessment completed 2026-01-31, FAIL status, hardening story required
+  1e-e2e-test-coverage-epic-1: ready-for-dev # Added from Epic 3 retro item #5: E2E test coverage
 
   # ═══════════════════════════════════════════════════════
   # Epic 1H: Security & Reliability Hardening
@@ -330,6 +343,7 @@ development_status:
   2-3-semantic-search-service-vector-rag: done
   2-4-validated-insight-storage-memory: done # Code review passed, 406 tests, 0 lint errors
   epic-2-retrospective: done # Retrospective completed 2026-02-01. 3 critical process failures documented. Action items defined.
+  2e-e2e-test-coverage-epic-2: ready-for-dev # Added from Epic 3 retro item #5: E2E test coverage
 
   # ═══════════════════════════════════════════════════════
   # Pre-Epic-3 Gates
@@ -352,6 +366,10 @@ development_status:
   3-6a-workflow-chain-crud-api: done # Code review passed, 52 tests (24 validator + 21 service + 7 controller), 432 total tests, 0 lint errors
   3-6b-workflow-chain-builder-ui: done # Code review passed 2026-02-04, 8 fixes applied (H1-H2, M1, M3-M4, L1), 228 tests, 0 lint errors
   3-7-workflow-studio-template-library: done # Code review passed 2026-02-04, 9 fixes applied (7 issues + takeUntilDestroyed), 291 tests, 0 lint errors.
+  3-8-workflow-management-view: ready-for-dev # Added from Epic 3 retro item #2: visibility editing post-creation
+  3-9-workflow-wizard-documentation-tooltips: ready-for-dev # Added from Epic 3 retro item #9: documentation + inline help
+  3h-rxjs-subscription-cleanup-hardening: ready-for-dev # CRITICAL: Fix 39 unsubscribed HTTP subscriptions across Epics 1-3
+  3e-e2e-test-coverage-epic-3: ready-for-dev # Added from Epic 3 retro item #5: E2E test coverage
   epic-3-retrospective: optional
 
   # ═══════════════════════════════════════════════════════
@@ -400,6 +418,8 @@ development_status:
   7-3-service-status-monitor: backlog
   7-4-admin-execution-inspector: backlog
   7-5-refresh-token-rotation: backlog # NFR deferred item — replaces interim 7-day JWT expiry from hardening story
+  7-6-admin-settings-page: backlog # Added from Epic 3 retro item #4: Settings page for LLM provider config
+  7-7-ui-polish-pass: backlog # Added from Epic 3 retro items #1, #7: Visual consistency + logout button UX
   epic-7-retrospective: optional
 
   # ═══════════════════════════════════════════════════════

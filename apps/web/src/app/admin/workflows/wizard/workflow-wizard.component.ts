@@ -20,7 +20,7 @@ import { HasUnsavedChanges } from '../../../core/guards/has-unsaved-changes.inte
 import { WizardMetadataStepComponent } from './steps/wizard-metadata-step.component';
 import { WizardInputsStepComponent } from './steps/wizard-inputs-step.component';
 import { WizardExecutionStepComponent } from './steps/wizard-execution-step.component';
-import { WizardKnowledgeStepComponent } from './steps/wizard-knowledge-step.component';
+// Knowledge step deferred to Phase 2 (see Epic 3 retrospective discussion item #8)
 import { WizardPromptStepComponent } from './steps/wizard-prompt-step.component';
 import { WizardOutputStepComponent } from './steps/wizard-output-step.component';
 
@@ -37,7 +37,6 @@ export interface WizardStep {
     WizardMetadataStepComponent,
     WizardInputsStepComponent,
     WizardExecutionStepComponent,
-    WizardKnowledgeStepComponent,
     WizardPromptStepComponent,
     WizardOutputStepComponent,
   ],
@@ -55,15 +54,14 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
   private readonly metadataStep = viewChild(WizardMetadataStepComponent);
   private readonly inputsStep = viewChild(WizardInputsStepComponent);
   private readonly executionStep = viewChild(WizardExecutionStepComponent);
-  private readonly knowledgeStep = viewChild(WizardKnowledgeStepComponent);
   private readonly promptStep = viewChild(WizardPromptStepComponent);
   private readonly outputStep = viewChild(WizardOutputStepComponent);
 
+  // Knowledge step deferred to Phase 2 (see Epic 3 retrospective item #8)
   steps: WizardStep[] = [
     { label: 'Metadata', icon: 'file-text' },
     { label: 'Inputs', icon: 'layers' },
     { label: 'Execution', icon: 'zap' },
-    { label: 'Knowledge', icon: 'brain' },
     { label: 'Prompt', icon: 'message-square' },
     { label: 'Output', icon: 'file-output' },
   ];
@@ -262,25 +260,25 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
   }
 
   // H1: Validate current step by calling child component's isValid()
+  // Note: Knowledge step (was case 3) deferred to Phase 2
   private isCurrentStepValid(): boolean {
     switch (this.currentStep()) {
       case 0: return this.metadataStep()?.isValid() ?? false;
       case 1: return this.inputsStep()?.isValid() ?? false;
       case 2: return this.executionStep()?.isValid() ?? false;
-      case 3: return this.knowledgeStep()?.isValid() ?? false;
-      case 4: return this.promptStep()?.isValid() ?? false;
-      case 5: return this.outputStep()?.isValid() ?? false;
+      case 3: return this.promptStep()?.isValid() ?? false;
+      case 4: return this.outputStep()?.isValid() ?? false;
       default: return false;
     }
   }
 
   // M4: Structured keyword-to-step mapping instead of fragile if-else chain
+  // Note: Knowledge step removed (deferred to Phase 2)
   private navigateToFirstErrorStep(errors: string[]): void {
     const stepKeywords: string[][] = [
       ['metadata', 'name', 'description', 'tags'],
       ['input', 'subject'],
       ['execution', 'model', 'temperature', 'processing'],
-      ['knowledge'],
       ['prompt'],
       ['output', 'filename', 'section', 'json_schema'],
     ];

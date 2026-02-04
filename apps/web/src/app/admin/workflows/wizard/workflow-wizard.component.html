@@ -76,7 +76,7 @@
     </div>
   }
 
-  <!-- Step content -->
+  <!-- Step content (Knowledge step deferred to Phase 2) -->
   <div class="step-content" role="tabpanel" data-testid="step-content">
     @switch (currentStep()) {
       @case (0) {
@@ -98,18 +98,12 @@
         />
       }
       @case (3) {
-        <app-wizard-knowledge-step
-          [state]="wizardState()"
-          (stateChange)="updateState($event)"
-        />
-      }
-      @case (4) {
         <app-wizard-prompt-step
           [state]="wizardState()"
           (stateChange)="updateState($event)"
         />
       }
-      @case (5) {
+      @case (4) {
         <app-wizard-output-step
           [state]="wizardState()"
           (stateChange)="updateState($event)"

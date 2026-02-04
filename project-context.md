@@ -297,6 +297,43 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   User chooses per finding: auto-fix, create action item, or show details.
 *   **NEVER auto-fix without consent.** This is a mandatory decision point.
 
+## Story & Epic Process Rules (from Epic 3 Retrospective — 2026-02-04)
+
+### 11. The "Story Sizing" Rule
+*   **NEVER** create stories with more than **7 tasks** or **10 acceptance criteria**.
+*   **IF** a story exceeds these limits, **SPLIT IT** into multiple smaller stories before marking ready-for-dev.
+*   **REASON:** Story 3.2 (6-step wizard + all UI components) caused many bugs and an extended review cycle. Large stories have compounding risk.
+
+### 12. The "E2E Test" Rule
+*   **EVERY** story **MUST** include E2E test coverage for its features as part of the acceptance criteria.
+*   **E2E tests verify:** API endpoints return expected responses (not just HTTP 200), UI flows complete end-to-end, navigation routes resolve to real components.
+*   **DO NOT** defer E2E tests to a "later sprint." Build E2E tests WITH the feature.
+*   **REASON:** 555+ unit tests passed while the UI was largely non-functional. Unit tests mock everything and never catch integration issues.
+
+### 13. The "RxJS Subscription Cleanup" Rule (CRITICAL)
+*   **EVERY** RxJS subscription in Angular components **MUST** use `takeUntilDestroyed()` for cleanup.
+*   **NEVER** leave HTTP subscriptions without cleanup — "completes quickly" is NOT a valid excuse.
+*   **PATTERN:**
+    ```typescript
+    import { DestroyRef, inject } from '@angular/core';
+    import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+    export class MyComponent {
+      private readonly destroyRef = inject(DestroyRef);
+
+      loadData(): void {
+        this.service.getData().pipe(
+          takeUntilDestroyed(this.destroyRef)
+        ).subscribe({
+          next: (data) => { ... },
+          error: (err) => { ... }
+        });
+      }
+    }
+    ```
+*   **REASON:** 39 subscription leaks were discovered across Epics 1-3. Code review repeatedly classified this as "low severity" — it is NOT low severity. Memory leaks, callbacks on destroyed components, and unpredictable behavior result.
+*   **Code review MUST reject** any `.subscribe()` call without `takeUntilDestroyed()`.
+
 ## Anti-Patterns (Do Not Do)
 
 *   ❌ **No Schema per Tenant:** Do not create dynamic schemas. Use `tenant_id` column.
@@ -305,5 +342,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   ❌ **No "Acceptable for MVP" Language:** Never rationalize quality gaps by referencing MVP scope.
 *   ❌ **No Silent Metric Omission:** Never report only errors while hiding warnings.
 *   ❌ **No Auto-Fix Without Consent:** Never fix code review findings without presenting them to the user first.
+*   ❌ **No Unmanaged Subscriptions:** Never call `.subscribe()` without `takeUntilDestroyed()` in Angular components.
+*   ❌ **No Oversized Stories:** Never create stories exceeding 7 tasks or 10 ACs — split them first.
 
 
