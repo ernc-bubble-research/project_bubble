@@ -1,11 +1,12 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
   WorkflowTemplateResponseDto,
   CreateWorkflowTemplateDto,
   CreateWorkflowVersionBodyDto,
   WorkflowVersionResponseDto,
+  ListWorkflowTemplatesQueryDto,
 } from '@project-bubble/shared';
 
 @Injectable({ providedIn: 'root' })
@@ -19,6 +20,22 @@ export class WorkflowTemplateService {
 
   getById(id: string): Observable<WorkflowTemplateResponseDto> {
     return this.http.get<WorkflowTemplateResponseDto>(`${this.baseUrl}/${id}`);
+  }
+
+  getAll(params?: ListWorkflowTemplatesQueryDto): Observable<WorkflowTemplateResponseDto[]> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.limit !== undefined) {
+        httpParams = httpParams.set('limit', params.limit.toString());
+      }
+      if (params.offset !== undefined) {
+        httpParams = httpParams.set('offset', params.offset.toString());
+      }
+      if (params.status) {
+        httpParams = httpParams.set('status', params.status);
+      }
+    }
+    return this.http.get<WorkflowTemplateResponseDto[]>(this.baseUrl, { params: httpParams });
   }
 
   // L4: Properly typed return as WorkflowVersionResponseDto

@@ -232,6 +232,41 @@
 #    be properly tested end-to-end.
 #
 # Raised during Story 3.2 UI testing (2026-02-02, 2026-02-04).
+#
+# RETRO NOTE: QUALITY REGRESSION SINCE EPIC 2 RETROSPECTIVE
+# ==========================================================
+# Despite the Epic 2 retrospective identifying process failures and defining
+# action items, quality has REGRESSED rather than improved. Examples from
+# Story 3.6b review (2026-02-04):
+#
+# 1. SHALLOW ANALYSIS: When reviewing Story 3.6b, suggested deferring AC 14
+#    (intermediate outputs visibility) without analyzing the business impact.
+#    This feature is CRITICAL for fairness — users pay credits for each workflow
+#    in a chain and MUST see all outputs they paid for. Deferral was lazy, not
+#    a legitimate scope decision.
+#
+# 2. ROUTE INCONSISTENCY: Story specified `/admin/workflow-studio/chains/new`
+#    but existing routes use `/admin/workflows/`. Basic codebase verification
+#    was not performed before writing the story.
+#
+# 3. INTERFACE MISMATCH: Story task listed input source options that don't match
+#    the actual ChainInputSource interface. Copy-paste assumptions instead of
+#    reading the actual code.
+#
+# 4. MISSING DEPENDENCIES: Story required fetching published templates but
+#    WorkflowTemplateService.getAll() doesn't exist. Dependencies not verified.
+#
+# ROOT CAUSE: The agent is optimizing for speed over correctness. Story creation
+# is becoming a checkbox exercise rather than thorough technical analysis.
+# The user should NOT have to babysit every decision.
+#
+# ACTION REQUIRED:
+# - Story review must include VERIFICATION against actual codebase (routes,
+#   interfaces, services, DTOs) before marking ready-for-dev
+# - "Defer" recommendations require explicit business impact analysis
+# - Quality bar from Epic 2 retro MUST be enforced, not ignored
+#
+# Raised during Story 3.6b review (2026-02-04).
 
 # IMMEDIATE POST-EPIC-2 ACTION:
 # =============================
@@ -310,12 +345,13 @@ development_status:
   # ═══════════════════════════════════════════════════════
   epic-3: in-progress
   3-1-workflow-definition-data-foundation: done # Code review passed, 7 fixes applied, 453 tests, 0 lint errors
-  3-2-workflow-builder-wizard-admin-ui: review # Code review passed (17 fixes), UI testing fixes applied: class-validator imports, circular dep, entity registration, tags input, formArrayName, logout button. 575+ tests, 0 lint errors.
+  3-2-workflow-builder-wizard-admin-ui: done # Code review passed (17 fixes), UI testing fixes applied, final review 2026-02-04. 575+ tests, 0 lint errors.
   3-3-workflow-template-crud-api: done # Code review passed, 6 fixes applied (H1-H3, M1-M2, L1), 504 tests, 0 lint errors
   3-4-workflow-versioning-publishing: done # Code review passed, 6 fixes applied (H1-H2, M1-M3, L1), 530 tests, 0 lint errors
   3-5-workflow-visibility-access-control: done # Code review passed, 5 fixes applied (H1, M1-M3, L1), 539 tests, 0 lint errors
-  3-6-workflow-chain-builder: backlog
-  3-7-workflow-studio-template-library: backlog
+  3-6a-workflow-chain-crud-api: done # Code review passed, 52 tests (24 validator + 21 service + 7 controller), 432 total tests, 0 lint errors
+  3-6b-workflow-chain-builder-ui: done # Code review passed 2026-02-04, 8 fixes applied (H1-H2, M1, M3-M4, L1), 228 tests, 0 lint errors
+  3-7-workflow-studio-template-library: ready-for-dev # Story file created 2026-02-04, 12 ACs, 10 tasks, 19 unit tests
   epic-3-retrospective: optional
 
   # ═══════════════════════════════════════════════════════

@@ -16,15 +16,25 @@ import { LucideAngularModule } from 'lucide-angular';
         <div class="empty-state">
           <lucide-icon name="git-branch" [size]="48"></lucide-icon>
           <h2>No workflows yet</h2>
-          <p>Create your first workflow template to get started.</p>
-          <button
-            class="btn btn-primary"
-            data-testid="create-workflow-btn"
-            (click)="navigateToCreate()"
-          >
-            <lucide-icon name="circle-check" [size]="16"></lucide-icon>
-            Create Workflow
-          </button>
+          <p>Create your first workflow template or chain to get started.</p>
+          <div class="action-buttons">
+            <button
+              class="btn btn-primary"
+              data-testid="create-workflow-btn"
+              (click)="navigateToCreate()"
+            >
+              <lucide-icon name="circle-check" [size]="16"></lucide-icon>
+              Create Workflow
+            </button>
+            <button
+              class="btn btn-outline"
+              data-testid="create-chain-btn"
+              (click)="navigateToCreateChain()"
+            >
+              <lucide-icon name="link" [size]="16"></lucide-icon>
+              Create Chain
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -67,6 +77,10 @@ import { LucideAngularModule } from 'lucide-angular';
       font-size: 14px;
       margin-bottom: 8px;
     }
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+    }
   `],
 })
 export class WorkflowStudioComponent {
@@ -74,5 +88,9 @@ export class WorkflowStudioComponent {
 
   navigateToCreate(): void {
     this.router.navigate(['/admin/workflows/create']);
+  }
+
+  navigateToCreateChain(): void {
+    this.router.navigate(['/admin/workflows/chains/new']);
   }
 }

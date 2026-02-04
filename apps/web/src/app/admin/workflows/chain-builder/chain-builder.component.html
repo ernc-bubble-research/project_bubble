@@ -1,0 +1,132 @@
+<div class="chain-builder-container">
+  <div class="builder-header">
+    <button
+      class="btn btn-outline btn-sm"
+      data-testid="chain-cancel-btn"
+      (click)="cancel()"
+    >
+      <lucide-icon name="arrow-left" [size]="16"></lucide-icon>
+      Back to Studio
+    </button>
+    <h1>{{ editMode() ? 'Edit Chain' : 'Create Chain' }}</h1>
+  </div>
+
+  <!-- Validation errors -->
+  @if (validationErrors().length > 0) {
+    <div class="validation-errors" role="alert" data-testid="chain-validation-errors">
+      <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+      <div>
+        <strong>Validation errors:</strong>
+        <ul>
+          @for (error of validationErrors(); track error) {
+            <li>{{ error }}</li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+
+  @if (saveError()) {
+    <div class="validation-errors" role="alert" data-testid="chain-save-error">
+      <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+      <span>{{ saveError() }}</span>
+    </div>
+  }
+
+  <div class="builder-content">
+    <!-- Metadata Section -->
+    <section class="builder-section">
+      <app-chain-metadata-section
+        [metadata]="chainState().metadata"
+        (metadataChange)="updateMetadata($event)"
+      />
+    </section>
+
+    <!-- Steps Section -->
+    <section class="builder-section">
+      <div class="section-header">
+        <h2>
+          Workflow Steps
+          <app-info-tooltip text="Add workflow templates as steps to build your analysis pipeline. Each step processes data and passes its output to the next." />
+        </h2>
+        <p class="section-description">Build your pipeline by adding and ordering workflow steps.</p>
+      </div>
+
+      <app-chain-steps-list
+        [steps]="chainState().steps || []"
+        (stepsChange)="updateSteps($event)"
+      />
+
+      <div class="add-step-section">
+        <app-chain-add-step
+          [existingStepCount]="(chainState().steps || []).length"
+          (stepAdded)="addStep($event)"
+        />
+      </div>
+    </section>
+
+    <!-- Input Mapping Section -->
+    @if ((chainState().steps || []).length > 1) {
+      <section class="builder-section">
+        <div class="section-header">
+          <h2>Input Mappings</h2>
+          <p class="section-description">Configure how data flows between steps.</p>
+        </div>
+
+        <app-chain-input-mapping
+          [steps]="chainState().steps || []"
+          (stepsChange)="updateSteps($event)"
+        />
+      </section>
+    }
+
+    <!-- Data Flow Visualization -->
+    @if ((chainState().steps || []).length >= 2) {
+      <section class="builder-section">
+        <div class="section-header">
+          <h2>Data Flow</h2>
+          <p class="section-description">Visual summary of how data moves through your chain.</p>
+        </div>
+
+        <app-chain-data-flow
+          [steps]="chainState().steps || []"
+        />
+      </section>
+    }
+
+    <!-- Visibility Section -->
+    <section class="builder-section">
+      <app-chain-visibility-settings
+        [visibility]="visibility()"
+        [allowedTenants]="allowedTenants()"
+        (visibilityChange)="updateVisibility($event)"
+        (allowedTenantsChange)="updateAllowedTenants($event)"
+      />
+    </section>
+  </div>
+
+  <!-- Actions -->
+  <div class="builder-actions">
+    <button
+      class="btn btn-outline"
+      data-testid="chain-cancel-btn-bottom"
+      (click)="cancel()"
+    >
+      Cancel
+    </button>
+    <button
+      class="btn btn-primary"
+      data-testid="chain-save-button"
+      [disabled]="isSaving() || !isValid()"
+      (click)="save()"
+    >
+      @if (isSaving()) {
+        <lucide-icon name="refresh-cw" [size]="16"></lucide-icon>
+        Saving...
+      } @else {
+        <lucide-icon name="save" [size]="16"></lucide-icon>
+        {{ editMode() ? 'Update Chain' : 'Create Chain' }}
+      }
+    </button>
+  </div>
+</div>

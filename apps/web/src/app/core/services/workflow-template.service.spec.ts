@@ -88,4 +88,40 @@ describe('[P0] WorkflowTemplateService', () => {
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
   });
+
+  describe('getAll', () => {
+    it('[3.6b-UNIT-028] [P1] Given no params, when getAll is called, then GET request is sent without query params', () => {
+      // Given
+      const mockResponse = [{ id: '123', name: 'Template 1' }];
+
+      // When
+      service.getAll().subscribe((result) => {
+        // Then
+        expect(result).toEqual(mockResponse);
+      });
+
+      const req = httpMock.expectOne('/api/admin/workflow-templates');
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('[3.6b-UNIT-029] [P1] Given params, when getAll is called, then GET request includes query params', () => {
+      // Given
+      const params = { limit: 10, offset: 5, status: 'published' as const };
+      const mockResponse = [{ id: '456', name: 'Template 2' }];
+
+      // When
+      service.getAll(params).subscribe((result) => {
+        // Then
+        expect(result).toEqual(mockResponse);
+      });
+
+      const req = httpMock.expectOne((request) => request.url === '/api/admin/workflow-templates');
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('limit')).toBe('10');
+      expect(req.request.params.get('offset')).toBe('5');
+      expect(req.request.params.get('status')).toBe('published');
+      req.flush(mockResponse);
+    });
+  });
 });

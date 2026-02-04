@@ -432,20 +432,44 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** the Workflow Studio template list shows visibility badges (public/private)
 **And** the Tenant Entitlements tab (Story 1.5) shows a read-only view of accessible workflows
 
-#### Story 3.6: Workflow Chain Builder
+#### Story 3.6a: Workflow Chain CRUD API
+**As a** Developer,
+**I want** API endpoints to create, read, update, list, and soft-delete workflow chains,
+**So that** the Chain Builder UI can persist and manage chain definitions.
+
+**Acceptance Criteria:**
+**Given** an authenticated Bubble Admin
+**When** I call `POST /admin/workflow-chains` with a valid chain definition
+**Then** a WorkflowChain record is created with the definition JSONB
+**And** `GET /admin/workflow-chains` returns a paginated list of chains with visibility filtering
+**And** `GET /admin/workflow-chains/:id` returns the chain with its full definition
+**And** `PUT /admin/workflow-chains/:id` updates the chain definition
+**And** `DELETE /admin/workflow-chains/:id` performs soft-delete (sets deletedAt timestamp)
+**And** chain definition validation enforces: at least 2 steps, valid workflow template references, valid input mapping schema
+**And** visibility/access control reuses the pattern from Story 3.5 (public/private + allowed_tenants)
+**And** all endpoints use TransactionManager for tenant-scoped operations
+**And** all endpoints have complete Swagger documentation (@ApiResponse for 200/201/400/401/403)
+**And** shared DTOs (CreateChainDto, UpdateChainDto, ChainResponseDto) are in libs/shared
+
+#### Story 3.6b: Workflow Chain Builder UI
 **As a** Bubble Admin,
-**I want** to compose workflow chains by linking atomic workflows sequentially,
-**So that** I can build multi-step analysis pipelines (e.g., analyze transcripts then consolidate reports).
+**I want** a Chain Builder interface in Workflow Studio to compose multi-step workflow chains,
+**So that** I can visually build analysis pipelines without writing JSON directly.
 
 **Acceptance Criteria:**
 **Given** I navigate to Workflow Studio and click "Create Chain"
-**Then** I can add steps by selecting published atomic workflow templates
-**And** I can configure input mapping for each step (Step 1+): map inputs from previous step outputs, inherited from chain initial inputs, fixed at chain definition time, or runtime user-provided
-**And** no file uploads in the chain builder — only metadata connections between workflow outputs and inputs
-**And** the chain definition is stored in workflow_chains.definition (JSONB)
-**And** chain templates support the same visibility/access control as workflow templates
-**And** I can soft-delete chains
-**And** intermediate outputs between steps are visible and downloadable after chain completion
+**Then** a chain builder form opens with: metadata section (name, description) and steps section
+**And** I can add steps by selecting from a dropdown of published atomic workflow templates
+**And** I can reorder steps via drag-and-drop or up/down buttons
+**And** I can remove steps from the chain
+**And** for each step (except Step 0), I can configure input mapping: source selection (previous_output, inherited, fixed, runtime) for each input
+**And** the builder shows a visual summary of data flow between steps
+**And** I can set visibility (public/private) and allowed tenants (reuses pattern from Story 3.5 UI)
+**And** the builder validates: minimum 2 steps, all required inputs mapped
+**And** I can save the chain (calls Story 3.6a API)
+**And** I can edit existing chains (loads from API, populates form)
+**And** every non-obvious field has an info tooltip
+**And** intermediate outputs between steps are marked as visible/downloadable after chain completion
 
 #### Story 3.7: Workflow Studio Template Library (Admin UI)
 **As a** Bubble Admin,

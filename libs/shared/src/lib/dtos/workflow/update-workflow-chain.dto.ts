@@ -1,33 +1,32 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
-  IsNotEmpty,
   MaxLength,
   IsOptional,
-  IsEnum,
   IsObject,
+  IsEnum,
   IsArray,
   IsUUID,
 } from 'class-validator';
 
-export class CreateWorkflowChainDto {
-  @ApiProperty({ example: 'Full Qualitative Analysis', maxLength: 255 })
+export class UpdateWorkflowChainDto {
+  @ApiPropertyOptional({ example: 'Updated Chain Name', maxLength: 255 })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(255)
-  name!: string;
+  name?: string;
 
-  @ApiPropertyOptional({ example: 'Analyze transcripts then consolidate findings' })
+  @ApiPropertyOptional({ example: 'Updated description for the chain' })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({ description: 'The chain definition (steps and input mappings)', type: Object })
+  @ApiPropertyOptional({ description: 'The updated chain definition', type: Object })
+  @IsOptional()
   @IsObject()
-  @IsNotEmpty()
-  definition!: Record<string, unknown>;
+  definition?: Record<string, unknown>;
 
-  @ApiPropertyOptional({ enum: ['public', 'private'], default: 'public' })
+  @ApiPropertyOptional({ enum: ['public', 'private'], description: 'Chain visibility' })
   @IsOptional()
   @IsEnum(['public', 'private'] as const)
   visibility?: 'public' | 'private';
