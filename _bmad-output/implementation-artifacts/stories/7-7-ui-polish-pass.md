@@ -26,7 +26,7 @@ This story is executed after all functional stories are complete (end of prototy
 - [ ] Admin dashboard cards
 - [ ] Tenant list/detail pages
 - [ ] User management UI
-- [ ] Logout button → Replace with user avatar dropdown menu (all layouts)
+- [ ] ~~Logout button~~ → MOVED to Story 3.1-2 (Avatar Dropdown)
 
 ### Epic 2 Components
 - [ ] Data vault file browser
@@ -60,7 +60,7 @@ This story is executed after all functional stories are complete (end of prototy
 3. **Typography** - Consistent font sizes and weights
 4. **Colors** - Consistent use of CSS variables for theming
 5. **Interactions** - Consistent hover/focus/active states
-6. **Avatar Dropdown** - User avatar replaces logout button in all layouts
+6. ~~**Avatar Dropdown**~~ - MOVED to Story 3.1-2
 7. **No Regressions** - All existing functionality still works
 
 ## Tasks
@@ -80,11 +80,8 @@ This story is executed after all functional stories are complete (end of prototy
 - [ ] Test visual appearance
 - [ ] Verify no functional regressions
 
-### Task 4: User Avatar Dropdown
-- [ ] Create avatar-dropdown.component.ts
-- [ ] Replace logout button in admin-layout
-- [ ] Replace logout button in app-layout
-- [ ] Include: profile info, settings link, logout
+### Task 4: ~~User Avatar Dropdown~~ → MOVED to Story 3.1-2
+- [x] MOVED: See Story 3.1-2 (Logout Button & Avatar Dropdown) in Epic 3.1
 
 ### Task 5: Verification
 - [ ] Visual review of all pages
@@ -104,3 +101,4 @@ This story is executed after all functional stories are complete (end of prototy
 | Date | Author | Changes |
 |------|--------|---------|
 | 2026-02-04 | Retrospective | Story created from Epic 3 discussion items #1, #7 |
+| 2026-02-04 | Restructure | Avatar dropdown (Task 4, AC 6) moved to Story 3.1-2 in Epic 3.1 |

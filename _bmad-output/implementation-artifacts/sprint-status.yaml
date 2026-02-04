@@ -39,8 +39,16 @@
 # Phase 2 / Future:    Epics 8, 9, 10, 11 (4 epics, 10 stories)
 #
 # DEPENDENCY CHAIN:
-# Epic 1 → Epic 1H (hardening) → Epic 2 + Epic 3 (parallel) → Epic 4 → Epic 5 → Epic 6
+# Epic 1 → Epic 1H (hardening) → Epic 2 + Epic 3 (parallel) → Epic 3.1 (settings+essentials) → Epic 4 → Epic 5 → Epic 6
 # Epic 7 runs parallel to Epics 4-6
+#
+# RECOMMENDED EXECUTION ORDER (from Epic 3 Retrospective):
+# 1. Story 3H  — RxJS Subscription Cleanup (CRITICAL - memory leaks)
+# 2. Epic 3.1  — Settings + Logout (foundational infrastructure)
+# 3. 1E/2E/3E — E2E Test Coverage (establish test framework)
+# 4. Story 3.9 — Wizard Documentation (needed to understand/test product)
+# 5. Story 3.8 — Workflow Management View (visibility editing)
+# 6. Story 1-13 — Tenant Lifecycle (archive/suspend/delete)
 #
 # GATE REQUIREMENTS:
 # ==================
@@ -370,7 +378,17 @@ development_status:
   3-9-workflow-wizard-documentation-tooltips: ready-for-dev # Added from Epic 3 retro item #9: documentation + inline help
   3h-rxjs-subscription-cleanup-hardening: ready-for-dev # CRITICAL: Fix 39 unsubscribed HTTP subscriptions across Epics 1-3
   3e-e2e-test-coverage-epic-3: ready-for-dev # Added from Epic 3 retro item #5: E2E test coverage
-  epic-3-retrospective: optional
+  epic-3-retrospective: done # Retrospective completed 2026-02-04. 8 key learnings documented. Rules 14-20 added to project-context.md. MVP excuse permanently banned.
+
+  # ═══════════════════════════════════════════════════════
+  # Epic 3.1: Settings & Essentials
+  # Foundational infrastructure needed before proceeding
+  # Created from Epic 3 retrospective: Settings + Logout
+  # Must complete before E2E test stories and Epic 4
+  # ═══════════════════════════════════════════════════════
+  epic-3.1: backlog
+  3.1-1-admin-settings-page: ready-for-dev # Moved from 7-6. LLM provider config, credentials, model management
+  3.1-2-logout-avatar-dropdown: ready-for-dev # Extracted from 7-7. Avatar dropdown replaces logout button in all layouts
 
   # ═══════════════════════════════════════════════════════
   # Epic 4: Workflow Execution Engine (The Creator)
@@ -418,8 +436,8 @@ development_status:
   7-3-service-status-monitor: backlog
   7-4-admin-execution-inspector: backlog
   7-5-refresh-token-rotation: backlog # NFR deferred item — replaces interim 7-day JWT expiry from hardening story
-  7-6-admin-settings-page: backlog # Added from Epic 3 retro item #4: Settings page for LLM provider config
-  7-7-ui-polish-pass: backlog # Added from Epic 3 retro items #1, #7: Visual consistency + logout button UX
+  # 7-6-admin-settings-page: MOVED → 3.1-1 (Epic 3.1: Settings & Essentials)
+  7-7-ui-polish-pass: backlog # Retro items #1, #7: Visual consistency (avatar dropdown moved to 3.1-2)
   epic-7-retrospective: optional
 
   # ═══════════════════════════════════════════════════════
