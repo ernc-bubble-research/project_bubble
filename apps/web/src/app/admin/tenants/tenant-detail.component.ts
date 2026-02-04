@@ -1,4 +1,5 @@
-import { Component, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, signal, computed, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
@@ -32,6 +33,7 @@ export class TenantDetailComponent implements OnInit {
   private readonly impersonationService = inject(ImpersonationService);
   private readonly toastService = inject(ToastService);
   private readonly invitationService = inject(InvitationService);
+  private readonly destroyRef = inject(DestroyRef);
 
   tenant = signal<Tenant | null>(null);
   loading = signal(false);
@@ -114,7 +116,7 @@ export class TenantDetailComponent implements OnInit {
 
   private loadTenant(id: string): void {
     this.loading.set(true);
-    this.tenantService.getOne(id).subscribe({
+    this.tenantService.getOne(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (tenant) => {
         this.tenant.set(tenant);
         this.syncFormFromTenant(tenant);
@@ -163,7 +165,7 @@ export class TenantDetailComponent implements OnInit {
     if (!t) return;
 
     this.loadingInvitations.set(true);
-    this.invitationService.getAll(t.id).subscribe({
+    this.invitationService.getAll(t.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (invitations) => {
         this.invitations.set(invitations);
         this.loadingInvitations.set(false);
@@ -179,7 +181,7 @@ export class TenantDetailComponent implements OnInit {
     const t = this.tenant();
     if (!t) return;
 
-    this.invitationService.resend(t.id, id).subscribe({
+    this.invitationService.resend(t.id, id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toastService.show('Invitation resent');
         this.loadInvitations();
@@ -194,7 +196,7 @@ export class TenantDetailComponent implements OnInit {
     const t = this.tenant();
     if (!t) return;
 
-    this.invitationService.revoke(t.id, id).subscribe({
+    this.invitationService.revoke(t.id, id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toastService.show('Invitation revoked');
         this.loadInvitations();
@@ -219,7 +221,7 @@ export class TenantDetailComponent implements OnInit {
     if (this.editResidency() !== t.dataResidency) payload.dataResidency = this.editResidency();
 
     this.saving.set(true);
-    this.tenantService.update(t.id, payload).subscribe({
+    this.tenantService.update(t.id, payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (updated) => {
         this.tenant.set(updated);
         this.syncFormFromTenant(updated);
@@ -253,7 +255,7 @@ export class TenantDetailComponent implements OnInit {
     if (this.editRetentionDays() !== t.assetRetentionDays) payload.assetRetentionDays = this.editRetentionDays();
 
     this.saving.set(true);
-    this.tenantService.update(t.id, payload).subscribe({
+    this.tenantService.update(t.id, payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (updated) => {
         this.tenant.set(updated);
         this.syncFormFromTenant(updated);
@@ -302,7 +304,7 @@ export class TenantDetailComponent implements OnInit {
     this.showSuspendDialog.set(false);
     this.saving.set(true);
 
-    this.tenantService.update(t.id, { status: newStatus }).subscribe({
+    this.tenantService.update(t.id, { status: newStatus }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (updated) => {
         this.tenant.set(updated);
         this.syncFormFromTenant(updated);
@@ -334,7 +336,7 @@ export class TenantDetailComponent implements OnInit {
     this.impersonating.set(true);
     this.showImpersonateDialog.set(false);
 
-    this.impersonationService.impersonate(t.id).subscribe({
+    this.impersonationService.impersonate(t.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
         this.impersonationService.storeImpersonation(response.token, response.tenant);
         this.impersonationService.startInactivityTimer();

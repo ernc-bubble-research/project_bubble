@@ -1,4 +1,5 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -45,6 +46,7 @@ export class SetPasswordComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   passwordForm!: FormGroup;
   isLoading = false;
@@ -87,7 +89,7 @@ export class SetPasswordComponent implements OnInit {
 
     const { newPassword } = this.passwordForm.value;
 
-    this.authService.setPassword(this.token, newPassword).subscribe({
+    this.authService.setPassword(this.token, newPassword).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.router.navigate(['/auth/login'], {
           queryParams: { message: 'password-set' },

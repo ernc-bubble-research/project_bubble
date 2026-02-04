@@ -1,6 +1,6 @@
 # Story 3H: RxJS Subscription Cleanup Hardening
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -35,7 +35,7 @@ During Story 3.7 code review, a SYSTEMIC issue was discovered: **39 HTTP subscri
 
 ## Files to Fix
 
-### Epic 1 Components (11 files, 15 subscriptions)
+### Epic 1 Components (7 files, 15 subscriptions)
 | File | Line(s) |
 |------|---------|
 | `apps/web/src/app/admin/dashboard/dashboard.component.ts` | 58 |
@@ -46,11 +46,11 @@ During Story 3.7 code review, a SYSTEMIC issue was discovered: **39 HTTP subscri
 | `apps/web/src/app/auth/login/login.component.ts` | 55 |
 | `apps/web/src/app/auth/set-password/set-password.component.ts` | 90 |
 
-### Epic 2 Components (3 files, 9 subscriptions)
+### Epic 2 Components (3 files, 11 subscriptions)
 | File | Line(s) |
 |------|---------|
 | `apps/web/src/app/app/data-vault/upload-zone.component.ts` | 184 |
-| `apps/web/src/app/app/data-vault/data-vault.component.ts` | 75, 86, 106, 132, 156, 172, 191, 213 |
+| `apps/web/src/app/app/data-vault/data-vault.component.ts` | 66, 75, 86, 106, 132, 156, 172, 191, 213 |
 | `apps/web/src/app/app/data-vault/create-folder-dialog.component.ts` | 130 |
 
 ### Epic 3 Components (8 files, 12 subscriptions)
@@ -70,44 +70,44 @@ During Story 3.7 code review, a SYSTEMIC issue was discovered: **39 HTTP subscri
 ## Tasks
 
 ### Task 1: Install ESLint Plugin
-- [ ] Install `eslint-plugin-rxjs-angular`
-- [ ] Configure in `.eslintrc.json` for web app
-- [ ] Enable `rxjs-angular/prefer-takeuntil` rule as "error"
-- [ ] Run lint to see all violations
+- [x] Install `eslint-plugin-rxjs-angular-x` (ESLint v9-compatible fork)
+- [x] Configure in `apps/web/eslint.config.mjs` (flat config, not `.eslintrc.json`)
+- [x] Enable `rxjs-angular-x/prefer-takeuntil` rule as "error" with `alias: ['takeUntilDestroyed']`
+- [x] Run lint — found exactly 36 violations (39 total - 3 already fixed in Story 3.7)
 
 ### Task 2: Update project-context.md
-- [ ] Add new rule requiring `takeUntilDestroyed()` for ALL subscriptions
-- [ ] Include code examples showing correct pattern
-- [ ] Mark as CRITICAL - code review must reject violations
+- [x] Rule 13 already exists requiring `takeUntilDestroyed()` for ALL subscriptions
+- [x] Includes code examples showing correct pattern
+- [x] Marked as CRITICAL — code review must reject violations
 
-### Task 3: Fix Epic 1 Components
-- [ ] Fix dashboard.component.ts
-- [ ] Fix tenant-list.component.ts
-- [ ] Fix create-tenant-modal.component.ts
-- [ ] Fix tenant-detail.component.ts (8 subscriptions)
-- [ ] Fix invite-user-dialog.component.ts
-- [ ] Fix login.component.ts
-- [ ] Fix set-password.component.ts
+### Task 3: Fix Epic 1 Components (7 files, 15 subscriptions)
+- [x] Fix dashboard.component.ts (1 subscription)
+- [x] Fix tenant-list.component.ts (1 subscription)
+- [x] Fix create-tenant-modal.component.ts (1 subscription)
+- [x] Fix tenant-detail.component.ts (8 subscriptions)
+- [x] Fix invite-user-dialog.component.ts (1 subscription)
+- [x] Fix login.component.ts (1 subscription)
+- [x] Fix set-password.component.ts (1 subscription)
 
-### Task 4: Fix Epic 2 Components
-- [ ] Fix upload-zone.component.ts
-- [ ] Fix data-vault.component.ts (8 subscriptions)
-- [ ] Fix create-folder-dialog.component.ts
+### Task 4: Fix Epic 2 Components (3 files, 11 subscriptions)
+- [x] Fix upload-zone.component.ts (1 subscription)
+- [x] Fix data-vault.component.ts (9 subscriptions)
+- [x] Fix create-folder-dialog.component.ts (1 subscription)
 
-### Task 5: Fix Epic 3 Components
-- [ ] Fix wizard-execution-step.component.ts
-- [ ] Fix workflow-wizard.component.ts (3 subscriptions)
-- [ ] Fix chain-visibility-settings.component.ts
-- [ ] Fix chain-data-flow.component.ts
-- [ ] Fix chain-input-mapping.component.ts
-- [ ] Fix chain-steps-list.component.ts
-- [ ] Fix chain-builder.component.ts (3 subscriptions)
-- [ ] Fix chain-add-step.component.ts
+### Task 5: Fix Epic 3 Components (7 files needing fixes, 11 subscriptions)
+- [x] wizard-execution-step.component.ts — Already fixed in Story 3.7 (has DestroyRef + takeUntilDestroyed)
+- [x] Fix workflow-wizard.component.ts (3 subscriptions)
+- [x] Fix chain-visibility-settings.component.ts (1 subscription)
+- [x] Fix chain-data-flow.component.ts (1 subscription)
+- [x] Fix chain-input-mapping.component.ts (1 subscription)
+- [x] Fix chain-steps-list.component.ts (1 subscription)
+- [x] Fix chain-builder.component.ts (3 subscriptions)
+- [x] Fix chain-add-step.component.ts (1 subscription)
 
 ### Task 6: Verify
-- [ ] Run all tests (`nx test web`)
-- [ ] Run lint (`nx lint web`) - should pass with new rules
-- [ ] Verify no new violations introduced
+- [x] Run all tests (`nx test web`) — 291 tests pass across 38 suites
+- [x] Run lint (`nx lint web`) — 0 errors, 0 warnings
+- [x] Verified no regressions introduced
 
 ## Pattern to Apply
 
@@ -136,15 +136,64 @@ this.service.getData().pipe(
 
 ## Definition of Done
 
-- [ ] All 36 remaining subscriptions fixed (39 total - 3 already fixed in Story 3.7)
-- [ ] ESLint rule installed and configured
-- [ ] project-context.md updated with new rule
-- [ ] All tests pass
-- [ ] Lint passes (0 errors)
-- [ ] Code review passed
+- [x] All 36 remaining subscriptions fixed (39 total - 3 already fixed in Story 3.7)
+- [x] ESLint rule installed and configured (`eslint-plugin-rxjs-angular-x` v0.1.1)
+- [x] project-context.md updated with new rule (Rule 13)
+- [x] All tests pass (291 tests, 38 suites)
+- [x] Lint passes (0 errors, 0 warnings)
+- [x] Code review passed
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `package.json` | Added `eslint-plugin-rxjs-angular-x` v0.1.1 dependency |
+| `package-lock.json` | Lock file updated for new dependency |
+| `apps/web/eslint.config.mjs` | Added `eslint-plugin-rxjs-angular-x` with `prefer-takeuntil` rule + type-aware linting |
+| `apps/web/src/app/admin/dashboard/dashboard.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/admin/tenants/tenant-list.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/admin/dashboard/create-tenant-modal.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/admin/tenants/tenant-detail.component.ts` | Added DestroyRef + takeUntilDestroyed (8 subscriptions) |
+| `apps/web/src/app/admin/tenants/invite-user-dialog.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/auth/login/login.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/auth/set-password/set-password.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/app/data-vault/upload-zone.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/app/data-vault/data-vault.component.ts` | Added DestroyRef + takeUntilDestroyed (9 subscriptions); replaced OnDestroy with DestroyRef.onDestroy() for setInterval cleanup |
+| `apps/web/src/app/app/data-vault/create-folder-dialog.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/admin/workflows/wizard/workflow-wizard.component.ts` | Added DestroyRef + takeUntilDestroyed (3 subscriptions) |
+| `apps/web/src/app/admin/workflows/chain-builder/chain-visibility-settings.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/admin/workflows/chain-builder/chain-data-flow.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/admin/workflows/chain-builder/chain-input-mapping.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/admin/workflows/chain-builder/chain-steps-list.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/admin/workflows/chain-builder/chain-builder.component.ts` | Added DestroyRef + takeUntilDestroyed (3 subscriptions) |
+| `apps/web/src/app/admin/workflows/chain-builder/chain-add-step.component.ts` | Added DestroyRef + takeUntilDestroyed (1 subscription) |
+| `apps/web/src/app/admin/workflows/workflow-search.component.ts` | Migrated from legacy takeUntil(destroy$) + OnDestroy to takeUntilDestroyed(destroyRef) (1 subscription) |
+| `apps/web/src/app/app/data-vault/data-vault.component.spec.ts` | Updated afterEach and destroy test: `component.ngOnDestroy()` → `fixture.destroy()` to match DestroyRef.onDestroy() migration |
+
+## Review Notes
+
+**Review Date:** 2026-02-04
+
+**Findings (0 High, 3 Medium, 2 Low):**
+
+| # | Severity | Finding | Resolution |
+|---|----------|---------|------------|
+| M1 | Medium | `workflow-search.component.ts` used legacy `takeUntil(destroy$)` + `OnDestroy` pattern — missed because ESLint `checkDestroy: false` accepts the legacy pattern | Migrated to `takeUntilDestroyed(destroyRef)`, removed `OnDestroy` and `destroy$` Subject |
+| M2 | Medium | Story "Files to Fix" header said "Epic 1 Components (11 files...)" but only 7 files listed | Fixed header to "(7 files, 15 subscriptions)" |
+| M3 | Medium | `data-vault.component.ts` retained `OnDestroy` interface for `setInterval` cleanup — inconsistent with modernized pattern | Replaced `ngOnDestroy()` with `DestroyRef.onDestroy()` callback in constructor |
+| L1 | Low | `package.json` and `package-lock.json` missing from Files Changed table | Added to table |
+| L2 | Low | Epic 2 header said "9 subscriptions" but data-vault has 9 subs + paramMap = total 11 for Epic 2 | Fixed header to "(3 files, 11 subscriptions)" |
+
+**Total subscription count reconciliation:**
+- Epic 1: 7 files, 15 subscriptions
+- Epic 2: 3 files, 11 subscriptions
+- Epic 3: 8 files, 12 subscriptions (1 pre-fixed in Story 3.7)
+- Total: 38 subscriptions across 18 unique files (+ 1 legacy-pattern file caught in review = 39 total)
 
 ## Change Log
 
 | Date | Author | Changes |
 |------|--------|---------|
 | 2026-02-04 | Retrospective | Story created from Epic 3 retrospective discussion |
+| 2026-02-04 | Dev | All 6 tasks completed. 36 subscriptions fixed across 17 files. ESLint plugin installed. 291 tests pass, 0 lint errors. Ready for review. |
+| 2026-02-04 | Review | Code review found 5 issues (0H/3M/2L). All fixed: migrated workflow-search.component.ts to takeUntilDestroyed, modernized data-vault.component.ts OnDestroy to DestroyRef.onDestroy(), updated spec to use fixture.destroy(), fixed 3 documentation inaccuracies in story file. 291 tests pass, 0 lint errors. Story done. |

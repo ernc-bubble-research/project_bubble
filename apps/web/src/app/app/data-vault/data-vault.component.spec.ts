@@ -98,7 +98,7 @@ describe('DataVaultComponent [P2]', () => {
   });
 
   afterEach(() => {
-    component.ngOnDestroy();
+    fixture.destroy();
     jest.useRealTimers();
   });
 
@@ -238,7 +238,7 @@ describe('DataVaultComponent [P2]', () => {
     component.onIndexAsset('a1');
 
     // Destroy component
-    component.ngOnDestroy();
+    fixture.destroy();
 
     // Advancing timers should not trigger any additional findAll calls
     const callCountBefore = mockAssetService.findAll.mock.calls.length;

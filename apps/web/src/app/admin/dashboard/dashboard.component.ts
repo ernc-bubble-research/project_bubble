@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal, computed } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { StatCardComponent } from '../../shared/components/stat-card/stat-card.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
@@ -18,6 +19,7 @@ import {
 export class DashboardComponent implements OnInit {
   private readonly tenantService = inject(TenantService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   tenants = signal<Tenant[]>([]);
   loading = signal(false);
@@ -55,7 +57,7 @@ export class DashboardComponent implements OnInit {
 
   loadTenants(): void {
     this.loading.set(true);
-    this.tenantService.getAll().subscribe({
+    this.tenantService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (tenants) => {
         this.tenants.set(tenants);
         this.loading.set(false);

@@ -1,4 +1,5 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, DestroyRef, inject, signal, computed, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -30,10 +31,15 @@ const INDEXING_POLL_INTERVAL_MS = 3000;
   templateUrl: './data-vault.component.html',
   styleUrl: './data-vault.component.scss',
 })
-export class DataVaultComponent implements OnInit, OnDestroy {
+export class DataVaultComponent implements OnInit {
   private readonly assetService = inject(AssetService);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private indexingPollTimer: ReturnType<typeof setInterval> | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => this.stopIndexingPoll());
+  }
 
   assets = signal<AssetResponseDto[]>([]);
   folders = signal<FolderResponseDto[]>([]);
@@ -57,7 +63,7 @@ export class DataVaultComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.route.paramMap.subscribe((params) => {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const folderId = params.get('folderId');
       this.activeFolderId.set(folderId);
       this.loadAssets();
@@ -65,14 +71,10 @@ export class DataVaultComponent implements OnInit, OnDestroy {
     this.loadFolders();
   }
 
-  ngOnDestroy(): void {
-    this.stopIndexingPoll();
-  }
-
   loadAssets(): void {
     this.loading.set(true);
     const folderId = this.activeFolderId() || undefined;
-    this.assetService.findAll(folderId).subscribe({
+    this.assetService.findAll(folderId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (assets) => {
         this.assets.set(assets);
         this.loading.set(false);
@@ -83,7 +85,7 @@ export class DataVaultComponent implements OnInit, OnDestroy {
   }
 
   loadFolders(): void {
-    this.assetService.findAllFolders().subscribe({
+    this.assetService.findAllFolders().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (folders) => this.folders.set(folders),
     });
   }
@@ -103,7 +105,7 @@ export class DataVaultComponent implements OnInit, OnDestroy {
   }
 
   onFolderRename(event: { id: string; name: string }): void {
-    this.assetService.updateFolder(event.id, { name: event.name }).subscribe({
+    this.assetService.updateFolder(event.id, { name: event.name }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => this.loadFolders(),
     });
   }
@@ -129,7 +131,7 @@ export class DataVaultComponent implements OnInit, OnDestroy {
     if (!ids.length) return;
     if (!confirm(`Archive ${ids.length} file(s)? This affects all tenant users.`)) return;
 
-    forkJoin(ids.map((id) => this.assetService.archive(id))).subscribe({
+    forkJoin(ids.map((id) => this.assetService.archive(id))).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.selectedIds.set(new Set());
         this.loadAssets();
@@ -153,7 +155,7 @@ export class DataVaultComponent implements OnInit, OnDestroy {
       next.add(id);
       return next;
     });
-    this.assetService.indexAsset(id).subscribe({
+    this.assetService.indexAsset(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         // Job queued (202) — keep spinner, start polling for completion
         this.startIndexingPoll();
@@ -169,7 +171,7 @@ export class DataVaultComponent implements OnInit, OnDestroy {
   }
 
   onDeIndexAsset(id: string): void {
-    this.assetService.deIndexAsset(id).subscribe({
+    this.assetService.deIndexAsset(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => this.loadAssets(),
     });
   }
@@ -188,7 +190,7 @@ export class DataVaultComponent implements OnInit, OnDestroy {
 
     forkJoin(
       ids.map((id) => this.assetService.indexAsset(id)),
-    ).subscribe({
+    ).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         // All jobs queued — poll for completion
         this.startIndexingPoll();
@@ -210,7 +212,7 @@ export class DataVaultComponent implements OnInit, OnDestroy {
 
     this.indexingPollTimer = setInterval(() => {
       const folderId = this.activeFolderId() || undefined;
-      this.assetService.findAll(folderId).subscribe({
+      this.assetService.findAll(folderId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (assets) => {
           this.assets.set(assets);
           this.reconcileIndexingState(assets);

@@ -1,11 +1,13 @@
 import {
   Component,
+  DestroyRef,
   inject,
   signal,
   computed,
   OnInit,
   HostListener,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
@@ -44,6 +46,7 @@ export class ChainBuilderComponent implements OnInit, HasUnsavedChanges {
   private readonly router = inject(Router);
   private readonly chainService = inject(WorkflowChainService);
   private readonly toast = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
 
   editMode = signal(false);
   chainId = signal<string | null>(null);
@@ -138,7 +141,7 @@ export class ChainBuilderComponent implements OnInit, HasUnsavedChanges {
       allowedTenants: this.visibility() === 'private' ? this.allowedTenants() : undefined,
     };
 
-    this.chainService.create(dto).subscribe({
+    this.chainService.create(dto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.isSaving.set(false);
         this.isDirty.set(false);
@@ -164,7 +167,7 @@ export class ChainBuilderComponent implements OnInit, HasUnsavedChanges {
       allowedTenants: this.visibility() === 'private' ? this.allowedTenants() : undefined,
     };
 
-    this.chainService.update(id, dto).subscribe({
+    this.chainService.update(id, dto).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.isSaving.set(false);
         this.isDirty.set(false);
@@ -179,7 +182,7 @@ export class ChainBuilderComponent implements OnInit, HasUnsavedChanges {
   }
 
   private loadExistingChain(id: string): void {
-    this.chainService.getById(id).subscribe({
+    this.chainService.getById(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (chain) => {
         this.chainState.set(chain.definition as unknown as ChainDefinition);
         this.visibility.set(chain.visibility as 'public' | 'private');

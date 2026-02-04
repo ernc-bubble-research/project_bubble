@@ -1,4 +1,5 @@
-import { Component, Input, Output, EventEmitter, signal, inject } from '@angular/core';
+import { Component, DestroyRef, Input, Output, EventEmitter, signal, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -18,6 +19,7 @@ export class InviteUserDialogComponent {
 
   private readonly fb = inject(FormBuilder);
   private readonly invitationService = inject(InvitationService);
+  private readonly destroyRef = inject(DestroyRef);
 
   form: FormGroup;
   isSubmitting = signal(false);
@@ -40,7 +42,7 @@ export class InviteUserDialogComponent {
     this.isSubmitting.set(true);
     this.errorMessage.set('');
 
-    this.invitationService.create(this.tenantId, this.form.value).subscribe({
+    this.invitationService.create(this.tenantId, this.form.value).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.isSubmitting.set(false);
         this.invited.emit();

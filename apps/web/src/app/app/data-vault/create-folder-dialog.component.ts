@@ -1,4 +1,5 @@
-import { Component, input, output, signal, inject } from '@angular/core';
+import { Component, DestroyRef, input, output, signal, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { AssetService } from '../../core/services/asset.service';
 
@@ -111,6 +112,7 @@ export class CreateFolderDialogComponent {
   cancelled = output<void>();
 
   private readonly assetService = inject(AssetService);
+  private readonly destroyRef = inject(DestroyRef);
 
   folderName = '';
   error = signal('');
@@ -127,6 +129,7 @@ export class CreateFolderDialogComponent {
         name: this.folderName.trim(),
         parentId: this.parentId() || undefined,
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => this.created.emit(),
         error: (err) => this.error.set(err?.error?.message || 'Failed to create folder'),

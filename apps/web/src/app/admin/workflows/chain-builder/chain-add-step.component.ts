@@ -1,4 +1,5 @@
-import { Component, input, output, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, input, output, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -157,6 +158,7 @@ import { InfoTooltipComponent } from '../../../shared/components/info-tooltip/in
 })
 export class ChainAddStepComponent implements OnInit {
   private readonly templateService = inject(WorkflowTemplateService);
+  private readonly destroyRef = inject(DestroyRef);
 
   existingStepCount = input<number>(0);
   stepAdded = output<ChainStep>();
@@ -173,7 +175,7 @@ export class ChainAddStepComponent implements OnInit {
 
   private loadPublishedTemplates(): void {
     this.isLoading.set(true);
-    this.templateService.getAll({ status: 'published' }).subscribe({
+    this.templateService.getAll({ status: 'published' }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (templates) => {
         this.publishedTemplates.set(templates);
         this.isLoading.set(false);

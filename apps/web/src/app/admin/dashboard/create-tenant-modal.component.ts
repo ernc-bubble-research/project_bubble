@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Output, inject, signal } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, Output, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { TenantService } from '../../core/services/tenant.service';
 
@@ -148,6 +149,7 @@ export class CreateTenantModalComponent {
   @Output() closed = new EventEmitter<void>();
 
   private readonly tenantService = inject(TenantService);
+  private readonly destroyRef = inject(DestroyRef);
 
   tenantName = '';
   errorMessage = signal('');
@@ -163,7 +165,7 @@ export class CreateTenantModalComponent {
     this.errorMessage.set('');
     this.submitting.set(true);
 
-    this.tenantService.create({ name }).subscribe({
+    this.tenantService.create({ name }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.submitting.set(false);
         this.created.emit();

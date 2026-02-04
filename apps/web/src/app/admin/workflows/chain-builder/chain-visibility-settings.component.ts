@@ -1,4 +1,5 @@
-import { Component, input, output, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, input, output, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -262,6 +263,7 @@ import { InfoTooltipComponent } from '../../../shared/components/info-tooltip/in
 })
 export class ChainVisibilitySettingsComponent implements OnInit {
   private readonly tenantService = inject(TenantService);
+  private readonly destroyRef = inject(DestroyRef);
 
   visibility = input<'public' | 'private'>('public');
   allowedTenants = input<string[]>([]);
@@ -279,7 +281,7 @@ export class ChainVisibilitySettingsComponent implements OnInit {
 
   private loadTenants(): void {
     this.isLoadingTenants.set(true);
-    this.tenantService.getAll().subscribe({
+    this.tenantService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (tenants) => {
         this.tenants.set(tenants);
         this.updateAvailableTenants();

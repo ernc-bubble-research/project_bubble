@@ -1,4 +1,5 @@
-import { Component, input, output, signal, inject } from '@angular/core';
+import { Component, DestroyRef, input, output, signal, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgClass } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { AssetService } from '../../core/services/asset.service';
@@ -137,6 +138,7 @@ export class UploadZoneComponent {
   uploadComplete = output<void>();
 
   private readonly assetService = inject(AssetService);
+  private readonly destroyRef = inject(DestroyRef);
 
   isDragover = signal(false);
   uploads = signal<UploadItem[]>([]);
@@ -181,6 +183,7 @@ export class UploadZoneComponent {
 
       this.assetService
         .upload(item.file, this.folderId() || undefined)
+        .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: () => {
             item.status = 'done';

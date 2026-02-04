@@ -1,4 +1,5 @@
-import { Component, input, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, DestroyRef, input, inject, signal, OnInit, computed } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import type { ChainStep, WorkflowTemplateResponseDto } from '@project-bubble/shared';
@@ -218,6 +219,7 @@ import { WorkflowTemplateService } from '../../../core/services/workflow-templat
 })
 export class ChainDataFlowComponent implements OnInit {
   private readonly templateService = inject(WorkflowTemplateService);
+  private readonly destroyRef = inject(DestroyRef);
 
   steps = input.required<ChainStep[]>();
 
@@ -241,7 +243,7 @@ export class ChainDataFlowComponent implements OnInit {
   }
 
   private loadTemplates(): void {
-    this.templateService.getAll({ status: 'published' }).subscribe({
+    this.templateService.getAll({ status: 'published' }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (templates) => {
         const cache = new Map<string, WorkflowTemplateResponseDto>();
         templates.forEach(t => cache.set(t.id, t));

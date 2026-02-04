@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   inject,
   signal,
   computed,
@@ -7,6 +8,7 @@ import {
   HostListener,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
@@ -49,6 +51,7 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
   private readonly router = inject(Router);
   private readonly templateService = inject(WorkflowTemplateService);
   private readonly toast = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // H1: viewChild refs for per-step validation
   private readonly metadataStep = viewChild(WizardMetadataStepComponent);
@@ -172,6 +175,7 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
     if (this.editMode() && id) {
       this.templateService
         .createVersion(id, { definition: definition as unknown as Record<string, unknown> })
+        .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: () => {
             this.isSaving.set(false);
@@ -221,6 +225,7 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
             );
         })
       )
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.isSaving.set(false);
@@ -236,7 +241,7 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
   }
 
   private loadExistingTemplate(id: string): void {
-    this.templateService.getById(id).subscribe({
+    this.templateService.getById(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (template) => {
         if (template.currentVersion?.definition) {
           const def = template.currentVersion.definition as unknown as WorkflowDefinition;

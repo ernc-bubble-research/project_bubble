@@ -1,9 +1,10 @@
-import { Component, input, output, signal, OnInit, OnDestroy, effect, untracked } from '@angular/core';
+import { Component, DestroyRef, input, output, signal, OnInit, effect, untracked, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   standalone: true,
@@ -91,9 +92,9 @@ import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
     }
   `],
 })
-export class WorkflowSearchComponent implements OnInit, OnDestroy {
+export class WorkflowSearchComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly searchSubject = new Subject<string>();
-  private readonly destroy$ = new Subject<void>();
 
   value = input<string>('');
   placeholder = input<string>('Search workflows...');
@@ -118,15 +119,10 @@ export class WorkflowSearchComponent implements OnInit, OnDestroy {
     this.searchSubject.pipe(
       debounceTime(this.debounceMs()),
       distinctUntilChanged(),
-      takeUntil(this.destroy$)
+      takeUntilDestroyed(this.destroyRef)
     ).subscribe(value => {
       this.searchChange.emit(value);
     });
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   onInput(event: Event): void {

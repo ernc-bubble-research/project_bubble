@@ -1,4 +1,5 @@
-import { Component, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, signal, computed, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
@@ -15,6 +16,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 export class TenantListComponent implements OnInit {
   private readonly tenantService = inject(TenantService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   tenants = signal<Tenant[]>([]);
   loading = signal(false);
@@ -37,7 +39,7 @@ export class TenantListComponent implements OnInit {
 
   private loadTenants(): void {
     this.loading.set(true);
-    this.tenantService.getAll().subscribe({
+    this.tenantService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (tenants) => {
         this.tenants.set(tenants);
         this.loading.set(false);
