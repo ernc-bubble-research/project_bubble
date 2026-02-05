@@ -27,6 +27,7 @@ export class AdminLayoutComponent {
     { label: 'Dashboard', icon: 'layout-dashboard', route: '/admin/dashboard' },
     { label: 'Tenants', icon: 'building-2', route: '/admin/tenants' },
     { label: 'Workflow Studio', icon: 'git-branch', route: '/admin/workflows' },
+    { label: 'Settings', icon: 'settings', route: '/admin/settings' },
   ];
 
   toggleMobileMenu(): void {

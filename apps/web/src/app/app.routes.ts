@@ -100,6 +100,13 @@ export const appRoutes: Route[] = [
           },
         ],
       },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./admin/settings/settings.component').then(
+            (m) => m.SettingsComponent
+          ),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

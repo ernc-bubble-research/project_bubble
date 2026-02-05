@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Building2,
   GitBranch,
+  Settings,
   Menu,
   LogOut,
 } from 'lucide-angular';
@@ -36,6 +37,7 @@ describe('AdminLayoutComponent [P2]', () => {
             LayoutDashboard,
             Building2,
             GitBranch,
+            Settings,
             Menu,
             LogOut,
           }),
@@ -49,12 +51,12 @@ describe('AdminLayoutComponent [P2]', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('[1H.1-UNIT-002] should render 3 nav items', () => {
+  it('[1H.1-UNIT-002] should render 4 nav items', () => {
     const fixture = TestBed.createComponent(AdminLayoutComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const navItems = compiled.querySelectorAll('.nav-item');
-    expect(navItems.length).toBe(3);
+    expect(navItems.length).toBe(4);
   });
 
   it('[1H.1-UNIT-003] should render sidebar with correct nav labels', () => {
@@ -68,6 +70,7 @@ describe('AdminLayoutComponent [P2]', () => {
       'Dashboard',
       'Tenants',
       'Workflow Studio',
+      'Settings',
     ]);
   });
 
