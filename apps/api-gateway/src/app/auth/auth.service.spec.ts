@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UnauthorizedException } from '@nestjs/common';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UserEntity, UserRole, UserStatus } from '@project-bubble/db-layer';
@@ -313,6 +313,33 @@ describe('AuthService [P0]', () => {
           lockedUntil: null,
         }),
       );
+    });
+  });
+
+  describe('getProfile', () => {
+    it('[3.1-2-UNIT-001] should return UserResponseDto for valid userId', async () => {
+      // Given — a user exists in the database
+      repo.findOne.mockResolvedValue(mockUser);
+
+      // When
+      const result = await service.getProfile(mockUser.id);
+
+      // Then
+      expect(repo.findOne).toHaveBeenCalledWith({ where: { id: mockUser.id } });
+      expect(result.id).toBe(mockUser.id);
+      expect(result.email).toBe(mockUser.email);
+      expect(result.role).toBe(mockUser.role);
+      expect(result.tenantId).toBe(mockUser.tenantId);
+    });
+
+    it('[3.1-2-UNIT-002] should throw NotFoundException for non-existent userId', async () => {
+      // Given — no user found
+      repo.findOne.mockResolvedValue(null);
+
+      // When / Then
+      await expect(
+        service.getProfile('non-existent-id'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

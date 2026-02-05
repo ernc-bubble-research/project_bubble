@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, RouterModule } from '@angular/router';
 import { AdminLayoutComponent } from './admin-layout.component';
 import { AuthService } from '../core/services/auth.service';
+import type { User } from '@project-bubble/shared';
 import {
   LUCIDE_ICONS,
   LucideIconProvider,
@@ -12,15 +13,36 @@ import {
   Settings,
   Menu,
   LogOut,
+  ChevronDown,
 } from 'lucide-angular';
 
 @Component({ standalone: true, template: '' })
 class DummyComponent {}
 
+const mockUser: User = {
+  id: '1',
+  email: 'admin@test.com',
+  role: 'bubble_admin',
+  name: 'Test Admin',
+  tenantId: 't1',
+  createdAt: '',
+  updatedAt: '',
+};
+
 describe('AdminLayoutComponent [P2]', () => {
-  const mockAuthService = { logout: jest.fn() };
+  const userSignal = signal<User | null>(mockUser);
+  const mockAuthService = {
+    user: userSignal,
+    getCurrentUser: jest.fn().mockReturnValue(mockUser),
+    logout: jest.fn(),
+    loadProfile: jest.fn(),
+  };
 
   beforeEach(async () => {
+    userSignal.set(mockUser);
+    mockAuthService.logout.mockClear();
+    mockAuthService.getCurrentUser.mockReturnValue(mockUser);
+
     await TestBed.configureTestingModule({
       imports: [
         AdminLayoutComponent,
@@ -40,6 +62,7 @@ describe('AdminLayoutComponent [P2]', () => {
             Settings,
             Menu,
             LogOut,
+            ChevronDown,
           }),
         },
       ],
@@ -91,12 +114,11 @@ describe('AdminLayoutComponent [P2]', () => {
     expect(component.mobileMenuOpen()).toBe(false);
   });
 
-  it('[1H.1-UNIT-006] should have a logout button', () => {
+  it('[1H.1-UNIT-006] should render avatar dropdown when user is loaded', () => {
     const fixture = TestBed.createComponent(AdminLayoutComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    const logoutBtn = compiled.querySelector('[data-testid="logout-btn"]');
-    expect(logoutBtn).toBeTruthy();
+    expect(compiled.querySelector('[data-testid="avatar-dropdown"]')).toBeTruthy();
   });
 
   it('[1H.1-UNIT-007] should call authService.logout and navigate on logout', () => {
@@ -104,9 +126,17 @@ describe('AdminLayoutComponent [P2]', () => {
     const router = TestBed.inject(Router);
     jest.spyOn(router, 'navigate').mockResolvedValue(true);
     const component = fixture.componentInstance;
-    mockAuthService.logout.mockClear();
     component.logout();
     expect(mockAuthService.logout).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
+  });
+
+  it('[3.1-2-UNIT-020] should not render avatar dropdown when user is null', () => {
+    userSignal.set(null);
+    mockAuthService.getCurrentUser.mockReturnValue(null);
+    const fixture = TestBed.createComponent(AdminLayoutComponent);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="avatar-dropdown"]')).toBeNull();
   });
 });

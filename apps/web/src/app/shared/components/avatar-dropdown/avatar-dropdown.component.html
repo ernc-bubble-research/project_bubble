@@ -1,0 +1,50 @@
+<div class="avatar-dropdown" data-testid="avatar-dropdown">
+  <button
+    class="avatar-trigger"
+    data-testid="avatar-trigger"
+    (click)="toggleDropdown()"
+    [attr.aria-expanded]="dropdownOpen()"
+    [attr.aria-label]="'User menu for ' + displayName()"
+    [title]="displayName()"
+    aria-haspopup="true"
+  >
+    <span class="avatar-circle" data-testid="avatar-initials">{{ initials() }}</span>
+    <div class="avatar-info">
+      <span class="avatar-name">{{ displayName() }}</span>
+      <span class="avatar-role">{{ roleBadge() }}</span>
+    </div>
+    <lucide-icon name="chevron-down" [size]="14" class="chevron"></lucide-icon>
+  </button>
+
+  @if (dropdownOpen()) {
+    <div class="dropdown-menu" role="menu" data-testid="avatar-menu">
+      <div class="dropdown-header">
+        <span class="dropdown-name">{{ displayName() }}</span>
+        <span class="dropdown-email" data-testid="avatar-email">{{ user().email }}</span>
+        <span class="dropdown-role-badge">{{ roleBadge() }}</span>
+      </div>
+      <div class="dropdown-divider"></div>
+      @if (showSettingsLink()) {
+        <a
+          class="dropdown-item"
+          routerLink="/admin/settings"
+          role="menuitem"
+          data-testid="settings-link"
+          (click)="closeDropdown()"
+        >
+          <lucide-icon name="settings" [size]="16"></lucide-icon>
+          <span>Settings</span>
+        </a>
+      }
+      <button
+        class="dropdown-item logout"
+        (click)="onLogout()"
+        role="menuitem"
+        data-testid="dropdown-logout-btn"
+      >
+        <lucide-icon name="log-out" [size]="16"></lucide-icon>
+        <span>Log out</span>
+      </button>
+    </div>
+  }
+</div>

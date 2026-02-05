@@ -1,6 +1,7 @@
 import {
   Injectable,
   Logger,
+  NotFoundException,
   OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -10,7 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UserEntity, UserRole, UserStatus } from '@project-bubble/db-layer';
-import { LoginDto, LoginResponseDto } from '@project-bubble/shared';
+import { LoginDto, LoginResponseDto, UserResponseDto } from '@project-bubble/shared';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -123,6 +124,22 @@ export class AuthService implements OnModuleInit {
         tenantId: user.tenantId,
       },
     };
+  }
+
+  async getProfile(userId: string): Promise<UserResponseDto> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const dto = new UserResponseDto();
+    dto.id = user.id;
+    dto.email = user.email;
+    dto.role = user.role;
+    dto.name = user.name;
+    dto.tenantId = user.tenantId;
+    dto.status = user.status;
+    dto.createdAt = user.createdAt;
+    return dto;
   }
 
   async hashPassword(password: string): Promise<string> {

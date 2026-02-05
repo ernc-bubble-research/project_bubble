@@ -35,17 +35,18 @@
 #
 # PHASE SCOPE:
 # ============
-# Prototype (Phase 1): Epics 1-7 (7 epics, stories updated 2026-02-02 for architectural pivot)
+# Prototype (Phase 1): Epics 1-7 + 7P (production readiness)
 # Phase 2 / Future:    Epics 8, 9, 10, 11 (4 epics, 10 stories)
 #
-# DEPENDENCY CHAIN:
-# Epic 1 → Epic 1H (hardening) → Epic 2 + Epic 3 (parallel) → Epic 3.1 (settings+essentials) → Epic 4 → Epic 5 → Epic 6
+# DEPENDENCY CHAIN (updated 2026-02-05 after Architect Review):
+# Epic 1 → Epic 1H → Epic 2 + Epic 3 (parallel) → Epic 3.1 → Epic 4 → Epic 5 → Epic 6
 # Epic 7 runs parallel to Epics 4-6
+# Epic 7P (Production Readiness) runs parallel to Epics 4-6, must complete before production
 #
-# RECOMMENDED EXECUTION ORDER (from Epic 3 Retrospective, updated 2026-02-05):
+# RECOMMENDED EXECUTION ORDER (updated 2026-02-05 after Architect Review):
 # 1. Story 3H  — RxJS Subscription Cleanup (CRITICAL - memory leaks) ✓ DONE
 # 2. Epic 3.1  — Settings + Essentials (4 stories):
-#    a. 3.1-1 Settings Page Shell (route + tabs + nav link)
+#    a. 3.1-1 Settings Page Shell ✓ DONE
 #    b. 3.1-2 Avatar Dropdown (logout UX improvement)
 #    c. 3.1-3 LLM Model Admin UI (frontend for existing backend)
 #    d. 3.1-4 Provider Credential Storage (new entity + encryption)
@@ -53,6 +54,14 @@
 # 4. Story 3.9 — Wizard Documentation (needed to understand/test product)
 # 5. Story 3.8 — Workflow Management View (visibility editing)
 # 6. Story 1-13 — Tenant Lifecycle (archive/suspend/delete)
+# 7. Epic 7P   — Production Readiness (can start parallel with Epic 4):
+#    a. 7P-1 Deployment target decision + Dockerfiles
+#    b. 7P-2 Cloud file storage migration (GCS/S3)
+#    c. 7P-3 Secrets management integration
+#    d. 7P-4 Database backup + disaster recovery
+#    e. 7P-5 BullMQ hardening (circuit breaker, alerting — safety-critical DLQ/idempotency moved to 4.0)
+#    f. 7P-6 RLS auth bypass security review + hardening
+#    g. 7P-7 Load testing + capacity planning
 #
 # GATE REQUIREMENTS:
 # ==================
@@ -81,13 +90,35 @@
 #   - 10% validation: GoogleAIStudioProvider (free tier, real LLM responses)
 #   - Production: VertexLlmProvider (paid, scalable)
 #
-# AFTER MVP Delivery (Epics 1-7 complete):
+# BEFORE Production Deployment (CRITICAL — from Architect Review 2026-02-05):
+#   All items in Epic 7P must be completed. Key decisions required:
+#   1. Deployment target: GCP (Cloud Run + Cloud SQL) vs AWS vs Render/Railway
+#      - GCP implied by Vertex AI/Gemini dependency. Cascades to all infra choices.
+#   2. File storage: Must migrate from local filesystem to cloud object storage.
+#      - Current: uploads/<tenantId>/<uuid>-<filename> on local disk (not production-safe)
+#      - AssetEntity.storage_path is a relative path — migration is swap-backend, keep-format
+#   3. Secrets management: Must replace .env files with cloud secrets manager.
+#      - Sensitive: JWT_SECRET, ADMIN_API_KEY, DATABASE_URL, GEMINI_API_KEY, SMTP_PASS
+#      - No rotation, no encryption at rest, no audit trail currently
+#   4. Database backups: No automated backup exists.
+#      - docker compose down -v destroys all data
+#      - Need pg_dump automation or managed DB with PITR
+#   5. BullMQ hardening: No DLQ, no circuit breaker, no alerting on job failures.
+#      - Safety-critical subset (DLQ + idempotency) moved to Epic 4 Story 4.0
+#      - Remaining (circuit breaker, alerting) stays in 7P-5 for pre-production
+#   6. RLS auth bypass policies: Permissive SELECT true on users/invitations tables.
+#      - By design for pre-auth flows, but needs security review
+#      - Consider dedicated DB roles to restrict access scope
+#   7. Load testing: Zero performance benchmarks exist.
+#      - PRD targets: <200ms UI, <2s submission ack, <3s report render
+#      - Need capacity planning: ~150 tenants, 1500 users estimated from revenue targets
+#   8. TypeORM synchronize:true must be replaced with migrations
+#   9. CI/CD pipeline (Story 1.11)
+#
+# AFTER MVP Delivery (Epics 1-7 + 7P complete):
 #   1. Implement Husky git pre-push hook (nx affected:test + nx affected:lint).
 #      Rationale: BMAD workflow already runs full lint/test/build on every story,
 #      but Husky adds a safety net for any future non-BMAD pushes.
-#   2. Story 1.11: CI/CD Pipeline Setup (GitHub Actions).
-#   3. Docker Compose for local full-stack orchestration.
-#   4. Production deployment (cloud hosting, migrations, secrets management).
 #
 # DEFERRED DECISIONS:
 # ===================
@@ -96,6 +127,8 @@
 # - Story 1.12 (Invitations) story created, ready-for-dev. Not blocking Epic 2/3.
 # - MVP runs entirely on laptop: Angular + NestJS + Postgres (Docker) + Redis (Docker) + Vertex AI API key.
 # - synchronize:true for dev. Switch to TypeORM migrations before production deployment.
+# - Production infrastructure decisions (cloud provider, file storage, secrets, backups)
+#   now tracked in Epic 7P (created 2026-02-05 from Architect Review findings).
 #
 # DEFERRED TO PHASE 2: KNOWLEDGE BASE FEATURES (Epic 3 Retro Item #8)
 # ====================================================================
@@ -291,6 +324,42 @@
 #
 # Raised during Story 3.6b review (2026-02-04).
 
+# ARCHITECT REVIEW FINDINGS (2026-02-05)
+# =======================================
+# A comprehensive Architect Review Package was generated scanning ALL BMAD docs,
+# the full codebase, and all planning artifacts. Seven critical production-readiness
+# gaps were identified and captured in Epic 7P (Production Readiness):
+#
+# CRITICAL (blocks production deployment):
+#   1. NO DEPLOYMENT TARGET: Only local docker-compose exists. No cloud provider chosen.
+#      Architecture.md mentions Render/Railway/AppRunner but no decision made. GCP implied
+#      by Vertex AI/Gemini dependency. This decision cascades to ALL other infra choices.
+#   2. NO FILE STORAGE STRATEGY: Uploaded files stored on local disk (uploads/<tenantId>/).
+#      Lost on container restart. No horizontal scaling. No backup. Not production-safe.
+#   3. NO SECRETS MANAGEMENT: 6 sensitive env vars in .env files. No rotation, no encryption
+#      at rest, no audit trail. Cloud secrets manager required.
+#   4. NO BACKUP/DR: docker compose down -v destroys everything. No pg_dump, no PITR,
+#      no file backup. Knowledge Base snapshots deferred as [Future] in architecture.
+#
+# HIGH (blocks safe Epic 4 execution):
+#   5. NO ERROR HANDLING STRATEGY: BullMQ ingestion has basic retry (3 attempts, exp backoff)
+#      but no DLQ, no circuit breaker, no alerting. Before Epic 4 (real LLM calls with
+#      credit charges), need idempotency + failure recovery for charged operations.
+#   6. RLS AUTH BYPASS RED FLAG: auth_select_all on users table uses condition:true.
+#      Any DB connection without tenant context can read ALL users (emails, password hashes).
+#      Intentional for pre-auth flow but needs formal security review and risk acceptance
+#      or mitigation (dedicated DB roles).
+#   7. NO PERFORMANCE TARGETS VALIDATED: PRD has NFRs (<200ms UI, <2s submission, <3s report)
+#      but zero load tests exist. No capacity planning. Revenue target implies ~150 tenants
+#      / 1500 users but no infra sizing done.
+#
+# DOCUMENT: _bmad-output/planning-artifacts/architect-review-package.md
+# ACTION: Epic 7P created with 7 stories to address these gaps.
+# TIMING: BullMQ safety-critical items (DLQ + idempotency) moved to Story 4.0 (first Epic 4 story).
+#         7P-5 (circuit breaker, alerting, monitoring) can run parallel with Epic 4.
+#         7P-1 through 7P-4 can run parallel with Epic 4 but must complete before production.
+#         7P-6 and 7P-7 can run anytime before production.
+
 # IMMEDIATE POST-EPIC-2 ACTION:
 # =============================
 # - Swagger @ApiResponse gap fix: Add missing error response decorators (400, 401, 403, 500)
@@ -402,7 +471,7 @@ development_status:
   # ═══════════════════════════════════════════════════════
   epic-3.1: in-progress
   3.1-1-admin-settings-page-shell: done # REWRITTEN 2026-02-05. Settings page route + tabbed layout + nav link. UI skeleton only.
-  3.1-2-logout-avatar-dropdown: ready-for-dev # Avatar dropdown replaces logout button in all layouts
+  3.1-2-logout-avatar-dropdown: done # Avatar dropdown replaces logout in all layouts. GET /api/auth/me + user signal + reusable AvatarDropdownComponent. 28 tests, code review passed (2 rounds).
   3.1-3-llm-model-admin-ui: ready-for-dev # NEW. Frontend for existing backend LLM model CRUD (entity/service/controller already exist).
   3.1-4-provider-credential-storage: ready-for-dev # NEW. LlmProviderConfigEntity + encrypted credential storage + CRUD API + UI.
 
@@ -412,6 +481,7 @@ development_status:
   # REWRITTEN 2026-02-02: Updated for LLM-orchestrated execution, fan-out/fan-in, chain orchestration.
   # ═══════════════════════════════════════════════════════
   epic-4: backlog
+  4-0-bullmq-safety-prerequisites: backlog            # DLQ routing + idempotency keys + workflow execution queue. Split from 7P-5. MUST be first Epic 4 story — safety-critical for charged LLM operations.
   4-1-workflow-catalog-run-initiation: backlog
   4-2-llm-provider-interface-prompt-assembly: backlog
   4-3-execution-engine-core-fan-out-fan-in: backlog
@@ -455,6 +525,31 @@ development_status:
   # 7-6-admin-settings-page: MOVED → 3.1-1 (Epic 3.1: Settings & Essentials)
   7-7-ui-polish-pass: backlog # Retro items #1, #7: Visual consistency (avatar dropdown moved to 3.1-2)
   epic-7-retrospective: optional
+
+  # ═══════════════════════════════════════════════════════
+  # Epic 7P: Production Readiness
+  # Critical infrastructure gaps identified by Architect Review (2026-02-05)
+  # Must complete before production deployment
+  # Can run parallel with Epics 4-6
+  #
+  # CONTEXT: The Architect Review Package flagged 7 critical gaps that
+  # are not covered by any existing epic. These are infrastructure and
+  # operational concerns that must be resolved before the product can
+  # be deployed to real users. See:
+  #   _bmad-output/planning-artifacts/architect-review-package.md
+  #
+  # NOTE: Some stories may be split further during story creation.
+  # Story 7P-1 (deployment target) is a prerequisite for 7P-2, 7P-3, 7P-4.
+  # ═══════════════════════════════════════════════════════
+  epic-7p: backlog
+  7p-1-deployment-target-dockerfiles: backlog        # Choose cloud provider, create Dockerfiles for api-gateway + web + worker-engine, define infra (managed DB, Redis, compute)
+  7p-2-cloud-file-storage-migration: backlog         # Replace local fs with GCS/S3. Swap storage backend in AssetsService. Depends on 7P-1 (cloud choice).
+  7p-3-secrets-management: backlog                   # Integrate cloud secrets manager. Replace .env with GCP SM / AWS SM / Vault. Key rotation for JWT. Depends on 7P-1.
+  7p-4-database-backup-disaster-recovery: backlog    # Automated pg_dump or managed DB PITR. Redis persistence config. File storage versioning. Depends on 7P-1.
+  7p-5-bullmq-hardening: backlog                     # Circuit breaker for LLM providers, alerting on failures, advanced monitoring. Pre-production only (safety-critical subset moved to Epic 4 Story 4.0).
+  7p-6-rls-auth-bypass-security-review: backlog      # Review permissive RLS policies (auth_select_all, auth_insert_users). Consider dedicated DB roles. Document accepted risks or implement mitigations.
+  7p-7-load-testing-capacity-planning: backlog       # Define Year 1 targets (tenants, users, runs/day, storage). Set up k6/Artillery. Validate PRD performance NFRs. Run against staging.
+  epic-7p-retrospective: optional
 
   # ═══════════════════════════════════════════════════════
   # Epic 8: Conversational Intelligence (Future Roadmap)

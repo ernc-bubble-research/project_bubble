@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
-import { LoginResponseDto } from '@project-bubble/shared';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { LoginResponseDto, UserResponseDto } from '@project-bubble/shared';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { InvitationsService } from '../invitations/invitations.service';
@@ -17,6 +17,7 @@ describe('AuthController [P2]', () => {
           provide: AuthService,
           useValue: {
             login: jest.fn(),
+            getProfile: jest.fn(),
           },
         },
         {
@@ -65,6 +66,40 @@ describe('AuthController [P2]', () => {
       await expect(
         controller.login({ email: 'bad@email.com', password: 'wrong' }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('GET /auth/me', () => {
+    it('[3.1-2-UNIT-003] should return user profile for authenticated request', async () => {
+      // Given — a mock profile response
+      const mockProfile: UserResponseDto = {
+        id: '123',
+        email: 'admin@bubble.io',
+        role: 'bubble_admin',
+        tenantId: '000',
+        status: 'active',
+        createdAt: new Date(),
+      } as UserResponseDto;
+      service.getProfile.mockResolvedValue(mockProfile);
+
+      // When
+      const result = await controller.getProfile({ user: { userId: '123' } });
+
+      // Then
+      expect(result).toEqual(mockProfile);
+      expect(service.getProfile).toHaveBeenCalledWith('123');
+    });
+
+    it('[3.1-2-UNIT-004] should propagate NotFoundException', async () => {
+      // Given — service throws NotFoundException
+      service.getProfile.mockRejectedValue(
+        new NotFoundException('User not found'),
+      );
+
+      // When / Then
+      await expect(
+        controller.getProfile({ user: { userId: 'non-existent' } }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

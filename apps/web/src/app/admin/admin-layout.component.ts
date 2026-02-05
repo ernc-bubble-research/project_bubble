@@ -1,8 +1,9 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, computed } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../core/services/auth.service';
+import { AvatarDropdownComponent } from '../shared/components/avatar-dropdown/avatar-dropdown.component';
 
 interface NavItem {
   label: string;
@@ -12,7 +13,7 @@ interface NavItem {
 
 @Component({
   standalone: true,
-  imports: [RouterModule, NgClass, LucideAngularModule],
+  imports: [RouterModule, NgClass, LucideAngularModule, AvatarDropdownComponent],
   selector: 'app-admin-layout',
   templateUrl: './admin-layout.component.html',
   styleUrl: './admin-layout.component.scss',
@@ -20,6 +21,8 @@ interface NavItem {
 export class AdminLayoutComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+
+  readonly user = computed(() => this.authService.user() ?? this.authService.getCurrentUser());
 
   mobileMenuOpen = signal(false);
 

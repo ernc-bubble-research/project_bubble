@@ -1,0 +1,136 @@
+.avatar-dropdown {
+  position: relative;
+}
+
+.avatar-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--sidebar-text, var(--text-main));
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--sidebar-hover-bg, rgba(0, 0, 0, 0.05));
+  }
+}
+
+.avatar-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: var(--radius-full, 50%);
+  background: var(--primary-600);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.avatar-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+.avatar-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.avatar-role {
+  font-size: 11px;
+  color: var(--sidebar-text-muted, var(--text-tertiary));
+}
+
+.chevron {
+  margin-left: auto;
+  color: var(--sidebar-text-muted, var(--text-tertiary));
+}
+
+/* Dropdown menu — positioned above trigger (sidebar footer) */
+.dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.dropdown-header {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropdown-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.dropdown-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-role-badge {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--slate-100);
+  color: var(--text-tertiary);
+  font-weight: 500;
+  width: fit-content;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border-color);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.1s ease;
+
+  &:hover {
+    background: var(--slate-50, #f8fafc);
+  }
+
+  &.logout:hover {
+    color: var(--danger-600, #dc2626);
+  }
+}

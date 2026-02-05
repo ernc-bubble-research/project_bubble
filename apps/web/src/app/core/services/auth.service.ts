@@ -1,6 +1,6 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, catchError, of, tap } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
 import type { LoginResponseDto, User } from '@project-bubble/shared';
 
@@ -17,14 +17,26 @@ interface JwtPayload {
 export class AuthService {
   private readonly http = inject(HttpClient);
 
+  readonly user = signal<User | null>(null);
+
+  constructor() {
+    this.loadProfile();
+  }
+
   login(email: string, password: string): Observable<LoginResponseDto> {
     return this.http
       .post<LoginResponseDto>('/api/auth/login', { email, password })
-      .pipe(tap((res) => localStorage.setItem(TOKEN_KEY, res.accessToken)));
+      .pipe(
+        tap((res) => {
+          localStorage.setItem(TOKEN_KEY, res.accessToken);
+          this.loadProfile();
+        }),
+      );
   }
 
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);
+    this.user.set(null);
   }
 
   getToken(): string | null {
@@ -69,5 +81,15 @@ export class AuthService {
 
   setPassword(token: string, password: string): Observable<void> {
     return this.http.post<void>('/api/auth/set-password', { token, password });
+  }
+
+  loadProfile(): void {
+    if (!this.getToken()) return;
+    this.http
+      .get<User>('/api/auth/me')
+      .pipe(catchError(() => of(null)))
+      .subscribe((profile) => {
+        this.user.set(profile);
+      });
   }
 }

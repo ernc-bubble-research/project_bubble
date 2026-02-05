@@ -32,17 +32,14 @@
 
     <div class="sidebar-footer">
       <div class="sidebar-divider"></div>
-      <div class="user-info">
-        <span class="user-avatar">A</span>
-        <div class="user-details">
-          <span class="user-name">Admin</span>
-          <span class="user-role">Bubble Admin</span>
-        </div>
-      </div>
-      <button class="logout-btn" (click)="logout()" data-testid="logout-btn">
-        <lucide-icon name="log-out" [size]="16"></lucide-icon>
-        <span>Log out</span>
-      </button>
+      @if (user()) {
+        <app-avatar-dropdown
+          [user]="user()!"
+          [showSettingsLink]="true"
+          (logoutClicked)="logout()"
+          data-testid="avatar-dropdown"
+        />
+      }
     </div>
   </aside>
 

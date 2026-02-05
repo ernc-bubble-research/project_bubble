@@ -1,9 +1,10 @@
-import { Controller, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Post, Get, Body, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { LoginDto, LoginResponseDto, AcceptInvitationDto } from '@project-bubble/shared';
+import { LoginDto, LoginResponseDto, AcceptInvitationDto, UserResponseDto } from '@project-bubble/shared';
 import { AuthService } from './auth.service';
 import { InvitationsService } from '../invitations/invitations.service';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -21,6 +22,19 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid email or password' })
   async login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
     return this.authService.login(dto);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'Current user profile', type: UserResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getProfile(
+    @Request() req: { user: { userId: string } },
+  ): Promise<UserResponseDto> {
+    return this.authService.getProfile(req.user.userId);
   }
 
   @Post('set-password')
