@@ -1,0 +1,113 @@
+<div class="llm-models-list" data-testid="llm-models-list">
+  <!-- Header with Add button -->
+  <div class="list-header">
+    <h2>LLM Models</h2>
+    <button
+      class="btn btn-primary"
+      data-testid="add-model-btn"
+      (click)="onAddModel()"
+      [disabled]="loading()"
+    >
+      <lucide-icon name="plus" [size]="16"></lucide-icon>
+      Add Model
+    </button>
+  </div>
+
+  <!-- Error banner -->
+  @if (error()) {
+    <div class="error-banner" data-testid="error-banner">
+      <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+      <span>{{ error() }}</span>
+      <button class="retry-btn" (click)="loadModels()">Retry</button>
+    </div>
+  }
+
+  <!-- Loading state -->
+  @if (loading()) {
+    <div class="loading-state" data-testid="loading-skeleton">
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+  }
+
+  <!-- Empty state -->
+  @if (isEmpty()) {
+    <div class="empty-state" data-testid="empty-state">
+      <lucide-icon name="brain" [size]="48" class="empty-icon"></lucide-icon>
+      <p class="empty-text">No models configured.</p>
+      <p class="empty-hint">Add your first LLM model to get started.</p>
+    </div>
+  }
+
+  <!-- Models grouped by provider -->
+  @if (!loading() && !isEmpty()) {
+    <div class="provider-groups" data-testid="provider-groups">
+      @for (group of providerGroups(); track group.providerKey) {
+        <div class="provider-group" [attr.data-testid]="'provider-group-' + group.providerKey">
+          <div class="provider-header">
+            <lucide-icon name="server" [size]="16"></lucide-icon>
+            <span>{{ group.displayName }}</span>
+            <span class="model-count">{{ group.models.length }} model{{ group.models.length === 1 ? '' : 's' }}</span>
+          </div>
+
+          <div class="models-table">
+            <div class="table-header">
+              <span class="col-name">Display Name</span>
+              <span class="col-model-id">Model ID</span>
+              <span class="col-context">Context</span>
+              <span class="col-output">Max Output</span>
+              <span class="col-status">Status</span>
+              <span class="col-actions">Actions</span>
+            </div>
+
+            @for (model of group.models; track model.id) {
+              <div
+                class="table-row"
+                [class.inactive]="!model.isActive"
+                [attr.data-testid]="'model-row-' + model.id"
+              >
+                <span class="col-name" [title]="model.displayName">{{ model.displayName }}</span>
+                <span class="col-model-id" [title]="model.modelId">
+                  <code>{{ model.modelId }}</code>
+                </span>
+                <span class="col-context">{{ formatContextWindow(model.contextWindow) }}</span>
+                <span class="col-output">{{ formatContextWindow(model.maxOutputTokens) }}</span>
+                <span class="col-status">
+                  <button
+                    class="toggle-btn"
+                    [class.active]="model.isActive"
+                    [attr.aria-pressed]="model.isActive"
+                    [attr.aria-label]="model.isActive ? 'Deactivate model' : 'Activate model'"
+                    [disabled]="togglingId() === model.id"
+                    [attr.data-testid]="'toggle-' + model.id"
+                    (click)="onToggleActive(model)"
+                  >
+                    @if (togglingId() === model.id) {
+                      <lucide-icon name="loader-2" [size]="14" class="spinner"></lucide-icon>
+                    } @else {
+                      <span class="toggle-track">
+                        <span class="toggle-thumb"></span>
+                      </span>
+                    }
+                    <span class="toggle-label">{{ model.isActive ? 'Active' : 'Inactive' }}</span>
+                  </button>
+                </span>
+                <span class="col-actions">
+                  <button
+                    class="icon-btn"
+                    [attr.aria-label]="'Edit ' + model.displayName"
+                    [attr.data-testid]="'edit-' + model.id"
+                    (click)="onEditModel(model)"
+                  >
+                    <lucide-icon name="pencil" [size]="14"></lucide-icon>
+                  </button>
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

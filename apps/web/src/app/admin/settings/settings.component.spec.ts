@@ -1,21 +1,61 @@
 import { TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 import {
   LUCIDE_ICONS,
   LucideIconProvider,
   Settings,
   Brain,
+  Plus,
+  AlertCircle,
+  Server,
+  Pencil,
+  Loader2,
+  X,
 } from 'lucide-angular';
 import { SettingsComponent } from './settings.component';
+import { LlmModelService, type LlmModel } from '../../core/services/llm-model.service';
+
+const mockModel: LlmModel = {
+  id: 'model-1',
+  providerKey: 'google-ai-studio',
+  modelId: 'models/gemini-2.0-flash',
+  displayName: 'Gemini 2.0 Flash',
+  contextWindow: 1000000,
+  maxOutputTokens: 8192,
+  isActive: true,
+  costPer1kInput: null,
+  costPer1kOutput: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
 describe('SettingsComponent [P2]', () => {
+  const mockLlmModelService = {
+    getAllModels: jest.fn().mockReturnValue(of([mockModel])),
+    createModel: jest.fn().mockReturnValue(of(mockModel)),
+    updateModel: jest.fn().mockReturnValue(of(mockModel)),
+  };
+
   beforeEach(async () => {
+    mockLlmModelService.getAllModels.mockReturnValue(of([mockModel]));
+
     await TestBed.configureTestingModule({
       imports: [SettingsComponent],
       providers: [
+        { provide: LlmModelService, useValue: mockLlmModelService },
         {
           provide: LUCIDE_ICONS,
           multi: true,
-          useValue: new LucideIconProvider({ Settings, Brain }),
+          useValue: new LucideIconProvider({
+            Settings,
+            Brain,
+            Plus,
+            AlertCircle,
+            Server,
+            Pencil,
+            Loader2,
+            X,
+          }),
         },
       ],
     }).compileComponents();
@@ -75,16 +115,17 @@ describe('SettingsComponent [P2]', () => {
     expect(llmTab?.getAttribute('aria-selected')).toBe('true');
   });
 
-  it('[3.1-1-UNIT-006] should show placeholder content in LLM Models tab', () => {
+  it('[3.1-1-UNIT-006] should show LLM Models list component in LLM Models tab', async () => {
     // Given
     const fixture = TestBed.createComponent(SettingsComponent);
     // When
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
     // Then
     const compiled = fixture.nativeElement as HTMLElement;
-    const placeholder = compiled.querySelector('[data-testid="llm-models-placeholder"]');
-    expect(placeholder).toBeTruthy();
-    expect(placeholder?.textContent).toContain('LLM model management');
+    const list = compiled.querySelector('[data-testid="llm-models-list"]');
+    expect(list).toBeTruthy();
   });
 
   it('[3.1-1-UNIT-007] should have System tab disabled', () => {
@@ -134,5 +175,54 @@ describe('SettingsComponent [P2]', () => {
     const panel = compiled.querySelector('#tabpanel-llm-models');
     expect(panel?.getAttribute('role')).toBe('tabpanel');
     expect(panel?.getAttribute('aria-labelledby')).toBe('tab-llm-models');
+  });
+
+  it('[3.1-3-UNIT-027] should open add dialog when openAddDialog called', async () => {
+    // Given
+    const fixture = TestBed.createComponent(SettingsComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    // When
+    fixture.componentInstance.openAddDialog();
+    fixture.detectChanges();
+    // Then
+    const dialog = fixture.nativeElement.querySelector('[data-testid="form-dialog"]');
+    expect(dialog).toBeTruthy();
+    expect(fixture.componentInstance.editingModel()).toBeNull();
+  });
+
+  it('[3.1-3-UNIT-028] should open edit dialog with model when openEditDialog called', async () => {
+    // Given
+    const fixture = TestBed.createComponent(SettingsComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    // When
+    fixture.componentInstance.openEditDialog(mockModel);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    // Then
+    const dialog = fixture.nativeElement.querySelector('[data-testid="form-dialog"]');
+    expect(dialog).toBeTruthy();
+    expect(fixture.componentInstance.editingModel()).toEqual(mockModel);
+  });
+
+  it('[3.1-3-UNIT-029] should close dialog and refresh list on model saved', async () => {
+    // Given
+    const fixture = TestBed.createComponent(SettingsComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    fixture.componentInstance.openAddDialog();
+    fixture.detectChanges();
+    // When
+    fixture.componentInstance.onModelSaved();
+    fixture.detectChanges();
+    // Then
+    expect(fixture.componentInstance.dialogOpen()).toBe(false);
+    const dialog = fixture.nativeElement.querySelector('[data-testid="form-dialog"]');
+    expect(dialog).toBeFalsy();
   });
 });

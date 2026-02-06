@@ -1,0 +1,223 @@
+<div
+  class="dialog-backdrop"
+  data-testid="form-dialog-backdrop"
+  role="presentation"
+  (click)="onCancel()"
+  (keydown.escape)="onCancel()"
+>
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="'dialog-title'"
+    data-testid="form-dialog"
+    (click)="$event.stopPropagation()"
+    (keydown)="$event.stopPropagation()"
+  >
+    <!-- Header -->
+    <div class="dialog-header">
+      <h2 id="dialog-title" class="dialog-title">{{ dialogTitle() }}</h2>
+      <button
+        type="button"
+        class="close-btn"
+        aria-label="Close dialog"
+        data-testid="dialog-close-btn"
+        (click)="onCancel()"
+      >
+        <lucide-icon name="x" [size]="18"></lucide-icon>
+      </button>
+    </div>
+
+    <!-- Error banner -->
+    @if (error()) {
+      <div class="error-banner" data-testid="form-error">
+        <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+        <span>{{ error() }}</span>
+      </div>
+    }
+
+    <!-- Form -->
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="dialog-form">
+      <!-- Provider Key -->
+      <div class="form-group">
+        <label for="providerKey">
+          Provider <span class="required">*</span>
+        </label>
+        @if (isEditMode()) {
+          <input
+            type="text"
+            id="providerKey"
+            formControlName="providerKey"
+            class="form-input readonly"
+            data-testid="input-providerKey"
+            readonly
+          />
+          <span class="field-hint">Provider cannot be changed after creation</span>
+        } @else {
+          <select
+            id="providerKey"
+            formControlName="providerKey"
+            class="form-select"
+            [class.error]="hasError('providerKey')"
+            data-testid="input-providerKey"
+          >
+            <option value="">Select a provider</option>
+            @for (opt of providerOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+          @if (hasError('providerKey')) {
+            <span class="field-error">{{ getFieldError('providerKey') }}</span>
+          }
+        }
+      </div>
+
+      <!-- Model ID -->
+      <div class="form-group">
+        <label for="modelId">
+          Model ID <span class="required">*</span>
+        </label>
+        <input
+          type="text"
+          id="modelId"
+          formControlName="modelId"
+          placeholder="e.g. models/gemini-2.0-flash"
+          class="form-input"
+          [class.error]="hasError('modelId')"
+          [class.readonly]="isEditMode()"
+          [readonly]="isEditMode()"
+          data-testid="input-modelId"
+        />
+        @if (isEditMode()) {
+          <span class="field-hint">Model ID cannot be changed after creation</span>
+        } @else if (hasError('modelId')) {
+          <span class="field-error">{{ getFieldError('modelId') }}</span>
+        }
+      </div>
+
+      <!-- Display Name -->
+      <div class="form-group">
+        <label for="displayName">
+          Display Name <span class="required">*</span>
+        </label>
+        <input
+          type="text"
+          id="displayName"
+          formControlName="displayName"
+          placeholder="e.g. Gemini 2.0 Flash"
+          class="form-input"
+          [class.error]="hasError('displayName')"
+          data-testid="input-displayName"
+        />
+        @if (hasError('displayName')) {
+          <span class="field-error">{{ getFieldError('displayName') }}</span>
+        }
+      </div>
+
+      <!-- Context Window & Max Output (side by side) -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="contextWindow">
+            Context Window <span class="required">*</span>
+          </label>
+          <input
+            type="number"
+            id="contextWindow"
+            formControlName="contextWindow"
+            min="1"
+            class="form-input"
+            [class.error]="hasError('contextWindow')"
+            data-testid="input-contextWindow"
+          />
+          @if (hasError('contextWindow')) {
+            <span class="field-error">{{ getFieldError('contextWindow') }}</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="maxOutputTokens">
+            Max Output Tokens <span class="required">*</span>
+          </label>
+          <input
+            type="number"
+            id="maxOutputTokens"
+            formControlName="maxOutputTokens"
+            min="1"
+            class="form-input"
+            [class.error]="hasError('maxOutputTokens')"
+            data-testid="input-maxOutputTokens"
+          />
+          @if (hasError('maxOutputTokens')) {
+            <span class="field-error">{{ getFieldError('maxOutputTokens') }}</span>
+          }
+        </div>
+      </div>
+
+      <!-- Cost fields (side by side) -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="costPer1kInput">Cost per 1K Input</label>
+          <input
+            type="text"
+            id="costPer1kInput"
+            formControlName="costPer1kInput"
+            placeholder="e.g. 0.000150"
+            class="form-input"
+            data-testid="input-costPer1kInput"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="costPer1kOutput">Cost per 1K Output</label>
+          <input
+            type="text"
+            id="costPer1kOutput"
+            formControlName="costPer1kOutput"
+            placeholder="e.g. 0.000600"
+            class="form-input"
+            data-testid="input-costPer1kOutput"
+          />
+        </div>
+      </div>
+
+      <!-- Active checkbox -->
+      <div class="form-group checkbox-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            formControlName="isActive"
+            data-testid="input-isActive"
+          />
+          <span class="checkbox-text">Active</span>
+        </label>
+        <span class="field-hint">Inactive models won't appear in workflow configuration</span>
+      </div>
+
+      <!-- Actions -->
+      <div class="dialog-actions">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          data-testid="cancel-btn"
+          (click)="onCancel()"
+          [disabled]="submitting()"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          data-testid="submit-btn"
+          [disabled]="submitting()"
+        >
+          @if (submitting()) {
+            <lucide-icon name="loader-2" [size]="16" class="spinner"></lucide-icon>
+            Saving...
+          } @else {
+            {{ isEditMode() ? 'Save Changes' : 'Add Model' }}
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -44,10 +44,20 @@
     aria-labelledby="tab-llm-models"
   >
     @if (activeTab() === 'llm-models') {
-      <div class="placeholder-card" data-testid="llm-models-placeholder">
-        <lucide-icon name="brain" [size]="32" class="placeholder-icon"></lucide-icon>
-        <p class="placeholder-text">LLM model management — coming in Story 3.1-3</p>
-      </div>
+      <app-llm-models-list
+        data-testid="llm-models-list"
+        (addModelClicked)="openAddDialog()"
+        (editModelClicked)="openEditDialog($event)"
+      ></app-llm-models-list>
     }
   </div>
+
+  <!-- Form dialog -->
+  @if (dialogOpen()) {
+    <app-llm-model-form-dialog
+      [model]="editingModel()"
+      (saved)="onModelSaved()"
+      (cancelled)="closeDialog()"
+    ></app-llm-model-form-dialog>
+  }
 </div>
