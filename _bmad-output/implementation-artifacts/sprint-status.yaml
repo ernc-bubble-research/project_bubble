@@ -469,11 +469,11 @@ development_status:
   #   - Audit Trail → Epic 7 Story 7-2 (cross-cutting concern)
   #   - E2E Tests → Handled by E2E stories (1E/2E/3E)
   # ═══════════════════════════════════════════════════════
-  epic-3.1: in-progress
+  epic-3.1: done # All 4 stories complete (3.1-1 through 3.1-4). 878 total tests, 0 lint errors.
   3.1-1-admin-settings-page-shell: done # REWRITTEN 2026-02-05. Settings page route + tabbed layout + nav link. UI skeleton only.
   3.1-2-logout-avatar-dropdown: done # Avatar dropdown replaces logout in all layouts. GET /api/auth/me + user signal + reusable AvatarDropdownComponent. 28 tests, code review passed (2 rounds).
   3.1-3-llm-model-admin-ui: done # Frontend for existing backend LLM model CRUD. 29 tests, 353 total. Code review passed 2026-02-06.
-  3.1-4-provider-credential-storage: review # LlmProviderConfigEntity + encrypted credential storage + CRUD API + Providers tab UI. 70 story tests (16 crypto + 22 service + 3 controller + 12 list + 11 dialog + 5 seeding + 1 model-service). Code review fixes applied (8 findings: 3H, 3M, 2L). 878 total tests, 0 failures, 0 lint errors.
+  3.1-4-provider-credential-storage: done # LlmProviderConfigEntity + encrypted credential storage + CRUD API + Providers tab UI. 70 story tests. Code review: 8 fixes (3H, 3M, 2L). 878 total tests, 0 failures, 0 lint errors.
 
   # ═══════════════════════════════════════════════════════
   # Epic 4: Workflow Execution Engine (The Creator)
