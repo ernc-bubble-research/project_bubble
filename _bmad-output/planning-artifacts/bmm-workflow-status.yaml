@@ -1,9 +1,9 @@
-generated: "2026-01-18T16:01:00+01:00"
+generated: "2026-02-06"
 project: "project_bubble"
 project_type: "bmad-method"
 selected_track: "bmad-method"
 field_type: "greenfield"
-workflow_path: "/Users/erinckaratoprak/Desktop/Code/project_bubble/_bmad/bmm/workflows/workflow-status/paths/method-greenfield.yaml"
+workflow_path: "_bmad/bmm/workflows/workflow-status/paths/method-greenfield.yaml"
 workflow_status:
   brainstorm-project: skipped
   research: skipped
@@ -12,6 +12,6 @@ workflow_status:
   create-ux-design: "_bmad-output/planning-artifacts/ux-design-specification.md"
   create-architecture: "_bmad-output/planning-artifacts/architecture.md"
   create-epics-and-stories: "_bmad-output/planning-artifacts/epics.md"
-  test-design: optional
-  implementation-readiness: required
-  sprint-planning: required
+  test-design: skipped
+  implementation-readiness: "_bmad-output/planning-artifacts/implementation-readiness-report-2026-01-30.md"
+  sprint-planning: "_bmad-output/implementation-artifacts/sprint-status.yaml"
