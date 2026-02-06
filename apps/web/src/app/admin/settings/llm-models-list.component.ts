@@ -9,18 +9,13 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideAngularModule } from 'lucide-angular';
 import { LlmModelService, type LlmModel } from '../../core/services/llm-model.service';
+import { PROVIDER_DISPLAY_NAMES } from './provider-constants';
 
 export interface ProviderGroup {
   providerKey: string;
   displayName: string;
   models: LlmModel[];
 }
-
-const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
-  'google-ai-studio': 'Google AI Studio',
-  'vertex': 'Vertex AI',
-  'mock': 'Mock Provider',
-};
 
 @Component({
   standalone: true,

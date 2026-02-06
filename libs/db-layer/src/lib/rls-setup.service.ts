@@ -50,6 +50,9 @@ export class RlsSetupService implements OnModuleInit {
     await this.createWorkflowTemplateAccessPolicy();
     await this.createWorkflowChainAccessPolicy();
 
+    // Seed provider configs BEFORE models (idempotent).
+    await this.seedProviderConfigs();
+
     // Seed LLM model registry (idempotent).
     await this.seedLlmModels();
   }
@@ -216,6 +219,34 @@ export class RlsSetupService implements OnModuleInit {
     }
   }
 
+  private async seedProviderConfigs(): Promise<void> {
+    try {
+      const result = await this.dataSource.query(`SELECT COUNT(*)::int as count FROM llm_provider_configs`);
+      const count = result[0]?.count ?? 0;
+      if (count > 0) {
+        this.logger.log(`LLM provider configs already seeded (${count} configs found)`);
+        return;
+      }
+
+      await this.dataSource.query(`
+        INSERT INTO llm_provider_configs (id, provider_key, display_name, encrypted_credentials, is_active)
+        VALUES
+          (gen_random_uuid(), 'google-ai-studio', 'Google AI Studio', NULL, true),
+          (gen_random_uuid(), 'vertex', 'Vertex AI', NULL, true),
+          (gen_random_uuid(), 'openai', 'OpenAI', NULL, true),
+          (gen_random_uuid(), 'mock', 'Mock Provider', NULL, true)
+      `);
+      this.logger.log('Seeded 4 default LLM provider configs (no credentials)');
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && (error as { code: string }).code === '42P01') {
+        this.logger.warn('LLM provider configs table does not exist yet — will seed after synchronize');
+        return;
+      }
+      this.logger.error('Failed to seed LLM provider configs:', error);
+      throw error;
+    }
+  }
+
   private async seedLlmModels(): Promise<void> {
     try {
       // Idempotent seed — only inserts if table is empty
@@ -229,13 +260,24 @@ export class RlsSetupService implements OnModuleInit {
       await this.dataSource.query(`
         INSERT INTO llm_models (id, provider_key, model_id, display_name, context_window, max_output_tokens, is_active, cost_per_1k_input, cost_per_1k_output)
         VALUES
-          (gen_random_uuid(), 'google-ai-studio', 'models/gemini-2.0-flash', 'Gemini 2.0 Flash', 1000000, 8192, true, NULL, NULL),
-          (gen_random_uuid(), 'google-ai-studio', 'models/gemini-2.0-pro', 'Gemini 2.0 Pro', 1000000, 8192, true, NULL, NULL),
-          (gen_random_uuid(), 'vertex', 'gemini-2.0-flash', 'Gemini 2.0 Flash (Vertex)', 1000000, 8192, true, NULL, NULL),
-          (gen_random_uuid(), 'vertex', 'gemini-2.0-pro', 'Gemini 2.0 Pro (Vertex)', 1000000, 8192, true, NULL, NULL),
+          -- Google AI Studio (Gemini 2.5 GA + 3.0 Preview)
+          (gen_random_uuid(), 'google-ai-studio', 'models/gemini-2.5-flash', 'Gemini 2.5 Flash', 1000000, 8192, true, NULL, NULL),
+          (gen_random_uuid(), 'google-ai-studio', 'models/gemini-2.5-pro', 'Gemini 2.5 Pro', 1000000, 8192, true, NULL, NULL),
+          (gen_random_uuid(), 'google-ai-studio', 'models/gemini-3.0-flash-preview', 'Gemini 3.0 Flash (Preview)', 1000000, 8192, true, NULL, NULL),
+          (gen_random_uuid(), 'google-ai-studio', 'models/gemini-3.0-pro-preview', 'Gemini 3.0 Pro (Preview)', 1000000, 8192, true, NULL, NULL),
+          -- Vertex AI (Gemini 2.5 GA + 3.0 Preview)
+          (gen_random_uuid(), 'vertex', 'gemini-2.5-flash', 'Gemini 2.5 Flash (Vertex)', 1000000, 8192, true, NULL, NULL),
+          (gen_random_uuid(), 'vertex', 'gemini-2.5-pro', 'Gemini 2.5 Pro (Vertex)', 1000000, 8192, true, NULL, NULL),
+          (gen_random_uuid(), 'vertex', 'gemini-3.0-flash-preview', 'Gemini 3.0 Flash (Vertex, Preview)', 1000000, 8192, true, NULL, NULL),
+          (gen_random_uuid(), 'vertex', 'gemini-3.0-pro-preview', 'Gemini 3.0 Pro (Vertex, Preview)', 1000000, 8192, true, NULL, NULL),
+          -- OpenAI
+          (gen_random_uuid(), 'openai', 'gpt-5.2', 'GPT-5.2', 128000, 16384, true, NULL, NULL),
+          (gen_random_uuid(), 'openai', 'gpt-4.1', 'GPT-4.1', 128000, 16384, true, NULL, NULL),
+          (gen_random_uuid(), 'openai', 'gpt-4.1-mini', 'GPT-4.1 Mini', 128000, 16384, true, NULL, NULL),
+          -- Mock
           (gen_random_uuid(), 'mock', 'mock-model', 'Mock LLM (Testing)', 1000000, 8192, true, NULL, NULL)
       `);
-      this.logger.log('Seeded 5 LLM models (google-ai-studio, vertex, mock)');
+      this.logger.log('Seeded 12 LLM models (google-ai-studio, vertex, openai, mock)');
     } catch (error: unknown) {
       // Only swallow "relation does not exist" (42P01) — table may not exist on first startup
       if (error instanceof Error && 'code' in error && (error as { code: string }).code === '42P01') {

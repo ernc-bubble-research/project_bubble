@@ -9,3 +9,4 @@ export { WorkflowVersionEntity } from './workflow-version.entity';
 export { WorkflowChainEntity, WorkflowChainStatus } from './workflow-chain.entity';
 export { WorkflowRunEntity, WorkflowRunStatus } from './workflow-run.entity';
 export { LlmModelEntity } from './llm-model.entity';
+export { LlmProviderConfigEntity } from './llm-provider-config.entity';

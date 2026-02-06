@@ -16,6 +16,7 @@ import { AssetsModule } from './assets/assets.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { WorkflowsModule } from './workflows/workflows.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { WorkflowsModule } from './workflows/workflows.module';
     IngestionModule,
     KnowledgeModule,
     WorkflowsModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -29,9 +29,10 @@ describe('RlsSetupService [P0]', () => {
     // + 4 auth policies (auth_select_all, auth_accept_invitations, auth_insert_users, auth_update_invitations)
     // + 3 workflow_templates custom RLS (enable, force, policy)
     // + 3 workflow_chains custom RLS (enable, force, policy)
+    // + 1 provider_configs seed SELECT COUNT + 1 provider_configs seed INSERT (count=0 → inserts)
     // + 1 llm_models seed SELECT COUNT + 1 llm_models seed INSERT (count=0 → inserts)
-    // = 2 + 21 + 4 + 3 + 3 + 2 = 35
-    expect(dataSource.query).toHaveBeenCalledTimes(35);
+    // = 2 + 21 + 4 + 3 + 3 + 2 + 2 = 37
+    expect(dataSource.query).toHaveBeenCalledTimes(37);
     expect(dataSource.query).toHaveBeenCalledWith(
       'ALTER TABLE "users" ENABLE ROW LEVEL SECURITY',
     );
@@ -247,12 +248,83 @@ describe('RlsSetupService [P0]', () => {
     });
   });
 
-  describe('LLM model seeding [3.1]', () => {
+  describe('LLM provider config seeding [3.1-4]', () => {
     beforeEach(() => {
       configService.get.mockReturnValue('development');
     });
 
-    it('[3.1-UNIT-046] [P0] Given empty llm_models table, when onModuleInit runs, then seeds 5 models', async () => {
+    it('[3.1-4-UNIT-065] [P0] Given empty llm_provider_configs table, when onModuleInit runs, then seeds 4 default provider configs', async () => {
+      // Given — default mock returns [{count: 0}]
+
+      // When
+      await service.onModuleInit();
+
+      // Then
+      const seedInsertCall = dataSource.query.mock.calls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes('INSERT INTO llm_provider_configs'),
+      );
+      expect(seedInsertCall).toBeDefined();
+      const sql = (seedInsertCall as string[])[0] as string;
+      expect(sql).toContain('google-ai-studio');
+      expect(sql).toContain('vertex');
+      expect(sql).toContain('openai');
+      expect(sql).toContain('mock');
+      // Credentials should be NULL (no credentials seeded)
+      expect(sql).toContain('NULL');
+    });
+
+    it('[3.1-4-UNIT-066] [P0] Given provider configs already seeded, when onModuleInit runs, then skips insert', async () => {
+      // Given
+      dataSource.query.mockImplementation(async (sql: string) => {
+        if (typeof sql === 'string' && sql.includes('SELECT COUNT') && sql.includes('llm_provider_configs')) {
+          return [{ count: 4 }];
+        }
+        if (typeof sql === 'string' && sql.includes('SELECT COUNT')) {
+          return [{ count: 0 }];
+        }
+        return undefined;
+      });
+
+      // When
+      await service.onModuleInit();
+
+      // Then — no INSERT INTO llm_provider_configs
+      const seedInsertCall = dataSource.query.mock.calls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes('INSERT INTO llm_provider_configs'),
+      );
+      expect(seedInsertCall).toBeUndefined();
+    });
+
+    it('[3.1-4-UNIT-067] [P1] Given provider configs table, when seeding, then provider configs are seeded BEFORE models', async () => {
+      // Given
+      const callOrder: string[] = [];
+      dataSource.query.mockImplementation(async (sql: string) => {
+        if (typeof sql === 'string' && sql.includes('INSERT INTO llm_provider_configs')) {
+          callOrder.push('provider_configs');
+        }
+        if (typeof sql === 'string' && sql.includes('INSERT INTO llm_models')) {
+          callOrder.push('llm_models');
+        }
+        if (typeof sql === 'string' && sql.includes('SELECT COUNT')) {
+          return [{ count: 0 }];
+        }
+        return undefined;
+      });
+
+      // When
+      await service.onModuleInit();
+
+      // Then — provider configs seeded before models
+      expect(callOrder).toEqual(['provider_configs', 'llm_models']);
+    });
+  });
+
+  describe('LLM model seeding [3.1-4]', () => {
+    beforeEach(() => {
+      configService.get.mockReturnValue('development');
+    });
+
+    it('[3.1-4-UNIT-068] [P0] Given empty llm_models table, when onModuleInit runs, then seeds 12 models', async () => {
       // Given — default mock returns [{count: 0}]
 
       // When
@@ -266,17 +338,23 @@ describe('RlsSetupService [P0]', () => {
       const sql = (seedInsertCall as string[])[0] as string;
       expect(sql).toContain('google-ai-studio');
       expect(sql).toContain('vertex');
+      expect(sql).toContain('openai');
       expect(sql).toContain('mock');
       expect(sql).toContain('mock-model');
+      expect(sql).toContain('gemini-2.5-flash');
+      expect(sql).toContain('gemini-3.0-flash-preview');
+      expect(sql).toContain('gpt-4.1');
+      expect(sql).toContain('gpt-5.2');
     });
 
-    it('[3.1-UNIT-047] [P0] Given llm_models already seeded, when onModuleInit runs, then skips insert', async () => {
-      // Given — seed check returns non-zero count
-      // We need to mock specifically: the SELECT COUNT query returns 5
-      // All other queries return default. We use mockImplementation to detect the seed query.
+    it('[3.1-4-UNIT-069] [P0] Given llm_models already seeded, when onModuleInit runs, then skips insert', async () => {
+      // Given — seed check returns non-zero count for llm_models
       dataSource.query.mockImplementation(async (sql: string) => {
+        if (typeof sql === 'string' && sql.includes('SELECT COUNT') && sql.includes('llm_models')) {
+          return [{ count: 12 }];
+        }
         if (typeof sql === 'string' && sql.includes('SELECT COUNT')) {
-          return [{ count: 5 }];
+          return [{ count: 0 }];
         }
         return undefined;
       });

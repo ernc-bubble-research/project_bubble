@@ -397,6 +397,21 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **IF** the answer is non-empty, that infrastructure **goes into the epic** — not deferred to a later epic.
 *   **REASON:** Epic 3 built a workflow engine that can't configure its own LLM provider, an admin panel without logout, and tenant management without archive/delete. Infrastructure must come before features.
 
+### 21. The "Mandatory Rationale" Rule (ALL AGENTS)
+*   **EVERY** design decision, trade-off, or scope limitation in a review or story **MUST** include an explicit **"Rationale:"** line with technical justification.
+*   **"It's simpler"** is NOT a rationale. **"providerKey is a type discriminator, not a relational reference, because provider configs are optional (env var fallback) and models are seeded before configs in the boot sequence"** IS a rationale.
+*   **BANNED NON-RATIONALES (non-exhaustive):** "it's simpler", "it's cleaner", "it works", "it's standard", "it's common practice", "it's the default", "it's obvious."
+*   **IF** you cannot articulate WHY a design choice is correct in technical terms, you don't understand it well enough to recommend it.
+*   **REASON:** Story 3.1-4 review (2026-02-06) — dev used "fine for MVP" as a substitute for actual technical analysis on two design decisions. The correct technical reasoning existed but was not articulated. This rule ensures every decision is justified on its merits.
+
+### 22. The "Zero-Tolerance Escalation" Rule
+*   **ANY** violation of the Quality Standard (Rule at line 277) or use of banned phrases triggers **immediate escalation:**
+    1. First violation: Formal warning + the offending review/analysis is rejected and must be redone.
+    2. Second violation: All future reviews require a mandatory second pass by the Architect agent.
+    3. Third violation: Agent loses review/analysis privileges entirely.
+*   **This applies to ALL synonyms and euphemisms** for the banned phrases, not just the exact wording. Attempting to rephrase the same excuse (e.g., "suitable for the current iteration" instead of "fine for MVP") is treated as a violation.
+*   **REASON:** Despite the Epic 3 retrospective permanently banning the MVP excuse (2026-02-04), the dev agent used it twice within 48 hours (Story 3.1-4 review, 2026-02-06). Apologies without process enforcement are meaningless.
+
 ### 20. The "Missing Journey Analysis" Rule
 *   **During epic-to-story decomposition**, run adversarial analysis:
     *   For every story ask: *"What does the user do before this? After this? What if they get stuck?"*
@@ -419,5 +434,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   ❌ **No Features Without Documentation:** Every UI story must include tooltips, empty states, and error messaging subtasks.
 *   ❌ **No Stories Without Traceability:** Every story must have AC-to-test mapping table before marking done.
 *   ❌ **No Features Before Infrastructure:** If a feature depends on infrastructure that doesn't exist, build the infrastructure first.
+*   ❌ **No Design Decisions Without Rationale:** Every design trade-off, scope limitation, or architectural choice must include an explicit "Rationale:" with technical justification. "It's simpler" is not a rationale.
+*   ❌ **No Rephrased MVP Excuses:** Attempting to rephrase the MVP excuse using synonyms or euphemisms ("suitable for current iteration", "appropriate for this phase", "sufficient for now") is treated as a violation of the Quality Standard.
 
 

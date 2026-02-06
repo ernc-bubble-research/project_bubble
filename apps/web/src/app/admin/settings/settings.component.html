@@ -22,6 +22,18 @@
       LLM Models
     </button>
     <button
+      class="tab"
+      role="tab"
+      id="tab-providers"
+      data-testid="tab-providers"
+      aria-controls="tabpanel-providers"
+      [class.active]="activeTab() === 'providers'"
+      [attr.aria-selected]="activeTab() === 'providers'"
+      (click)="setTab('providers')"
+    >
+      Providers
+    </button>
+    <button
       class="tab disabled"
       role="tab"
       id="tab-system"
@@ -37,27 +49,51 @@
   </div>
 
   <!-- Tab content -->
-  <div
-    class="tab-content"
-    role="tabpanel"
-    id="tabpanel-llm-models"
-    aria-labelledby="tab-llm-models"
-  >
+  <div class="tab-content">
     @if (activeTab() === 'llm-models') {
-      <app-llm-models-list
-        data-testid="llm-models-list"
-        (addModelClicked)="openAddDialog()"
-        (editModelClicked)="openEditDialog($event)"
-      ></app-llm-models-list>
+      <div
+        role="tabpanel"
+        id="tabpanel-llm-models"
+        aria-labelledby="tab-llm-models"
+      >
+        <app-llm-models-list
+          data-testid="llm-models-list"
+          (addModelClicked)="openAddModelDialog()"
+          (editModelClicked)="openEditModelDialog($event)"
+        ></app-llm-models-list>
+      </div>
+    }
+
+    @if (activeTab() === 'providers') {
+      <div
+        role="tabpanel"
+        id="tabpanel-providers"
+        aria-labelledby="tab-providers"
+      >
+        <app-provider-config-list
+          data-testid="provider-config-list"
+          (addConfigClicked)="openAddProviderDialog()"
+          (editConfigClicked)="openEditProviderDialog($event)"
+        ></app-provider-config-list>
+      </div>
     }
   </div>
 
-  <!-- Form dialog -->
-  @if (dialogOpen()) {
+  <!-- LLM Model Form dialog -->
+  @if (modelDialogOpen()) {
     <app-llm-model-form-dialog
       [model]="editingModel()"
       (saved)="onModelSaved()"
-      (cancelled)="closeDialog()"
+      (cancelled)="closeModelDialog()"
     ></app-llm-model-form-dialog>
+  }
+
+  <!-- Provider Config Form dialog -->
+  @if (providerDialogOpen()) {
+    <app-provider-config-form-dialog
+      [config]="editingProvider()"
+      (saved)="onProviderSaved()"
+      (cancelled)="closeProviderDialog()"
+    ></app-provider-config-form-dialog>
   }
 </div>

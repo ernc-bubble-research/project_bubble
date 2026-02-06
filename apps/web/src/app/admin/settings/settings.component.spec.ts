@@ -11,9 +11,14 @@ import {
   Pencil,
   Loader2,
   X,
+  Key,
+  Lock,
+  LockOpen,
+  Info,
 } from 'lucide-angular';
 import { SettingsComponent } from './settings.component';
 import { LlmModelService, type LlmModel } from '../../core/services/llm-model.service';
+import { LlmProviderService } from '../../core/services/llm-provider.service';
 
 const mockModel: LlmModel = {
   id: 'model-1',
@@ -36,13 +41,21 @@ describe('SettingsComponent [P2]', () => {
     updateModel: jest.fn().mockReturnValue(of(mockModel)),
   };
 
+  const mockLlmProviderService = {
+    getAllConfigs: jest.fn().mockReturnValue(of([])),
+    createConfig: jest.fn().mockReturnValue(of({})),
+    updateConfig: jest.fn().mockReturnValue(of({})),
+  };
+
   beforeEach(async () => {
     mockLlmModelService.getAllModels.mockReturnValue(of([mockModel]));
+    mockLlmProviderService.getAllConfigs.mockReturnValue(of([]));
 
     await TestBed.configureTestingModule({
       imports: [SettingsComponent],
       providers: [
         { provide: LlmModelService, useValue: mockLlmModelService },
+        { provide: LlmProviderService, useValue: mockLlmProviderService },
         {
           provide: LUCIDE_ICONS,
           multi: true,
@@ -55,6 +68,10 @@ describe('SettingsComponent [P2]', () => {
             Pencil,
             Loader2,
             X,
+            Key,
+            Lock,
+            LockOpen,
+            Info,
           }),
         },
       ],
@@ -92,7 +109,7 @@ describe('SettingsComponent [P2]', () => {
     expect(icon).toBeTruthy();
   });
 
-  it('[3.1-1-UNIT-004] should render tab bar with two tabs', () => {
+  it('[3.1-1-UNIT-004] should render tab bar with three tabs', () => {
     // Given
     const fixture = TestBed.createComponent(SettingsComponent);
     // When
@@ -100,7 +117,7 @@ describe('SettingsComponent [P2]', () => {
     // Then
     const compiled = fixture.nativeElement as HTMLElement;
     const tabs = compiled.querySelectorAll('[role="tab"]');
-    expect(tabs.length).toBe(2);
+    expect(tabs.length).toBe(3);
   });
 
   it('[3.1-1-UNIT-005] should have LLM Models tab active by default', () => {
@@ -177,14 +194,14 @@ describe('SettingsComponent [P2]', () => {
     expect(panel?.getAttribute('aria-labelledby')).toBe('tab-llm-models');
   });
 
-  it('[3.1-3-UNIT-027] should open add dialog when openAddDialog called', async () => {
+  it('[3.1-3-UNIT-027] should open add model dialog when openAddModelDialog called', async () => {
     // Given
     const fixture = TestBed.createComponent(SettingsComponent);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
     // When
-    fixture.componentInstance.openAddDialog();
+    fixture.componentInstance.openAddModelDialog();
     fixture.detectChanges();
     // Then
     const dialog = fixture.nativeElement.querySelector('[data-testid="form-dialog"]');
@@ -192,14 +209,14 @@ describe('SettingsComponent [P2]', () => {
     expect(fixture.componentInstance.editingModel()).toBeNull();
   });
 
-  it('[3.1-3-UNIT-028] should open edit dialog with model when openEditDialog called', async () => {
+  it('[3.1-3-UNIT-028] should open edit model dialog with model when openEditModelDialog called', async () => {
     // Given
     const fixture = TestBed.createComponent(SettingsComponent);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
     // When
-    fixture.componentInstance.openEditDialog(mockModel);
+    fixture.componentInstance.openEditModelDialog(mockModel);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -209,19 +226,19 @@ describe('SettingsComponent [P2]', () => {
     expect(fixture.componentInstance.editingModel()).toEqual(mockModel);
   });
 
-  it('[3.1-3-UNIT-029] should close dialog and refresh list on model saved', async () => {
+  it('[3.1-3-UNIT-029] should close model dialog and refresh list on model saved', async () => {
     // Given
     const fixture = TestBed.createComponent(SettingsComponent);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-    fixture.componentInstance.openAddDialog();
+    fixture.componentInstance.openAddModelDialog();
     fixture.detectChanges();
     // When
     fixture.componentInstance.onModelSaved();
     fixture.detectChanges();
     // Then
-    expect(fixture.componentInstance.dialogOpen()).toBe(false);
+    expect(fixture.componentInstance.modelDialogOpen()).toBe(false);
     const dialog = fixture.nativeElement.querySelector('[data-testid="form-dialog"]');
     expect(dialog).toBeFalsy();
   });

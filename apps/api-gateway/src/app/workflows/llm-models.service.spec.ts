@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
@@ -96,6 +97,28 @@ describe('LlmModelsService [P1]', () => {
       // Then
       expect(result.id).toBe(modelId);
       expect(result.providerKey).toBe('google-ai-studio');
+    });
+
+    it('[3.1-4-UNIT-064] [P0] Given unknown providerKey, when create is called, then throws BadRequestException', async () => {
+      // Given / When / Then
+      await expect(
+        service.create({
+          providerKey: 'unknown-provider',
+          modelId: 'some-model',
+          displayName: 'Test',
+          contextWindow: 1000,
+          maxOutputTokens: 1000,
+        }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.create({
+          providerKey: 'goggle-ai-studio',
+          modelId: 'some-model',
+          displayName: 'Typo Test',
+          contextWindow: 1000,
+          maxOutputTokens: 1000,
+        }),
+      ).rejects.toThrow(/Unknown provider key/);
     });
 
     it('[3.3-UNIT-023] [P0] Given duplicate provider_key+model_id, when create is called, then throws ConflictException', async () => {

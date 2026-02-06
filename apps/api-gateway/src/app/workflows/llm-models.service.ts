@@ -1,5 +1,6 @@
 import {
   Injectable,
+  BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,6 +12,7 @@ import {
   LlmModelResponseDto,
 } from '@project-bubble/shared';
 import { UpdateLlmModelDto } from '@project-bubble/shared';
+import { KNOWN_PROVIDER_KEYS } from '../common/provider-keys';
 
 @Injectable()
 export class LlmModelsService {
@@ -35,6 +37,8 @@ export class LlmModelsService {
   }
 
   async create(dto: CreateLlmModelDto): Promise<LlmModelResponseDto> {
+    this.validateProviderKey(dto.providerKey);
+
     try {
       const model = this.repo.create({
         providerKey: dto.providerKey,
@@ -92,6 +96,18 @@ export class LlmModelsService {
 
     const updated = await this.repo.save(model);
     return this.toResponse(updated);
+  }
+
+  private validateProviderKey(providerKey: string): void {
+    if (
+      !KNOWN_PROVIDER_KEYS.includes(
+        providerKey as (typeof KNOWN_PROVIDER_KEYS)[number],
+      )
+    ) {
+      throw new BadRequestException(
+        `Unknown provider key "${providerKey}". Known providers: ${KNOWN_PROVIDER_KEYS.join(', ')}`,
+      );
+    }
   }
 
   private toResponse(entity: LlmModelEntity): LlmModelResponseDto {

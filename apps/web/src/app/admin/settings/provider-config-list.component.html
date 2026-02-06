@@ -1,0 +1,104 @@
+<div class="provider-config-list" data-testid="provider-config-list">
+  <!-- Header with Add button -->
+  <div class="list-header">
+    <h2>LLM Providers</h2>
+    <button
+      class="btn btn-primary"
+      data-testid="add-provider-btn"
+      (click)="onAddConfig()"
+      [disabled]="loading()"
+    >
+      <lucide-icon name="plus" [size]="16"></lucide-icon>
+      Add Provider
+    </button>
+  </div>
+
+  <!-- Error banner -->
+  @if (error()) {
+    <div class="error-banner" data-testid="error-banner">
+      <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+      <span>{{ error() }}</span>
+      <button class="retry-btn" (click)="loadConfigs()">Retry</button>
+    </div>
+  }
+
+  <!-- Loading state -->
+  @if (loading()) {
+    <div class="loading-state" data-testid="loading-skeleton">
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+  }
+
+  <!-- Empty state -->
+  @if (isEmpty()) {
+    <div class="empty-state" data-testid="empty-state">
+      <lucide-icon name="key" [size]="48" class="empty-icon"></lucide-icon>
+      <p class="empty-text">No providers configured.</p>
+      <p class="empty-hint">Add your first LLM provider to store API credentials securely.</p>
+    </div>
+  }
+
+  <!-- Provider configs table -->
+  @if (!loading() && !isEmpty()) {
+    <div class="configs-table-wrapper" data-testid="configs-table">
+      <div class="table-header">
+        <span class="col-provider">Provider</span>
+        <span class="col-display-name">Display Name</span>
+        <span class="col-credentials">Credentials</span>
+        <span class="col-status">Status</span>
+        <span class="col-actions">Actions</span>
+      </div>
+
+      @for (config of configs(); track config.id) {
+        <div
+          class="table-row"
+          [class.inactive]="!config.isActive"
+          [attr.data-testid]="'provider-row-' + config.id"
+        >
+          <span class="col-provider" [title]="config.providerKey">
+            <code>{{ config.providerKey }}</code>
+          </span>
+          <span class="col-display-name" [title]="config.displayName">{{ config.displayName }}</span>
+          <span class="col-credentials">
+            <span class="credential-badge" [class.has-credentials]="config.maskedCredentials && !config.maskedCredentials['_status']">
+              <lucide-icon [name]="config.maskedCredentials && !config.maskedCredentials['_status'] ? 'lock' : 'lock-open'" [size]="12"></lucide-icon>
+              {{ getCredentialSummary(config.maskedCredentials) }}
+            </span>
+          </span>
+          <span class="col-status">
+            <button
+              class="toggle-btn"
+              [class.active]="config.isActive"
+              [attr.aria-pressed]="config.isActive"
+              [attr.aria-label]="config.isActive ? 'Deactivate provider' : 'Activate provider'"
+              [disabled]="togglingId() === config.id"
+              [attr.data-testid]="'toggle-' + config.id"
+              (click)="onToggleActive(config)"
+            >
+              @if (togglingId() === config.id) {
+                <lucide-icon name="loader-2" [size]="14" class="spinner"></lucide-icon>
+              } @else {
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
+              }
+              <span class="toggle-label">{{ config.isActive ? 'Active' : 'Inactive' }}</span>
+            </button>
+          </span>
+          <span class="col-actions">
+            <button
+              class="icon-btn"
+              [attr.aria-label]="'Edit ' + config.displayName"
+              [attr.data-testid]="'edit-' + config.id"
+              (click)="onEditConfig(config)"
+            >
+              <lucide-icon name="pencil" [size]="14"></lucide-icon>
+            </button>
+          </span>
+        </div>
+      }
+    </div>
+  }
+</div>

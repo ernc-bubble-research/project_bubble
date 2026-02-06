@@ -14,12 +14,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { LucideAngularModule } from 'lucide-angular';
 import { LlmModelService, type LlmModel } from '../../core/services/llm-model.service';
 import type { CreateLlmModelDto, UpdateLlmModelDto } from '@project-bubble/shared';
-
-export const PROVIDER_OPTIONS = [
-  { value: 'google-ai-studio', label: 'Google AI Studio' },
-  { value: 'vertex', label: 'Vertex AI' },
-  { value: 'mock', label: 'Mock Provider' },
-] as const;
+import { PROVIDER_OPTIONS } from './provider-constants';
 
 @Component({
   standalone: true,

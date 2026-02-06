@@ -473,7 +473,7 @@ development_status:
   3.1-1-admin-settings-page-shell: done # REWRITTEN 2026-02-05. Settings page route + tabbed layout + nav link. UI skeleton only.
   3.1-2-logout-avatar-dropdown: done # Avatar dropdown replaces logout in all layouts. GET /api/auth/me + user signal + reusable AvatarDropdownComponent. 28 tests, code review passed (2 rounds).
   3.1-3-llm-model-admin-ui: done # Frontend for existing backend LLM model CRUD. 29 tests, 353 total. Code review passed 2026-02-06.
-  3.1-4-provider-credential-storage: ready-for-dev # NEW. LlmProviderConfigEntity + encrypted credential storage + CRUD API + UI.
+  3.1-4-provider-credential-storage: review # LlmProviderConfigEntity + encrypted credential storage + CRUD API + Providers tab UI. 70 story tests (16 crypto + 22 service + 3 controller + 12 list + 11 dialog + 5 seeding + 1 model-service). Code review fixes applied (8 findings: 3H, 3M, 2L). 878 total tests, 0 failures, 0 lint errors.
 
   # ═══════════════════════════════════════════════════════
   # Epic 4: Workflow Execution Engine (The Creator)
@@ -550,6 +550,20 @@ development_status:
   7p-6-rls-auth-bypass-security-review: backlog      # Review permissive RLS policies (auth_select_all, auth_insert_users). Consider dedicated DB roles. Document accepted risks or implement mitigations.
   7p-7-load-testing-capacity-planning: backlog       # Define Year 1 targets (tenants, users, runs/day, storage). Set up k6/Artillery. Validate PRD performance NFRs. Run against staging.
   epic-7p-retrospective: optional
+
+  # ═══════════════════════════════════════════════════════
+  # Documentation & Onboarding (Cross-cutting)
+  # Required before production: Admin handbook, user manual,
+  # system description docs. These document the platform for
+  # operators and end-users.
+  #
+  # NOTE: Story 3.9 (workflow wizard docs) is a specific story;
+  # these are broader documentation deliverables that span the
+  # entire product.
+  # ═══════════════════════════════════════════════════════
+  doc-1-admin-handbook: backlog                           # Admin's Handbook: system setup (env vars, SETTINGS_ENCRYPTION_KEY, DB config), provider credential configuration, tenant management, LLM model management, monitoring, troubleshooting. Target audience: platform operator / Bubble Admin.
+  doc-2-user-manual: backlog                              # User's Manual: end-user guide for tenant admins and creators. Workflow creation, chain building, file uploads, data vault, running workflows, reading reports. Target audience: tenant users.
+  doc-3-system-description: backlog                       # System Description / Architecture Overview: deployment architecture, service map, data flow, security model, API reference. For onboarding new developers or auditors.
 
   # ═══════════════════════════════════════════════════════
   # Epic 8: Conversational Intelligence (Future Roadmap)
