@@ -4,7 +4,10 @@
 
   <form [formGroup]="form" class="form-fields">
     <div class="form-group">
-      <span class="field-label">Output Format</span>
+      <span class="field-label">
+        Output Format
+        <app-info-tooltip text="Markdown: free-form text with named sections. JSON: structured response validated against a schema." />
+      </span>
       <div class="radio-group">
         <label class="radio-item">
           <input type="radio" formControlName="format" value="markdown" data-testid="output-format-markdown" />
@@ -20,7 +23,10 @@
     <!-- Markdown sections -->
     @if (isMarkdown) {
       <div class="form-group">
-        <span class="field-label">Output Sections <span class="required">*</span></span>
+        <span class="field-label">
+          Output Sections <span class="required">*</span>
+          <app-info-tooltip text="Each section needs a key (e.g., summary) for output parsing and a display label shown in the document." />
+        </span>
         <div class="sections-list" formArrayName="sections" data-testid="output-sections-list">
           @for (ctrl of sectionsArray.controls; track ctrl; let i = $index) {
             <div class="section-item" [formGroupName]="i" [attr.data-testid]="'output-section-' + i">
@@ -71,7 +77,10 @@
     <!-- JSON schema -->
     @if (isJson) {
       <div class="form-group">
-        <span class="field-label">JSON Schema <span class="required">*</span></span>
+        <span class="field-label">
+          JSON Schema <span class="required">*</span>
+          <app-info-tooltip text="Define the expected JSON structure. The LLM will format its response to match this schema." />
+        </span>
         <textarea
           formControlName="json_schema"
           class="mono-textarea"

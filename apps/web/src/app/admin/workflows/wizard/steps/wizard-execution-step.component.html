@@ -25,6 +25,7 @@
     <div class="form-group">
       <span class="field-label">
         LLM Model <span class="required">*</span>
+        <app-info-tooltip text="The AI model to use for this workflow. Different models vary in speed, cost, and capability." />
       </span>
       @if (modelsLoading()) {
         <span class="field-hint">Loading models...</span>

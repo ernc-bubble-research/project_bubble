@@ -52,7 +52,10 @@ import { InfoTooltipComponent } from '../../../../shared/components/info-tooltip
 
           @if (form.get('query_strategy')?.value === 'custom') {
             <div class="form-group">
-              <span class="field-label">Query Template</span>
+              <span class="field-label">
+                Query Template
+                <app-info-tooltip text="Custom search query sent to the Knowledge Base. Use {input_name} variables to include input content in the search." />
+              </span>
               <textarea
                 formControlName="query_template"
                 rows="3"

@@ -60,6 +60,7 @@
                 <div class="form-group">
                   <span class="field-label">
                     Name <span class="required">*</span>
+                    <app-info-tooltip text="Variable name used in prompts via {name}. Use snake_case (e.g., subject, research_brief)." />
                   </span>
                   <input
                     type="text"
@@ -71,6 +72,7 @@
                 <div class="form-group">
                   <span class="field-label">
                     Label <span class="required">*</span>
+                    <app-info-tooltip text="Human-readable label shown to users when filling out the run form." />
                   </span>
                   <input
                     type="text"
@@ -82,7 +84,10 @@
               </div>
 
               <div class="form-group">
-                <span class="field-label">Description</span>
+                <span class="field-label">
+                  Description
+                  <app-info-tooltip text="Help text shown below the input field at runtime. Explain what content to provide." />
+                </span>
                 <textarea
                   formControlName="description"
                   rows="2"
@@ -105,7 +110,10 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <span class="field-label">Required</span>
+                  <span class="field-label">
+                    Required
+                    <app-info-tooltip text="When enabled, users must provide this input before running the workflow." />
+                  </span>
                   <div class="toggle-group">
                     <label class="toggle-switch">
                       <input

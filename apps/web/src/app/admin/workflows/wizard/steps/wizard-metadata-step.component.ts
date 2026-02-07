@@ -18,6 +18,7 @@ import { InfoTooltipComponent } from '../../../../shared/components/info-tooltip
         <div class="form-group">
           <label for="name">
             Name <span class="required">*</span>
+            <app-info-tooltip text="A unique name for this workflow template. Shown in the template library and when selecting workflows." />
           </label>
           <input
             id="name"
@@ -34,6 +35,7 @@ import { InfoTooltipComponent } from '../../../../shared/components/info-tooltip
         <div class="form-group">
           <label for="description">
             Description <span class="required">*</span>
+            <app-info-tooltip text="Explain what this workflow does and when to use it. Helps other admins understand the template's purpose." />
           </label>
           <textarea
             id="description"
