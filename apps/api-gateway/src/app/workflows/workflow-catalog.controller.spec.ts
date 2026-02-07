@@ -40,7 +40,7 @@ describe('WorkflowCatalogController [P1]', () => {
     it('[3.5-UNIT-006] [P0] Given authenticated tenant user, when GET / is called, then delegates to service.findPublished with tenantId from JWT', async () => {
       // Given
       service.findPublished.mockResolvedValue([mockResponse]);
-      const req = { user: { tenant_id: tenantId } };
+      const req = { user: { tenantId: tenantId } };
 
       // When
       const result = await controller.findPublished(req, {});
@@ -56,7 +56,7 @@ describe('WorkflowCatalogController [P1]', () => {
     it('[3.5-UNIT-007] [P1] Given query params, when GET / is called with limit and offset, then passes query params to service', async () => {
       // Given
       service.findPublished.mockResolvedValue([]);
-      const req = { user: { tenant_id: tenantId } };
+      const req = { user: { tenantId: tenantId } };
 
       // When
       await controller.findPublished(req, { limit: 20, offset: 10 });

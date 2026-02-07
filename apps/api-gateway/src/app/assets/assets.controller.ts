@@ -42,12 +42,12 @@ export class AssetsController {
   upload(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: UploadAssetDto,
-    @Request() req: { user: { userId: string; tenant_id: string } },
+    @Request() req: { user: { userId: string; tenantId: string } },
   ) {
     return this.assetsService.upload(
       file,
       dto,
-      req.user.tenant_id,
+      req.user.tenantId,
       req.user.userId,
     );
   }
@@ -59,10 +59,10 @@ export class AssetsController {
   @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   findAll(
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
     @Query() query: ListAssetsQueryDto,
   ) {
-    return this.assetsService.findAll(req.user.tenant_id, {
+    return this.assetsService.findAll(req.user.tenantId, {
       folderId: query.folderId,
       status: query.status,
       limit: query.limit,
@@ -79,9 +79,9 @@ export class AssetsController {
   @ApiResponse({ status: 404, description: 'Asset not found' })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.assetsService.findOne(id, req.user.tenant_id);
+    return this.assetsService.findOne(id, req.user.tenantId);
   }
 
   @Patch(':id')
@@ -94,9 +94,9 @@ export class AssetsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateAssetDto,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.assetsService.update(id, req.user.tenant_id, dto);
+    return this.assetsService.update(id, req.user.tenantId, dto);
   }
 
   @Delete(':id')
@@ -108,9 +108,9 @@ export class AssetsController {
   @ApiResponse({ status: 404, description: 'Asset not found' })
   archive(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.assetsService.archive(id, req.user.tenant_id);
+    return this.assetsService.archive(id, req.user.tenantId);
   }
 
   @Post(':id/restore')
@@ -122,8 +122,8 @@ export class AssetsController {
   @ApiResponse({ status: 404, description: 'Asset not found' })
   restore(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.assetsService.restore(id, req.user.tenant_id);
+    return this.assetsService.restore(id, req.user.tenantId);
   }
 }

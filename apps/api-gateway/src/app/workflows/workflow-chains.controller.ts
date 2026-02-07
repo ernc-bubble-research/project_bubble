@@ -44,11 +44,11 @@ export class WorkflowChainsController {
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   create(
     @Body() dto: CreateWorkflowChainDto,
-    @Request() req: { user: { userId: string; tenant_id: string } },
+    @Request() req: { user: { userId: string; tenantId: string } },
   ) {
     return this.workflowChainsService.create(
       dto,
-      req.user.tenant_id,
+      req.user.tenantId,
       req.user.userId,
     );
   }
@@ -60,10 +60,10 @@ export class WorkflowChainsController {
   @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   findAll(
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
     @Query() query: ListWorkflowChainsQueryDto,
   ) {
-    return this.workflowChainsService.findAll(req.user.tenant_id, {
+    return this.workflowChainsService.findAll(req.user.tenantId, {
       limit: query.limit,
       offset: query.offset,
       status: query.status,
@@ -80,9 +80,9 @@ export class WorkflowChainsController {
   @ApiResponse({ status: 404, description: 'Chain not found' })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.workflowChainsService.findOne(id, req.user.tenant_id);
+    return this.workflowChainsService.findOne(id, req.user.tenantId);
   }
 
   @Put(':id')
@@ -95,11 +95,11 @@ export class WorkflowChainsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateWorkflowChainDto,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
     return this.workflowChainsService.update(
       id,
-      req.user.tenant_id,
+      req.user.tenantId,
       dto,
     );
   }
@@ -114,9 +114,9 @@ export class WorkflowChainsController {
   @ApiResponse({ status: 404, description: 'Chain not found' })
   softDelete(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.workflowChainsService.softDelete(id, req.user.tenant_id);
+    return this.workflowChainsService.softDelete(id, req.user.tenantId);
   }
 
   @Patch(':id/restore')
@@ -128,9 +128,9 @@ export class WorkflowChainsController {
   @ApiResponse({ status: 404, description: 'Chain not found' })
   restore(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.workflowChainsService.restore(id, req.user.tenant_id);
+    return this.workflowChainsService.restore(id, req.user.tenantId);
   }
 
   @Patch(':id/publish')
@@ -142,8 +142,8 @@ export class WorkflowChainsController {
   @ApiResponse({ status: 404, description: 'Chain not found' })
   publish(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.workflowChainsService.publish(id, req.user.tenant_id);
+    return this.workflowChainsService.publish(id, req.user.tenantId);
   }
 }

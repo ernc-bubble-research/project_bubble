@@ -10,7 +10,7 @@ describe('WorkflowVersionsController [P1]', () => {
   const userId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
   const templateId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
   const versionId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
-  const mockRequest = { user: { userId, tenant_id: tenantId } };
+  const mockRequest = { user: { userId, tenantId: tenantId } };
 
   const mockVersionResponse: WorkflowVersionResponseDto = {
     id: versionId,

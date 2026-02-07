@@ -7,7 +7,7 @@ describe('FoldersController [P2]', () => {
   let controller: FoldersController;
   let service: jest.Mocked<FoldersService>;
 
-  const mockReq = { user: { tenant_id: 'tenant-1' } };
+  const mockReq = { user: { tenantId: 'tenant-1' } };
   const mockFolder = createMockFolder({ tenantId: 'tenant-1' });
 
   beforeEach(async () => {

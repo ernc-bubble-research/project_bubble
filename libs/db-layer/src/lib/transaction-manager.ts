@@ -36,9 +36,12 @@ export class TransactionManager {
 
     return this.dataSource.transaction(async (manager) => {
       if (tenantId) {
-        await manager.query(`SET LOCAL app.current_tenant = $1`, [
-          tenantId,
-        ]);
+        // SET LOCAL does not support parameterized queries in PostgreSQL.
+        // Validate UUID format to prevent SQL injection.
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
+          throw new Error(`Invalid tenant ID format: ${tenantId}`);
+        }
+        await manager.query(`SET LOCAL app.current_tenant = '${tenantId}'`);
       }
       return callback(manager);
     });

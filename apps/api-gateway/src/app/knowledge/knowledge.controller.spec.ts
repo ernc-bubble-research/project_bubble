@@ -19,7 +19,7 @@ describe('KnowledgeController [2.3-UNIT-002] [P2]', () => {
 
   const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   const userId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-  const mockReq = { user: { tenant_id: tenantId, sub: userId } };
+  const mockReq = { user: { tenantId: tenantId, sub: userId } };
   const mockResults = [
     {
       id: '11111111-1111-1111-1111-111111111111',
@@ -115,7 +115,7 @@ describe('KnowledgeController [2.3-UNIT-002] [P2]', () => {
 
     it('[2.3-UNIT-002e] should extract tenant_id from request user', async () => {
       const customTenantId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-      const customReq = { user: { tenant_id: customTenantId, sub: userId } };
+      const customReq = { user: { tenantId: customTenantId, sub: userId } };
       const dto: SearchKnowledgeDto = { query: 'test' } as SearchKnowledgeDto;
 
       await controller.search(dto, customReq as any);
@@ -155,7 +155,7 @@ describe('KnowledgeController [2.3-UNIT-002] [P2]', () => {
 
     it('[2.4-UNIT-003b] should extract sub (userId) from JWT for verifiedBy', async () => {
       const customUserId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
-      const customReq = { user: { tenant_id: tenantId, sub: customUserId } };
+      const customReq = { user: { tenantId: tenantId, sub: customUserId } };
       const dto = {
         content: 'Test insight.',
         sourceType: InsightSourceType.MANUAL_ENTRY,

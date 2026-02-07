@@ -40,11 +40,11 @@ export class IngestionController {
   @ApiResponse({ status: 500, description: 'Queue or embedding service failure' })
   async indexAsset(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ): Promise<IndexAssetResponseDto> {
     const result = await this.ingestionService.indexAsset(
       id,
-      req.user.tenant_id,
+      req.user.tenantId,
     );
     return {
       jobId: result.jobId,
@@ -64,8 +64,8 @@ export class IngestionController {
   @ApiResponse({ status: 500, description: 'De-indexing service failure' })
   async deIndexAsset(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ): Promise<void> {
-    await this.ingestionService.deIndexAsset(id, req.user.tenant_id);
+    await this.ingestionService.deIndexAsset(id, req.user.tenantId);
   }
 }

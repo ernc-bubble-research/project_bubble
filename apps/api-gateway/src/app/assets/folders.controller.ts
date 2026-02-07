@@ -34,9 +34,9 @@ export class FoldersController {
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   create(
     @Body() dto: CreateFolderDto,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.foldersService.create(dto, req.user.tenant_id);
+    return this.foldersService.create(dto, req.user.tenantId);
   }
 
   @Get()
@@ -44,8 +44,8 @@ export class FoldersController {
   @ApiResponse({ status: 200, description: 'List of all folders', type: [FolderResponseDto] })
   @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
-  findAll(@Request() req: { user: { tenant_id: string } }) {
-    return this.foldersService.findAll(req.user.tenant_id);
+  findAll(@Request() req: { user: { tenantId: string } }) {
+    return this.foldersService.findAll(req.user.tenantId);
   }
 
   @Patch(':id')
@@ -58,9 +58,9 @@ export class FoldersController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateFolderDto,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.foldersService.update(id, req.user.tenant_id, dto);
+    return this.foldersService.update(id, req.user.tenantId, dto);
   }
 
   @Delete(':id')
@@ -72,8 +72,8 @@ export class FoldersController {
   @ApiResponse({ status: 404, description: 'Folder not found' })
   delete(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.foldersService.delete(id, req.user.tenant_id);
+    return this.foldersService.delete(id, req.user.tenantId);
   }
 }

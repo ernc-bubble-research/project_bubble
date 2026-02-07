@@ -42,10 +42,10 @@ export class WorkflowCatalogController {
   @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   findPublished(
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
     @Query() query: CatalogQueryDto,
   ): Promise<WorkflowTemplateResponseDto[]> {
-    return this.workflowTemplatesService.findPublished(req.user.tenant_id, {
+    return this.workflowTemplatesService.findPublished(req.user.tenantId, {
       limit: query.limit,
       offset: query.offset,
     });

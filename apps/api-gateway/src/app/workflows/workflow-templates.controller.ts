@@ -44,11 +44,11 @@ export class WorkflowTemplatesController {
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   create(
     @Body() dto: CreateWorkflowTemplateDto,
-    @Request() req: { user: { userId: string; tenant_id: string } },
+    @Request() req: { user: { userId: string; tenantId: string } },
   ) {
     return this.workflowTemplatesService.create(
       dto,
-      req.user.tenant_id,
+      req.user.tenantId,
       req.user.userId,
     );
   }
@@ -60,10 +60,10 @@ export class WorkflowTemplatesController {
   @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   findAll(
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
     @Query() query: ListWorkflowTemplatesQueryDto,
   ) {
-    return this.workflowTemplatesService.findAll(req.user.tenant_id, {
+    return this.workflowTemplatesService.findAll(req.user.tenantId, {
       limit: query.limit,
       offset: query.offset,
       status: query.status,
@@ -80,9 +80,9 @@ export class WorkflowTemplatesController {
   @ApiResponse({ status: 404, description: 'Template not found' })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.workflowTemplatesService.findOne(id, req.user.tenant_id);
+    return this.workflowTemplatesService.findOne(id, req.user.tenantId);
   }
 
   @Patch(':id')
@@ -95,11 +95,11 @@ export class WorkflowTemplatesController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateWorkflowTemplateDto,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
     return this.workflowTemplatesService.update(
       id,
-      req.user.tenant_id,
+      req.user.tenantId,
       dto,
     );
   }
@@ -114,9 +114,9 @@ export class WorkflowTemplatesController {
   @ApiResponse({ status: 404, description: 'Template not found' })
   softDelete(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.workflowTemplatesService.softDelete(id, req.user.tenant_id);
+    return this.workflowTemplatesService.softDelete(id, req.user.tenantId);
   }
 
   @Post(':id/restore')
@@ -128,9 +128,9 @@ export class WorkflowTemplatesController {
   @ApiResponse({ status: 404, description: 'Template not found' })
   restore(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
-    return this.workflowTemplatesService.restore(id, req.user.tenant_id);
+    return this.workflowTemplatesService.restore(id, req.user.tenantId);
   }
 
   @Post(':id/publish')
@@ -143,11 +143,11 @@ export class WorkflowTemplatesController {
   publish(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: PublishWorkflowTemplateDto,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
     return this.workflowTemplatesService.publish(
       id,
-      req.user.tenant_id,
+      req.user.tenantId,
       dto.versionId,
     );
   }
@@ -162,11 +162,11 @@ export class WorkflowTemplatesController {
   rollback(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('versionId', ParseUUIDPipe) versionId: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
     return this.workflowTemplatesService.rollback(
       id,
-      req.user.tenant_id,
+      req.user.tenantId,
       versionId,
     );
   }

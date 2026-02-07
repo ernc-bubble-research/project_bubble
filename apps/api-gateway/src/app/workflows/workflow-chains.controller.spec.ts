@@ -9,7 +9,7 @@ describe('WorkflowChainsController [P1]', () => {
   const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   const userId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
   const chainId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
-  const mockRequest = { user: { userId, tenant_id: tenantId } };
+  const mockRequest = { user: { userId, tenantId: tenantId } };
 
   const mockResponse: WorkflowChainResponseDto = {
     id: chainId,

@@ -9,7 +9,7 @@ describe('IngestionController [2.2-UNIT-006] [P2]', () => {
 
   const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   const assetId = '11111111-1111-1111-1111-111111111111';
-  const mockReq = { user: { tenant_id: tenantId } };
+  const mockReq = { user: { tenantId: tenantId } };
 
   beforeEach(() => {
     mockIngestionService = {

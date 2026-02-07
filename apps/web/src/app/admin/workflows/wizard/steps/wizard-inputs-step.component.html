@@ -100,9 +100,7 @@
                 <div class="form-group">
                   <span class="field-label">
                     Role
-                    <app-info-tooltip [text]="inputsArray.at(i).get('role')?.value === 'subject'
-                      ? 'The primary items being analyzed. Each file becomes a separate job in parallel mode'
-                      : 'Shared reference material included in every LLM call (e.g., codebook, research brief)'" />
+                    <app-info-tooltip text="Subject: the primary files being analyzed (exactly 1 required). Context: shared reference material included in every LLM call." />
                   </span>
                   <select formControlName="role" [attr.data-testid]="'input-role-' + i">
                     <option value="context">Context</option>

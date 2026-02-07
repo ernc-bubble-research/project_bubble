@@ -39,12 +39,12 @@ export class WorkflowVersionsController {
   createVersion(
     @Param('templateId', ParseUUIDPipe) templateId: string,
     @Body() dto: CreateWorkflowVersionBodyDto,
-    @Request() req: { user: { userId: string; tenant_id: string } },
+    @Request() req: { user: { userId: string; tenantId: string } },
   ) {
     return this.workflowVersionsService.createVersion(
       templateId,
       dto.definition,
-      req.user.tenant_id,
+      req.user.tenantId,
       req.user.userId,
     );
   }
@@ -57,11 +57,11 @@ export class WorkflowVersionsController {
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   findAllByTemplate(
     @Param('templateId', ParseUUIDPipe) templateId: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
     return this.workflowVersionsService.findAllByTemplate(
       templateId,
-      req.user.tenant_id,
+      req.user.tenantId,
     );
   }
 
@@ -74,11 +74,11 @@ export class WorkflowVersionsController {
   @ApiResponse({ status: 404, description: 'Version not found' })
   findOne(
     @Param('versionId', ParseUUIDPipe) versionId: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ) {
     return this.workflowVersionsService.findOne(
       versionId,
-      req.user.tenant_id,
+      req.user.tenantId,
     );
   }
 }

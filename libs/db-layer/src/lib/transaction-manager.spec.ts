@@ -22,24 +22,33 @@ describe('TransactionManager [P0]', () => {
   describe('run(tenantId, callback)', () => {
     it('[1H.1-UNIT-001] should execute SET LOCAL with the provided tenant ID', async () => {
       const callback = jest.fn().mockResolvedValue('result');
+      const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
-      const result = await txManager.run('tenant-123', callback);
+      const result = await txManager.run(tenantId, callback);
 
       expect(result).toBe('result');
       expect(mockManager.query).toHaveBeenCalledWith(
-        'SET LOCAL app.current_tenant = $1',
-        ['tenant-123'],
+        `SET LOCAL app.current_tenant = '${tenantId}'`,
       );
       expect(callback).toHaveBeenCalledWith(mockManager);
+    });
+
+    it('[1H.1-UNIT-007] should reject non-UUID tenant IDs to prevent SQL injection', async () => {
+      const callback = jest.fn().mockResolvedValue('result');
+
+      await expect(
+        txManager.run("'; DROP TABLE users; --", callback),
+      ).rejects.toThrow('Invalid tenant ID format');
     });
   });
 
   describe('run(callback) — reads from AsyncLocalStorage', () => {
     it('[1H.1-UNIT-002] should read tenant from AsyncLocalStorage context', async () => {
       const callback = jest.fn().mockResolvedValue('result');
+      const tenantId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
       const ctx: TenantContext = {
-        tenantId: 'als-tenant',
+        tenantId,
         bypassRls: false,
       };
 
@@ -49,8 +58,7 @@ describe('TransactionManager [P0]', () => {
 
       expect(result).toBe('result');
       expect(mockManager.query).toHaveBeenCalledWith(
-        'SET LOCAL app.current_tenant = $1',
-        ['als-tenant'],
+        `SET LOCAL app.current_tenant = '${tenantId}'`,
       );
     });
 
@@ -84,7 +92,7 @@ describe('TransactionManager [P0]', () => {
     it('[1H.1-UNIT-005] should pass the transaction EntityManager to the callback', async () => {
       let receivedManager: EntityManager | undefined;
 
-      await txManager.run('tenant-1', async (manager) => {
+      await txManager.run('cccccccc-cccc-cccc-cccc-cccccccccccc', async (manager) => {
         receivedManager = manager;
       });
 
@@ -95,7 +103,7 @@ describe('TransactionManager [P0]', () => {
   describe('transaction rollback on error', () => {
     it('[1H.1-UNIT-006] should propagate errors from the callback', async () => {
       await expect(
-        txManager.run('tenant-1', async () => {
+        txManager.run('cccccccc-cccc-cccc-cccc-cccccccccccc', async () => {
           throw new Error('DB failure');
         }),
       ).rejects.toThrow('DB failure');

@@ -7,7 +7,7 @@ describe('AssetsController [P2]', () => {
   let controller: AssetsController;
   let service: jest.Mocked<AssetsService>;
 
-  const mockReq = { user: { userId: 'user-1', tenant_id: 'tenant-1' } };
+  const mockReq = { user: { userId: 'user-1', tenantId: 'tenant-1' } };
   const mockAsset = createMockAsset({ tenantId: 'tenant-1' });
 
   beforeEach(async () => {

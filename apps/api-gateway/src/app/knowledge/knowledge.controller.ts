@@ -57,9 +57,9 @@ export class KnowledgeController {
   @ApiResponse({ status: 500, description: 'Embedding service failure' })
   async search(
     @Body() dto: SearchKnowledgeDto,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ): Promise<SearchResultDto[]> {
-    return this.knowledgeSearchService.search(dto.query, req.user.tenant_id, {
+    return this.knowledgeSearchService.search(dto.query, req.user.tenantId, {
       limit: dto.limit,
       similarityThreshold: dto.similarityThreshold,
     });
@@ -78,11 +78,11 @@ export class KnowledgeController {
   @ApiResponse({ status: 500, description: 'Embedding service failure' })
   async storeInsight(
     @Body() dto: CreateValidatedInsightDto,
-    @Request() req: { user: { tenant_id: string; sub: string } },
+    @Request() req: { user: { tenantId: string; sub: string } },
   ): Promise<ValidatedInsightResponseDto> {
     return this.validatedInsightService.store(
       dto.content,
-      req.user.tenant_id,
+      req.user.tenantId,
       req.user.sub,
       {
         sourceType: dto.sourceType,
@@ -105,10 +105,10 @@ export class KnowledgeController {
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   @ApiResponse({ status: 500, description: 'Database query failure' })
   async listInsights(
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
     @Query() query: ListInsightsQueryDto,
   ): Promise<ValidatedInsightResponseDto[]> {
-    return this.validatedInsightService.getByTenant(req.user.tenant_id, {
+    return this.validatedInsightService.getByTenant(req.user.tenantId, {
       limit: query.limit,
       offset: query.offset,
     });
@@ -127,9 +127,9 @@ export class KnowledgeController {
   @ApiResponse({ status: 500, description: 'Database query failure' })
   async getInsightsByRun(
     @Param('runId', ParseUUIDPipe) runId: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ): Promise<ValidatedInsightResponseDto[]> {
-    return this.validatedInsightService.getByRun(runId, req.user.tenant_id);
+    return this.validatedInsightService.getByRun(runId, req.user.tenantId);
   }
 
   @Delete('insights/:id')
@@ -142,8 +142,8 @@ export class KnowledgeController {
   @ApiResponse({ status: 404, description: 'Insight not found or already deleted' })
   async deleteInsight(
     @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: { user: { tenant_id: string } },
+    @Request() req: { user: { tenantId: string } },
   ): Promise<void> {
-    return this.validatedInsightService.softDelete(id, req.user.tenant_id);
+    return this.validatedInsightService.softDelete(id, req.user.tenantId);
   }
 }

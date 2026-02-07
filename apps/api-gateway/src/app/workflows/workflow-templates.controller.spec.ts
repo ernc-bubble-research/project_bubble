@@ -9,7 +9,7 @@ describe('WorkflowTemplatesController [P1]', () => {
   const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   const userId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
   const templateId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
-  const mockRequest = { user: { userId, tenant_id: tenantId } };
+  const mockRequest = { user: { userId, tenantId: tenantId } };
 
   const mockResponse: WorkflowTemplateResponseDto = {
     id: templateId,
