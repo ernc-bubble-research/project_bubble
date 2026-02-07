@@ -18,6 +18,7 @@ interface UploadItem {
   template: `
     <div
       class="upload-zone"
+      data-testid="upload-zone"
       [ngClass]="{ dragover: isDragover() }"
       (dragover)="onDragOver($event)"
       (dragleave)="onDragLeave()"
@@ -32,6 +33,7 @@ interface UploadItem {
               type="file"
               multiple
               accept=".pdf,.txt,.md,.docx"
+              data-testid="file-input"
               (change)="onFileSelect($event)"
               hidden
             />
@@ -41,7 +43,7 @@ interface UploadItem {
       </div>
 
       @if (uploads().length > 0) {
-        <div class="upload-list">
+        <div class="upload-list" data-testid="upload-list">
           @for (item of uploads(); track item.file.name) {
             <div class="upload-item" [ngClass]="item.status">
               <span class="upload-name">{{ item.file.name }}</span>

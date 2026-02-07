@@ -8,22 +8,23 @@ import { AssetService } from '../../core/services/asset.service';
   imports: [FormsModule],
   selector: 'app-create-folder-dialog',
   template: `
-    <div class="dialog-overlay" (click)="onCancel()" (keydown.escape)="onCancel()" tabindex="0" role="dialog">
+    <div class="dialog-overlay" data-testid="create-folder-dialog" (click)="onCancel()" (keydown.escape)="onCancel()" tabindex="0" role="dialog">
       <div class="dialog" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="-1" role="document">
         <h3>Create Folder</h3>
         <input
           type="text"
           placeholder="Folder name"
+          data-testid="folder-name-input"
           [(ngModel)]="folderName"
           (keydown.enter)="onSubmit()"
           cdkFocusInitial
         />
         @if (error()) {
-          <p class="error">{{ error() }}</p>
+          <p class="error" data-testid="folder-error">{{ error() }}</p>
         }
         <div class="dialog-actions">
-          <button class="btn-secondary" (click)="onCancel()">Cancel</button>
-          <button class="btn-primary" [disabled]="!folderName" (click)="onSubmit()">Create</button>
+          <button class="btn-secondary" data-testid="folder-cancel-btn" (click)="onCancel()">Cancel</button>
+          <button class="btn-primary" data-testid="folder-create-btn" [disabled]="!folderName" (click)="onSubmit()">Create</button>
         </div>
       </div>
     </div>

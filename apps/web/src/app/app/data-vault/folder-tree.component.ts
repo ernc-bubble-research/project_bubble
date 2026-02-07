@@ -9,9 +9,10 @@ import type { FolderResponseDto } from '@project-bubble/shared';
   imports: [NgClass, FormsModule, LucideAngularModule],
   selector: 'app-folder-tree',
   template: `
-    <div class="folder-tree">
+    <div class="folder-tree" data-testid="folder-tree">
       <button
         class="folder-item"
+        data-testid="folder-all-files"
         [ngClass]="{ active: activeFolderId() === null }"
         (click)="folderSelect.emit(null)"
         (keydown.enter)="folderSelect.emit(null)"
@@ -24,6 +25,7 @@ import type { FolderResponseDto } from '@project-bubble/shared';
         <div class="folder-row">
           <button
             class="folder-item"
+            [attr.data-testid]="'folder-' + folder.id"
             [ngClass]="{ active: activeFolderId() === folder.id }"
             (click)="folderSelect.emit(folder.id)"
             (keydown.enter)="folderSelect.emit(folder.id)"
@@ -46,6 +48,7 @@ import type { FolderResponseDto } from '@project-bubble/shared';
           @if (renamingId() !== folder.id) {
             <button
               class="action-btn"
+              [attr.data-testid]="'rename-folder-btn-' + folder.id"
               title="Rename folder"
               (click)="startRename(folder, $event)"
               (keydown.enter)="startRename(folder, $event)"
@@ -59,6 +62,7 @@ import type { FolderResponseDto } from '@project-bubble/shared';
           <div class="folder-row">
             <button
               class="folder-item nested"
+              [attr.data-testid]="'folder-' + child.id"
               [ngClass]="{ active: activeFolderId() === child.id }"
               (click)="folderSelect.emit(child.id)"
               (keydown.enter)="folderSelect.emit(child.id)"
@@ -81,6 +85,7 @@ import type { FolderResponseDto } from '@project-bubble/shared';
             @if (renamingId() !== child.id) {
               <button
                 class="action-btn"
+                [attr.data-testid]="'rename-folder-btn-' + child.id"
                 title="Rename folder"
                 (click)="startRename(child, $event)"
                 (keydown.enter)="startRename(child, $event)"
@@ -94,6 +99,7 @@ import type { FolderResponseDto } from '@project-bubble/shared';
             <div class="folder-row">
               <button
                 class="folder-item nested-2"
+                [attr.data-testid]="'folder-' + grandchild.id"
                 [ngClass]="{ active: activeFolderId() === grandchild.id }"
                 (click)="folderSelect.emit(grandchild.id)"
                 (keydown.enter)="folderSelect.emit(grandchild.id)"
@@ -116,6 +122,7 @@ import type { FolderResponseDto } from '@project-bubble/shared';
               @if (renamingId() !== grandchild.id) {
                 <button
                   class="action-btn"
+                  [attr.data-testid]="'rename-folder-btn-' + grandchild.id"
                   title="Rename folder"
                   (click)="startRename(grandchild, $event)"
                   (keydown.enter)="startRename(grandchild, $event)"

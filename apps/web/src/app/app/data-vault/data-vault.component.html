@@ -1,9 +1,9 @@
-<div class="data-vault">
+<div class="data-vault" data-testid="data-vault">
   <!-- Sidebar: Folder tree -->
-  <aside class="folder-sidebar">
+  <aside class="folder-sidebar" data-testid="folder-sidebar">
     <div class="folder-header">
       <h3>Folders</h3>
-      <button class="btn-icon" title="New folder" (click)="showCreateFolder.set(true)">
+      <button class="btn-icon" title="New folder" data-testid="new-folder-btn" (click)="showCreateFolder.set(true)">
         <lucide-icon name="folder-plus" [size]="18"></lucide-icon>
       </button>
     </div>
@@ -29,11 +29,12 @@
           <input
             type="text"
             placeholder="Search files..."
+            data-testid="search-input"
             [value]="searchQuery()"
             (input)="onSearchInput($event)"
           />
         </div>
-        <button class="btn-icon" title="Toggle view" (click)="toggleView()">
+        <button class="btn-icon" title="Toggle view" data-testid="view-toggle-btn" (click)="toggleView()">
           <lucide-icon [name]="viewMode() === 'grid' ? 'list' : 'layout-grid'" [size]="18"></lucide-icon>
         </button>
       </div>
@@ -41,19 +42,19 @@
 
     <!-- Bulk actions -->
     @if (selectedIds().size > 0) {
-      <div class="bulk-actions">
+      <div class="bulk-actions" data-testid="bulk-actions">
         <span>{{ selectedIds().size }} selected</span>
-        <button class="btn-primary-sm" (click)="indexSelected()" title="Adding to Knowledge Base means Bubble's AI agents will permanently learn from this file across all workflows.">Learn This</button>
-        <button class="btn-danger-sm" (click)="deleteSelected()">Archive</button>
+        <button class="btn-primary-sm" data-testid="learn-selected-btn" (click)="indexSelected()" title="Adding to Knowledge Base means Bubble's AI agents will permanently learn from this file across all workflows.">Learn This</button>
+        <button class="btn-danger-sm" data-testid="archive-selected-btn" (click)="deleteSelected()">Archive</button>
       </div>
     }
 
     <!-- File grid / list -->
-    <div class="file-area" [ngClass]="viewMode()">
+    <div class="file-area" data-testid="file-area" [ngClass]="viewMode()">
       @if (loading()) {
-        <div class="loading">Loading...</div>
+        <div class="loading" data-testid="loading-indicator">Loading...</div>
       } @else if (filteredAssets().length === 0) {
-        <div class="empty-state">
+        <div class="empty-state" data-testid="empty-state">
           <lucide-icon name="file-x" [size]="48"></lucide-icon>
           <p>No files found</p>
         </div>

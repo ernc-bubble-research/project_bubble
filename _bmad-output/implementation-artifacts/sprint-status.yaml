@@ -424,7 +424,7 @@ development_status:
   2-3-semantic-search-service-vector-rag: done
   2-4-validated-insight-storage-memory: done # Code review passed, 406 tests, 0 lint errors
   epic-2-retrospective: done # Retrospective completed 2026-02-01. 3 critical process failures documented. Action items defined.
-  2e-e2e-test-coverage-epic-2: ready-for-dev # Added from Epic 3 retro item #5: E2E test coverage
+  2e-e2e-test-coverage-epic-2: done # Data & Configuration E2E — Data Vault (folders, files, upload, tenant isolation) + Settings LLM Admin. 11 tests, 4 spec files, 3 auth states, hybrid seed. Code review: 9 findings fixed (3H, 4M, 2L). 878 unit tests, 0 lint errors.
 
   # ═══════════════════════════════════════════════════════
   # Pre-Epic-3 Gates

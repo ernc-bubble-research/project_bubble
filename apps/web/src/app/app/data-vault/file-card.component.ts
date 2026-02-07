@@ -9,9 +9,9 @@ import type { AssetResponseDto } from '@project-bubble/shared';
   selector: 'app-file-card',
   template: `
     @if (viewMode() === 'grid') {
-      <div class="file-card" [ngClass]="{ selected: selected() }" (click)="toggleSelect.emit()" (keydown.enter)="toggleSelect.emit()" tabindex="0" role="button">
+      <div class="file-card" [attr.data-testid]="'file-item-' + asset().id" [ngClass]="{ selected: selected() }" (click)="toggleSelect.emit()" (keydown.enter)="toggleSelect.emit()" tabindex="0" role="button">
         <div class="card-checkbox">
-          <input type="checkbox" [checked]="selected()" (click)="$event.stopPropagation()" (change)="toggleSelect.emit()" aria-label="Select file" />
+          <input type="checkbox" [attr.data-testid]="'file-checkbox-' + asset().id" [checked]="selected()" (click)="$event.stopPropagation()" (change)="toggleSelect.emit()" aria-label="Select file" />
         </div>
         <div class="card-badges">
           @if (indexing()) {
@@ -30,12 +30,12 @@ import type { AssetResponseDto } from '@project-bubble/shared';
         </div>
         <div class="card-actions" role="presentation" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
           @if (asset().isIndexed) {
-            <button class="btn-action" title="Remove from Knowledge Base" (click)="deIndex.emit()">
+            <button class="btn-action" [attr.data-testid]="'deindex-btn-' + asset().id" title="Remove from Knowledge Base" (click)="deIndex.emit()">
               <lucide-icon name="brain" [size]="14"></lucide-icon>
               <span>Remove</span>
             </button>
           } @else if (!indexing()) {
-            <button class="btn-action btn-learn" title="Adding to Knowledge Base means Bubble's AI agents will permanently learn from this file across all workflows." (click)="index.emit()">
+            <button class="btn-action btn-learn" [attr.data-testid]="'index-btn-' + asset().id" title="Adding to Knowledge Base means Bubble's AI agents will permanently learn from this file across all workflows." (click)="index.emit()">
               <lucide-icon name="brain" [size]="14"></lucide-icon>
               <span>Learn This</span>
             </button>
@@ -46,8 +46,8 @@ import type { AssetResponseDto } from '@project-bubble/shared';
         </div>
       </div>
     } @else {
-      <div class="file-row" [ngClass]="{ selected: selected() }" (click)="toggleSelect.emit()" (keydown.enter)="toggleSelect.emit()" tabindex="0" role="button">
-        <input type="checkbox" [checked]="selected()" (click)="$event.stopPropagation()" (change)="toggleSelect.emit()" aria-label="Select file" />
+      <div class="file-row" [attr.data-testid]="'file-item-' + asset().id" [ngClass]="{ selected: selected() }" (click)="toggleSelect.emit()" (keydown.enter)="toggleSelect.emit()" tabindex="0" role="button">
+        <input type="checkbox" [attr.data-testid]="'file-checkbox-' + asset().id" [checked]="selected()" (click)="$event.stopPropagation()" (change)="toggleSelect.emit()" aria-label="Select file" />
         <lucide-icon [name]="getIcon()" [size]="18"></lucide-icon>
         <span class="row-name" [title]="asset().originalName">{{ asset().originalName }}</span>
         @if (indexing()) {

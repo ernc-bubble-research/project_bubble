@@ -1,31 +1,32 @@
 import './env';
-import { test as setup, expect } from '@playwright/test';
+import { test as setup, expect, type APIRequestContext } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 
-const ADMIN_STORAGE_STATE = path.resolve(
-  __dirname,
-  '../../../playwright/.auth/admin.json',
-);
+const AUTH_DIR = path.resolve(__dirname, '../../../playwright/.auth');
 
 const apiURL = process.env['API_URL'] || 'http://localhost:3000';
-const seedEmail = process.env['SEED_ADMIN_EMAIL'] || 'admin@bubble.io';
-const seedPassword = process.env['SEED_ADMIN_PASSWORD'] || 'Admin123!';
+const baseURL = process.env['BASE_URL'] || 'http://localhost:4200';
+const origin = new URL(baseURL).origin;
 
-setup('authenticate as admin', async ({ request }) => {
-  // Login via API — avoids UI interaction and throttle limits
+/**
+ * Create a storageState JSON file for the given credentials.
+ * Logs in via POST /api/auth/login and writes the JWT to localStorage format.
+ */
+async function createStorageState(
+  request: APIRequestContext,
+  email: string,
+  password: string,
+  filePath: string,
+): Promise<void> {
   const response = await request.post(`${apiURL}/api/auth/login`, {
-    data: { email: seedEmail, password: seedPassword },
+    data: { email, password },
   });
 
   expect(response.ok()).toBeTruthy();
 
   const body = await response.json();
   expect(body.accessToken).toBeTruthy();
-
-  // Build storageState manually — the Angular app stores JWT in localStorage
-  const baseURL = process.env['BASE_URL'] || 'http://localhost:4200';
-  const origin = new URL(baseURL).origin;
 
   const storageState = {
     cookies: [],
@@ -39,10 +40,39 @@ setup('authenticate as admin', async ({ request }) => {
     ],
   };
 
-  // Write storageState to disk so the 'chromium' project picks it up
-  fs.mkdirSync(path.dirname(ADMIN_STORAGE_STATE), { recursive: true });
-  fs.writeFileSync(
-    ADMIN_STORAGE_STATE,
-    JSON.stringify(storageState, null, 2),
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(storageState, null, 2));
+}
+
+setup('authenticate as admin', async ({ request }) => {
+  const email = process.env['SEED_ADMIN_EMAIL'] || 'admin@bubble.io';
+  const password = process.env['SEED_ADMIN_PASSWORD'] || 'Admin123!';
+  await createStorageState(
+    request,
+    email,
+    password,
+    path.join(AUTH_DIR, 'admin.json'),
+  );
+});
+
+setup('authenticate as tenant-a', async ({ request }) => {
+  const email = process.env['SEED_TENANT_A_EMAIL'] || 'tenant-a@test.io';
+  const password = process.env['SEED_TENANT_A_PASSWORD'] || 'TenantA123!';
+  await createStorageState(
+    request,
+    email,
+    password,
+    path.join(AUTH_DIR, 'tenant-a.json'),
+  );
+});
+
+setup('authenticate as tenant-b', async ({ request }) => {
+  const email = process.env['SEED_TENANT_B_EMAIL'] || 'tenant-b@test.io';
+  const password = process.env['SEED_TENANT_B_PASSWORD'] || 'TenantB123!';
+  await createStorageState(
+    request,
+    email,
+    password,
+    path.join(AUTH_DIR, 'tenant-b.json'),
   );
 });
