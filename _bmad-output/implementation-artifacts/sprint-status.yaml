@@ -450,7 +450,7 @@ development_status:
   3-8-workflow-management-view: ready-for-dev # Added from Epic 3 retro item #2: visibility editing post-creation
   3-9-workflow-wizard-documentation-tooltips: ready-for-dev # Added from Epic 3 retro item #9: documentation + inline help
   3h-rxjs-subscription-cleanup-hardening: done # Code review passed. 37 subscriptions fixed (19 files). ESLint plugin installed. 291 tests, 0 lint errors.
-  3e-e2e-test-coverage-epic-3: ready-for-dev # Added from Epic 3 retro item #5: E2E test coverage
+  3e-e2e-test-coverage-epic-3: done # Code review passed (7 findings: 3 fixed, 4 accepted). 8 tests, 3 spec files. Seed: template + version + chain + LLM model. 878 unit tests, 0 lint errors.
   epic-3-retrospective: done # Retrospective completed 2026-02-04. 8 key learnings documented. Rules 14-20 added to project-context.md. MVP excuse permanently banned.
 
   # ═══════════════════════════════════════════════════════

@@ -97,8 +97,10 @@ async function globalSetup(): Promise<void> {
     const seedPassword = process.env['SEED_ADMIN_PASSWORD'] || 'Admin123!';
     const adminHash = await bcrypt.hash(seedPassword, 10);
 
+    const adminUserId = '00000000-0000-0000-0000-000000000001';
     await tenantRepo.save({ id: systemTenantId, name: 'System' });
     await userRepo.save({
+      id: adminUserId,
       email: seedEmail,
       passwordHash: adminHash,
       role: 'bubble_admin',
@@ -155,6 +157,70 @@ async function globalSetup(): Promise<void> {
       parentId: null,
     });
     console.log('[E2E] Test folders seeded — one per tenant');
+
+    // ── Step 5: Seed workflow data (Story 3E) ──────────────────────────
+    const templateRepo = testDs.getRepository(WorkflowTemplateEntity);
+    const versionRepo = testDs.getRepository(WorkflowVersionEntity);
+    const chainRepo = testDs.getRepository(WorkflowChainEntity);
+
+    const seedTemplate = await templateRepo.save({
+      id: '33333333-0000-0000-0000-000000000001',
+      tenantId: systemTenantId,
+      name: 'E2E Seed Template',
+      description: 'Seeded template for E2E tests',
+      visibility: 'public',
+      status: 'published',
+      createdBy: adminUserId,
+    });
+
+    const seedVersion = await versionRepo.save({
+      id: '33333333-0000-0000-0000-000000000002',
+      tenantId: systemTenantId,
+      templateId: seedTemplate.id,
+      versionNumber: 1,
+      definition: {
+        metadata: { name: 'E2E Seed Template', description: 'Seeded', version: 1, tags: [] },
+        inputs: [{ name: 'subject', label: 'Subject', role: 'subject', source: ['text'], required: true }],
+        execution: { processing: 'parallel', model: 'mock-model', temperature: 0.7, max_output_tokens: 4096 },
+        knowledge: { enabled: false },
+        prompt: 'Analyze {subject}',
+        output: { format: 'markdown', filename_template: 'output-{subject}', sections: [{ name: 'analysis', label: 'Analysis', required: true }] },
+      },
+      createdBy: adminUserId,
+    });
+
+    await templateRepo.update(seedTemplate.id, { currentVersionId: seedVersion.id });
+
+    await chainRepo.save({
+      id: '33333333-0000-0000-0000-000000000003',
+      tenantId: systemTenantId,
+      name: 'E2E Seed Chain',
+      description: 'Seeded chain for E2E tests',
+      visibility: 'public',
+      status: 'draft',
+      definition: {
+        metadata: { name: 'E2E Seed Chain', description: 'Seeded chain for E2E tests' },
+        steps: [
+          { workflow_id: seedTemplate.id, alias: 'Step 1' },
+          { workflow_id: seedTemplate.id, alias: 'Step 2', input_mapping: {} },
+        ],
+      },
+      createdBy: adminUserId,
+    });
+
+    console.log('[E2E] Workflow data seeded — 1 template + 1 version + 1 chain');
+
+    // ── Step 6: Seed LLM model (Story 3E — wizard execution step) ────
+    const llmModelRepo = testDs.getRepository(LlmModelEntity);
+    await llmModelRepo.save({
+      providerKey: 'mock',
+      modelId: 'mock-model',
+      displayName: 'Mock LLM (Testing)',
+      contextWindow: 1000000,
+      maxOutputTokens: 8192,
+      isActive: true,
+    });
+    console.log('[E2E] LLM model seeded — mock-model');
 
     await testDs.destroy();
     console.log('[E2E] Global setup complete');
