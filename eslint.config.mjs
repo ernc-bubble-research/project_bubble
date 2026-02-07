@@ -40,6 +40,10 @@ export default [
               sourceTag: 'scope:db',
               onlyDependOnLibsWithTags: ['scope:shared'],
             },
+            {
+              sourceTag: 'scope:e2e',
+              onlyDependOnLibsWithTags: ['scope:shared', 'scope:db'],
+            },
           ],
         },
       ],

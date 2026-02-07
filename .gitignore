@@ -53,3 +53,8 @@ vitest.config.*.timestamp*
 
 # Uploaded files (local MVP storage)
 uploads/
+
+# Playwright
+playwright/.auth/
+dist/.playwright/
+.env.test

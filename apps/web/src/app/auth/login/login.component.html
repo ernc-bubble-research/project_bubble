@@ -11,10 +11,10 @@
     }
 
     @if (errorMessage) {
-      <div class="alert alert-error">{{ errorMessage }}</div>
+      <div class="alert alert-error" data-testid="login-error">{{ errorMessage }}</div>
     }
 
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form" data-testid="login-form">
       <div class="form-group">
         <label for="email" class="form-label">Email</label>
         <input
@@ -24,6 +24,7 @@
           class="form-input"
           placeholder="you@example.com"
           autocomplete="email"
+          data-testid="login-email"
         />
         @if (loginForm.get('email')?.touched && loginForm.get('email')?.hasError('required')) {
           <span class="form-error">Email is required</span>
@@ -43,6 +44,7 @@
             class="form-input"
             placeholder="Enter your password"
             autocomplete="current-password"
+            data-testid="login-password"
           />
           <button
             type="button"
@@ -62,6 +64,7 @@
         type="submit"
         class="btn btn-primary btn-login"
         [disabled]="isLoading"
+        data-testid="login-submit"
       >
         {{ isLoading ? 'Signing in...' : 'Sign In' }}
       </button>

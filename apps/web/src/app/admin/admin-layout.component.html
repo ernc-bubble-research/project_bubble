@@ -16,12 +16,13 @@
       <span class="logo-text">Bubble<br /><small>Admin Portal</small></span>
     </div>
 
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" data-testid="sidebar-nav">
       @for (item of navItems; track item.route) {
         <a
           class="nav-item"
           [routerLink]="item.route"
           routerLinkActive="active"
+          [attr.data-testid]="'nav-' + item.label.toLowerCase().replace(' ', '-')"
           (click)="closeMobileMenu()"
         >
           <lucide-icon class="nav-icon" [name]="item.icon" [size]="20"></lucide-icon>

@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "outDir": "../../dist/apps/web-e2e",
+    "rootDir": ".",
+    "paths": {
+      "@project-bubble/db-layer": ["../../libs/db-layer/src/index.ts"],
+      "@project-bubble/shared": ["../../libs/shared/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "playwright.config.ts"]
+}
