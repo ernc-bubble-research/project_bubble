@@ -418,6 +418,29 @@ _This file contains critical rules and patterns that AI agents must follow when 
     *   If there's no answer, there's a missing story.
 *   **This analysis must NOT include assumptions.** If a gap or even a slight issue is identified, it must be brought to the user's attention for discussion.
 
+## Party Mode & Collaboration Rules (from Epic 3 Retrospective — 2026-02-08)
+
+### 23. The "Party Mode Default" Rule
+*   **Party mode is the DEFAULT** for every story lifecycle stage: planning, post-implementation review, and code review.
+*   Small stories can be exempted case-by-case if the team raises it, but the default is always party mode.
+*   **REASON:** Party mode discussions during Epic 3 produced better architectural decisions (node-graph → atomic workflow pivot, BullMQ safety split, knowledge base deferral, prompt-to-output design). Individual agent analysis missed issues that multi-agent discussion caught.
+
+### 24. The "Module Wiring Tests" Rule
+*   **Every epic MUST include module wiring / integration tests** as a standard test category alongside unit tests and E2E tests.
+*   **NestJS:** Module compilation tests — verify `Test.createTestingModule({...}).compile()` succeeds with real providers (not mocked).
+*   **Angular:** Component integration tests — render with real child components for critical paths (not stubs).
+*   **REASON:** 555+ unit tests passed while the app crashed on startup. TypeORM entities not registered, circular dependencies, 20 Lucide icons silently failing — none caught by mocked unit tests. The three-layer testing pyramid (unit → wiring → E2E) is required for confidence.
+
+### 25. The "Guard Ordering Documentation" Rule
+*   **ANY** new guard registration **MUST** specify explicit execution order in a comment or documentation.
+*   Document: what guards run before this one? What does this guard expect from the request context? What happens if a prerequisite guard hasn't run?
+*   **REASON:** TenantStatusGuard was registered as APP_GUARD but ran before JwtAuthGuard, making `request.user` undefined and the guard a complete no-op. NestJS guard execution order: APP_GUARD (global) → controller @UseGuards → route guards.
+
+### 26. The "Browser Smoke Test" Rule
+*   **Every UI story MUST include a browser smoke test** before code review.
+*   At minimum: does the page load? Can you click through the happy path? Do icons render?
+*   **REASON:** Lucide icon bug, tags comma bug, markdown sections bug, TenantStatusGuard no-op — all invisible to automated tests, found in minutes by a human clicking through the UI.
+
 ## Anti-Patterns (Do Not Do)
 
 *   ❌ **No Schema per Tenant:** Do not create dynamic schemas. Use `tenant_id` column.
@@ -436,5 +459,9 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   ❌ **No Features Before Infrastructure:** If a feature depends on infrastructure that doesn't exist, build the infrastructure first.
 *   ❌ **No Design Decisions Without Rationale:** Every design trade-off, scope limitation, or architectural choice must include an explicit "Rationale:" with technical justification. "It's simpler" is not a rationale.
 *   ❌ **No Rephrased MVP Excuses:** Attempting to rephrase the MVP excuse using synonyms or euphemisms ("suitable for current iteration", "appropriate for this phase", "sufficient for now") is treated as a violation of the Quality Standard.
+*   ❌ **No Skipping Party Mode:** Party mode is default for every story (planning, post-impl, code review). Only skip if team explicitly raises that a story is too small.
+*   ❌ **No Epics Without Wiring Tests:** Every epic must include module wiring tests (NestJS compile + Angular integration). Unit tests alone are not sufficient.
+*   ❌ **No Guards Without Ordering Docs:** Every guard registration must document execution order and prerequisite guards.
+*   ❌ **No UI Stories Without Browser Test:** Every UI story must be manually smoke-tested in the browser before code review.
 
 

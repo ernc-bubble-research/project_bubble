@@ -502,6 +502,23 @@ This document provides the complete epic and story breakdown for project_bubble,
 
 > **Party Mode Consensus (2026-02-08):** Standalone UX story, not part of Story 3.8. Hardcoded presets (not admin-configurable). Chip-toggle UI pattern. ~half day effort. Shared constant in libs/shared for frontend + backend reuse.
 
+#### Story 3.11: Prompt-to-Output Section Auto-Population
+**As a** Bubble Admin,
+**I want** the wizard to automatically parse my prompt's output structure and populate the Output step's sections,
+**So that** I don't have to manually re-define the document structure that's already described in my prompt.
+
+**Acceptance Criteria:**
+**Given** I have written a prompt in Step 5 (Prompt) that includes an `## Output Structure` section (or equivalent convention)
+**When** I navigate to Step 6 (Output)
+**Then** the wizard parses the prompt for structured output section definitions and auto-populates the sections list
+**And** the admin can review and edit the auto-populated sections
+**And** the prompt is the single source of truth — if the admin corrects the structure, they correct it in the prompt
+**And** if no structure is detected in the prompt, a warning is shown asking the admin to confirm
+**And** if the admin confirms no structure, a single default section is created using the workflow template name as the title
+**And** the parsing logic uses convention-based detection (documented template with `## Output Structure` section pattern)
+
+> **Epic 3 Retro Decision (2026-02-08):** Option A (convention-based parsing) was unanimously chosen by the team. Prompt is single source of truth — no manual re-entry of output sections. Fallback: single section with workflow template name. LLM-assisted parsing (Option C) deferred to future epic as enhancement. Must be completed before Epic 4 starts.
+
 ### Epic 4: Workflow Execution Engine (The Creator)
 **Goal:** The heart of the system. Enable Creators to browse available workflows, submit runs with dynamic input forms, and execute LLM-orchestrated analysis asynchronously via BullMQ. Handles prompt assembly, fan-out/fan-in execution, output validation with automatic retry, token budget checks, credit pre-checks, and workflow chain orchestration.
 **FRs covered:** FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR34, FR36, FR37, FR46, FR47
@@ -511,6 +528,15 @@ This document provides the complete epic and story breakdown for project_bubble,
 > **ARCHITECTURE (Party Mode Pivot 2026-02-01):** LangGraph.js **DEFERRED**. The execution engine consumes atomic YAML workflow definitions (produced by Epic 3). Workflows are single LLM call patterns — YAML IS the prompt. Platform handles assembly: read input files/text + RAG context + YAML prompt template -> inject variables -> send to LLM via hexagonal `LLMProvider` interface. Execution patterns: `parallel` (fan-out: N BullMQ jobs, 1 per subject file) vs `batch` (fan-in: 1 BullMQ job with all files). Workflow chains use BullMQ FlowProducer to orchestrate sequential atomic workflow steps.
 
 > **GATE REQUIREMENT (BEFORE Story 4.1 or 4.2):** Build Mock LLM Provider alongside real providers. MockLlmProvider (deterministic, free, for dev + unit tests), VertexLlmProvider (production), GoogleAIStudioProvider (free tier, smoke tests). Switched via `LLM_PROVIDER` env var.
+
+> **EPIC 3 RETRO PLANNING ITEMS (2026-02-08):** The following topics were raised during the Epic 3 retrospective and must be discussed during Epic 4 planning party mode:
+> 1. **Circuit breaker for LLM providers** — Stop sending after N consecutive failures (e.g., 429 rate limits), surface error to user. Don't queue infinitely.
+> 2. **Per-tenant safety cap / budget system** — Design BEFORE execution engine. Even simple "max N requests per workflow run" safety cap prevents runaway loops burning credits.
+> 3. **In-process BullMQ consumer first** — Keep BullMQ consumer in api-gateway (same pattern as Epic 2 ingestion). Extract to separate worker-engine service only when scaling requires it. Less moving parts, faster iteration.
+> 4. **Credit/billing system design** — How to track, debit, enforce limits per tenant. Business requirement, not just technical.
+> 5. **Output validation strategies** — Verifying LLM output matches expected schema (structural validation, not content quality).
+> 6. **Fan-out/fan-in patterns with BullMQ** — Parallel job execution + result aggregation. FlowProducer patterns.
+> 7. **Token budget management** — Ensuring prompts don't exceed model context windows. Interactive file deselection UI.
 
 #### Story 4.1: Workflow Catalog & Run Initiation (Dynamic Forms)
 **As a** Creator,
