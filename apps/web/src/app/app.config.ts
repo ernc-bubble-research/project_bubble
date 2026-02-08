@@ -75,6 +75,9 @@ import {
   Archive,
   Globe,
   Shield,
+  Database,
+  List,
+  LayoutGrid,
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
@@ -147,6 +150,9 @@ export const appConfig: ApplicationConfig = {
         Archive,
         Globe,
         Shield,
+        Database,
+        List,
+        LayoutGrid,
       }),
     },
   ],

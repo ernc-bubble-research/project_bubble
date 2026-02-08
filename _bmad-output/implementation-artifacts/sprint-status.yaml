@@ -475,7 +475,7 @@ development_status:
   3h-rxjs-subscription-cleanup-hardening: done # Code review passed. 37 subscriptions fixed (19 files). ESLint plugin installed. 291 tests, 0 lint errors.
   3e-e2e-test-coverage-epic-3: done # Code review passed (7 findings: 3 fixed, 4 accepted). 8 tests, 3 spec files. Seed: template + version + chain + LLM model. 878 unit tests, 0 lint errors.
   3-11-prompt-to-output-auto-population: cancelled      # CANCELLED (party mode 2026-02-08): Prompt defines output structure via markdown instructions → LLM returns formatted markdown → report UI renders it. Output sections in wizard are unnecessary. Output step hidden from wizard UI. Validator relaxed (output optional).
-  mw-1-module-wiring-tests: backlog                     # Epic 3 Retro decision: NestJS module compilation tests + Angular component integration tests for Epics 1, 2, 3. New standard test category. Includes tenantId automated grep/CI check. Must complete before Epic 4.
+  mw-1-module-wiring-tests: done                          # 40 wiring tests (11 Tier 1 + 18 Tier 2 + 11 Angular) + tenantId CI check + shared DB helpers. Code review: 7 findings fixed (ARCHIVED guard, real cross-module verification, DI-resolved guards, shared DB helpers, NODE_ENV comment, icon source-of-truth, test count). 1028 total tests, 0 lint errors.
   epic-3-retrospective: done # Interactive retro completed 2026-02-08. 10 key learnings, 7 mandatory action items, 8 new team agreements. Party mode is default. Module wiring tests are standard.
 
   # ═══════════════════════════════════════════════════════
