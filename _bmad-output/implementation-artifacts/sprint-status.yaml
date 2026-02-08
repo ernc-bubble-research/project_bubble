@@ -449,6 +449,7 @@ development_status:
   3-7-workflow-studio-template-library: done # Code review passed 2026-02-04, 9 fixes applied (7 issues + takeUntilDestroyed), 291 tests, 0 lint errors.
   3-8-workflow-management-view: ready-for-dev # Added from Epic 3 retro item #2: visibility editing post-creation
   3-9-workflow-wizard-documentation-tooltips: done # 12 tooltips added across 5 wizard step files. Code review: 3 findings fixed (M1, M2, L1 — consolidated section tooltips to group label). 878 tests, 0 lint errors.
+  3-10-file-type-preset-groups: backlog              # UX-1 from user testing feedback. Chip-toggle presets for wizard file type restrictions. Party mode consensus 2026-02-08.
   3h-rxjs-subscription-cleanup-hardening: done # Code review passed. 37 subscriptions fixed (19 files). ESLint plugin installed. 291 tests, 0 lint errors.
   3e-e2e-test-coverage-epic-3: done # Code review passed (7 findings: 3 fixed, 4 accepted). 8 tests, 3 spec files. Seed: template + version + chain + LLM model. 878 unit tests, 0 lint errors.
   epic-3-retrospective: done # Retrospective completed 2026-02-04. 8 key learnings documented. Rules 14-20 added to project-context.md. MVP excuse permanently banned.
@@ -478,45 +479,34 @@ development_status:
   # ═══════════════════════════════════════════════════════
   # USER TESTING FEEDBACK (2026-02-08 — post-Story-3.9 live session)
   # Captured during hands-on browser testing of the full app.
+  # Party mode review completed 2026-02-08.
   # ═══════════════════════════════════════════════════════
   #
-  # BUG-1: ZONELESS CHANGE DETECTION FLICKERING
-  #   Symptom: Settings page items (models, providers) appear one-by-one on click.
-  #            Workflow Studio shows empty list, requires a click to render workflows.
-  #   Root cause: Likely zoneless Angular change detection — computed signals or
-  #   async data not triggering view updates without zone.js.
-  #   Affects: Settings tabs (LLM Models, Providers), Workflow Studio template list.
-  #   Priority: Medium — cosmetic but gives impression of broken UI.
-  #   Target: Dedicated investigation story or 7-7 UI polish pass.
+  # BUG-1: TEMPLATE RENDERING BROKEN (Settings + Workflow Studio) — FIXED
+  #   Root cause: 20 missing Lucide icon registrations in app.config.ts.
+  #   Unregistered icons silently broke Angular template rendering.
+  #   Fix: commit b30faa3. All icons now registered.
   #
   # BUG-2: EMAIL INVITATIONS FAIL (expected)
-  #   Symptom: "Cannot send email" when inviting users.
   #   Root cause: No SMTP service configured. Expected for local dev.
-  #   Priority: Low — not blocking until tenant onboarding is needed.
   #   Target: Epic 7P or production deployment setup.
   #
-  # UX-1: FILE TYPE RESTRICTIONS — MANUAL ENTRY TOO TEDIOUS
-  #   Symptom: Wizard file-upload step requires typing each extension individually
-  #            (rtf, doc, docx, txt, pdf, etc.). Dozens of formats exist.
-  #   Improvement: Add preset file-type groups ("Documents", "Images", "Spreadsheets")
-  #   with one-click selection. Keep manual entry as override.
-  #   Target: Story 3.8 (Workflow Management) or dedicated UX story.
+  # UX-1: FILE TYPE RESTRICTIONS — MANUAL ENTRY TOO TEDIOUS → Story 3.10
+  #   Decision: Standalone story (not part of 3.8). Chip-toggle UI with
+  #   hardcoded preset groups. Shared constant in libs/shared. ~half day.
   #
-  # UX-2: NO PUBLISH UI FOR WORKFLOW TEMPLATES
-  #   Symptom: After creating a template, no way to publish it from the UI.
-  #   Status: ALREADY PLANNED — this is Story 3.8 (Workflow Management View).
-  #   Target: Story 3.8 (next in execution order).
+  # UX-2: NO PUBLISH UI — covered by Story 3.8 (no separate action needed)
   #
-  # FEATURE-1: WORKFLOW RUN FORM SIMULATOR / PREVIEW
-  #   Request: Admin should be able to preview how end-users will experience the
-  #            workflow run form (file uploads, input fields, instructions) before
-  #            publishing. Like a "Preview as user" mode.
-  #   Target: Could be part of Story 3.8 or a standalone story after Epic 4.
+  # FEATURE-1: WORKFLOW TEST RUN & PREVIEW → Story 4.7 (Epic 4)
+  #   Decision: Both layout preview (A) and functional test (B) deferred to
+  #   Epic 4. The test run form IS the user-facing form — Option A comes free.
+  #   Option B requires the execution engine. No throwaway preview UI.
   #
   # BUGS FIXED IN THIS SESSION:
   #   - tenant_id → tenantId mismatch in 8 controllers (commit 74ab37a)
   #   - SET LOCAL parameterized query → string interpolation with UUID validation
   #   - Role tooltip clarified (Subject vs Context)
+  #   - 20 missing Lucide icons registered (commit b30faa3)
   #
 
   # ═══════════════════════════════════════════════════════
@@ -532,6 +522,7 @@ development_status:
   4-4-pre-flight-validation-credit-check: backlog
   4-5-output-validation-storage: backlog
   4-6-workflow-chain-orchestration: backlog
+  4-7-workflow-test-run-preview: backlog              # FEATURE-1 from user testing feedback. Combines layout preview + functional test run. Party mode consensus 2026-02-08.
   epic-4-retrospective: optional
 
   # ═══════════════════════════════════════════════════════

@@ -486,6 +486,22 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** a separate tab/section shows workflow chains with similar card layout
 **And** I can duplicate an existing template to create a new one based on it
 
+#### Story 3.10: File Type Preset Groups (Wizard UX Improvement)
+**As a** Bubble Admin,
+**I want** to select common file type groups (Documents, Images, Spreadsheets, etc.) with one click when configuring file upload restrictions in the wizard,
+**So that** I don't have to manually type dozens of individual file extensions.
+
+**Acceptance Criteria:**
+**Given** I am on Step 2 (Inputs) of the Workflow Builder Wizard editing a file-upload input's accepted extensions
+**Then** I see a row of preset group chips: Documents (pdf, doc, docx, rtf, txt, odt), Spreadsheets (xls, xlsx, csv, tsv, ods), Images (jpg, jpeg, png, gif, webp, svg, bmp), Audio/Video (mp3, wav, mp4, avi, mov, webm), Archives (zip, tar, gz, 7z, rar), Code (js, ts, py, java, json, xml, yaml, html, css), All Files (wildcard)
+**And** clicking a chip toggles it on/off and adds/removes its extensions from the accepted list
+**And** selected chips show their extensions as read-only pills below the chip row
+**And** a "+ Custom extension" input allows adding extensions not covered by presets
+**And** preset groups are defined as a shared constant (`FILE_TYPE_PRESETS`) in libs/shared for reuse by backend validation in Epic 4
+**And** the existing manual extension entry still works for edge cases
+
+> **Party Mode Consensus (2026-02-08):** Standalone UX story, not part of Story 3.8. Hardcoded presets (not admin-configurable). Chip-toggle UI pattern. ~half day effort. Shared constant in libs/shared for frontend + backend reuse.
+
 ### Epic 4: Workflow Execution Engine (The Creator)
 **Goal:** The heart of the system. Enable Creators to browse available workflows, submit runs with dynamic input forms, and execute LLM-orchestrated analysis asynchronously via BullMQ. Handles prompt assembly, fan-out/fan-in execution, output validation with automatic retry, token budget checks, credit pre-checks, and workflow chain orchestration.
 **FRs covered:** FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR34, FR36, FR37, FR46, FR47
@@ -594,6 +610,24 @@ This document provides the complete epic and story breakdown for project_bubble,
 **And** intermediate outputs between steps are visible and downloadable
 **And** if any step fails, the chain is marked as failed with the failing step identified
 **And** a WorkflowRun record is created for the chain with `chain_id` reference (check constraint: version_id OR chain_id)
+
+#### Story 4.7: Workflow Test Run & Preview
+**As a** Bubble Admin,
+**I want** to preview the user-facing run form and execute a test run of my workflow before publishing,
+**So that** I can see exactly what end-users will experience and verify that my prompts produce quality output.
+
+**Acceptance Criteria:**
+**Given** I am viewing a workflow template in Workflow Studio (draft or published)
+**When** I click "Test Run"
+**Then** I see the same dynamically generated run form that end-users would see (Story 4.1), rendered from the workflow's input definitions
+**And** I can fill in test data (upload files, select assets, enter text) just like a Creator would
+**And** submitting the form executes the workflow through the real execution pipeline with a `dryRun` flag
+**And** the LLM response and assembled prompt are displayed inline for review
+**And** I can iterate — modify the workflow's prompt in the wizard, then re-run the test to compare results
+**And** test runs do not consume tenant credits and are not visible to Creators
+**And** test run history is stored for the admin's reference (last N test runs per template)
+
+> **Party Mode Consensus (2026-02-08):** Combines layout preview (Option A) and functional test (Option B) into one story. Option A comes free — the test run form IS the user-facing form component. Option B requires the Epic 4 execution engine. Deferred from Epic 3 because building a fake preview would be throwaway work. The real run form component is reused for both test runs and production runs.
 
 ### Epic 5: Interactive Reporting & Feedback Loop
 **Goal:** Deliver the value. Provide a highly responsive report viewer where users can verify evidence ("Traceable Truth") and provide feedback that triggers re-runs.
