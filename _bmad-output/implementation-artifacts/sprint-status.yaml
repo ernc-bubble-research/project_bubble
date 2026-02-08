@@ -438,7 +438,7 @@ development_status:
   # REWRITTEN 2026-02-02: All stories updated for party mode architectural pivot.
   # Old node-based stories (3.1-3.6 + 3.2b) replaced with atomic workflow architecture.
   # ═══════════════════════════════════════════════════════
-  epic-3: in-progress
+  epic-3: done # All 12 stories + hardening + E2E + retro complete. 880 total tests, 0 lint errors.
   3-1-workflow-definition-data-foundation: done # Code review passed, 7 fixes applied, 453 tests, 0 lint errors
   3-2-workflow-builder-wizard-admin-ui: done # Code review passed (17 fixes), UI testing fixes applied, final review 2026-02-04. 575+ tests, 0 lint errors.
   3-3-workflow-template-crud-api: done # Code review passed, 6 fixes applied (H1-H3, M1-M2, L1), 504 tests, 0 lint errors
