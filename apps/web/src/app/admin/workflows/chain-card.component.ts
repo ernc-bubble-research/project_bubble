@@ -1,4 +1,4 @@
-import { Component, input, output, computed } from '@angular/core';
+import { Component, input, output, computed, signal, HostListener, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import type { WorkflowChainResponseDto } from '@project-bubble/shared';
@@ -16,21 +16,44 @@ interface ChainDefinition {
     <div
       class="chain-card"
       [attr.data-testid]="'chain-card-' + chain().id"
-      (click)="cardClick.emit(chain())"
+      (click)="onCardClick()"
       (keydown.enter)="cardClick.emit(chain())"
       tabindex="0"
       role="button"
     >
       <div class="card-header">
         <h3 class="card-title">{{ chain().name }}</h3>
-        <div class="card-badges">
-          <span class="status-badge" [class]="chain().status">
-            {{ chain().status | uppercase }}
-          </span>
-          <span class="visibility-badge" [class]="chain().visibility">
-            {{ chain().visibility | uppercase }}
-          </span>
+        <div class="card-actions">
+          <button
+            class="more-actions-btn"
+            (click)="toggleMenu($event)"
+            [attr.data-testid]="'chain-card-' + chain().id + '-menu'"
+            aria-label="More actions"
+          >
+            <lucide-icon name="more-vertical" [size]="16"></lucide-icon>
+          </button>
+          @if (showMenu()) {
+            <div class="actions-dropdown">
+              <button
+                class="dropdown-item"
+                (click)="onSettings($event)"
+                [attr.data-testid]="'chain-card-' + chain().id + '-settings'"
+              >
+                <lucide-icon name="settings" [size]="14"></lucide-icon>
+                Settings
+              </button>
+            </div>
+          }
         </div>
+      </div>
+
+      <div class="card-badges">
+        <span class="status-badge" [class]="chain().status">
+          {{ chain().status | uppercase }}
+        </span>
+        <span class="visibility-badge" [class]="chain().visibility">
+          {{ chain().visibility | uppercase }}
+        </span>
       </div>
 
       <p class="card-description">
@@ -97,10 +120,68 @@ interface ChainDefinition {
       min-width: 0;
     }
 
+    .card-actions {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .more-actions-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      color: var(--text-tertiary);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+
+      &:hover {
+        background: var(--slate-100);
+        color: var(--text-main);
+      }
+    }
+
+    .actions-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 4px;
+      min-width: 140px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 10;
+      padding: 4px 0;
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 12px;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text-main);
+      cursor: pointer;
+      text-align: left;
+
+      &:hover {
+        background: var(--slate-50);
+      }
+    }
+
     .card-badges {
       display: flex;
       gap: 6px;
       flex-shrink: 0;
+      margin-top: 4px;
     }
 
     .status-badge,
@@ -187,8 +268,20 @@ interface ChainDefinition {
   `],
 })
 export class ChainCardComponent {
+  private readonly elementRef = inject(ElementRef);
+
   chain = input.required<WorkflowChainResponseDto>();
   cardClick = output<WorkflowChainResponseDto>();
+  settingsClick = output<WorkflowChainResponseDto>();
+
+  showMenu = signal(false);
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    if (this.showMenu() && !this.elementRef.nativeElement.contains(event.target)) {
+      this.showMenu.set(false);
+    }
+  }
 
   stepCount = computed(() => {
     const definition = this.chain().definition as ChainDefinition;
@@ -210,4 +303,23 @@ export class ChainCardComponent {
     if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
     return date.toLocaleDateString();
   });
+
+  onCardClick(): void {
+    if (!this.showMenu()) {
+      this.cardClick.emit(this.chain());
+    } else {
+      this.showMenu.set(false);
+    }
+  }
+
+  toggleMenu(event: Event): void {
+    event.stopPropagation();
+    this.showMenu.update(v => !v);
+  }
+
+  onSettings(event: Event): void {
+    event.stopPropagation();
+    this.showMenu.set(false);
+    this.settingsClick.emit(this.chain());
+  }
 }

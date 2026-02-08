@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LucideIconProvider, LUCIDE_ICONS } from 'lucide-angular';
-import { GitBranch, MoreVertical, Copy } from 'lucide-angular';
+import { GitBranch, MoreVertical, Copy, Settings } from 'lucide-angular';
 import { TemplateCardComponent } from './template-card.component';
 import type { WorkflowTemplateResponseDto } from '@project-bubble/shared';
 
@@ -43,7 +43,7 @@ describe('[P0] TemplateCardComponent', () => {
         {
           provide: LUCIDE_ICONS,
           multi: true,
-          useValue: new LucideIconProvider({ GitBranch, MoreVertical, Copy }),
+          useValue: new LucideIconProvider({ GitBranch, MoreVertical, Copy, Settings }),
         },
       ],
     }).compileComponents();
@@ -252,6 +252,44 @@ describe('[P0] TemplateCardComponent', () => {
 
       // Then
       expect(emitSpy).toHaveBeenCalledWith(mockTemplate);
+    });
+
+    it('[3.8-UNIT-001] [P0] Given dropdown open, when settings clicked, then emits settingsClick', () => {
+      // Given
+      fixture.componentRef.setInput('template', mockTemplate);
+      fixture.detectChanges();
+      const emitSpy = jest.spyOn(component.settingsClick, 'emit');
+
+      // Open menu
+      const menuBtn = fixture.nativeElement.querySelector('[data-testid="template-card-template-123-menu"]');
+      menuBtn.click();
+      fixture.detectChanges();
+
+      // When
+      const settingsBtn = fixture.nativeElement.querySelector('[data-testid="template-card-template-123-settings"]');
+      settingsBtn.click();
+
+      // Then
+      expect(emitSpy).toHaveBeenCalledWith(mockTemplate);
+    });
+
+    it('[3.8-UNIT-001a] [P1] Given dropdown open, when settings clicked, then closes menu', () => {
+      // Given
+      fixture.componentRef.setInput('template', mockTemplate);
+      fixture.detectChanges();
+
+      // Open menu
+      const menuBtn = fixture.nativeElement.querySelector('[data-testid="template-card-template-123-menu"]');
+      menuBtn.click();
+      fixture.detectChanges();
+
+      // When
+      const settingsBtn = fixture.nativeElement.querySelector('[data-testid="template-card-template-123-settings"]');
+      settingsBtn.click();
+      fixture.detectChanges();
+
+      // Then
+      expect(component.showMenu()).toBe(false);
     });
 
     it('[3.7-UNIT-023a] [P1] Given dropdown open, when duplicate clicked, then closes menu', () => {

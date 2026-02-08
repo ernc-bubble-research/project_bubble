@@ -8,6 +8,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { ChainCardComponent } from './chain-card.component';
 import { WorkflowFilterBarComponent, WorkflowFilters, StatusCounts } from './workflow-filter-bar.component';
 import { WorkflowSearchComponent } from './workflow-search.component';
+import { WorkflowSettingsModalComponent, type WorkflowSettingsTarget } from './workflow-settings-modal.component';
 import type { WorkflowChainResponseDto } from '@project-bubble/shared';
 
 @Component({
@@ -18,6 +19,7 @@ import type { WorkflowChainResponseDto } from '@project-bubble/shared';
     ChainCardComponent,
     WorkflowFilterBarComponent,
     WorkflowSearchComponent,
+    WorkflowSettingsModalComponent,
   ],
   selector: 'app-chain-list',
   template: `
@@ -72,9 +74,18 @@ import type { WorkflowChainResponseDto } from '@project-bubble/shared';
             <app-chain-card
               [chain]="chain"
               (cardClick)="onChainClick($event)"
+              (settingsClick)="onSettingsClick($event)"
             />
           }
         </div>
+      }
+
+      @if (settingsTarget()) {
+        <app-workflow-settings-modal
+          [target]="settingsTarget()!"
+          (saved)="onSettingsSaved()"
+          (cancelled)="onSettingsCancelled()"
+        />
       }
     </div>
   `,
@@ -156,6 +167,7 @@ export class ChainListComponent implements OnInit {
 
   chains = signal<WorkflowChainResponseDto[]>([]);
   isLoading = signal(true);
+  settingsTarget = signal<WorkflowSettingsTarget | null>(null);
 
   filters = signal<WorkflowFilters>({
     status: 'all',
@@ -232,6 +244,19 @@ export class ChainListComponent implements OnInit {
 
   updateSearch(search: string): void {
     this.filters.update(f => ({ ...f, search }));
+  }
+
+  onSettingsClick(chain: WorkflowChainResponseDto): void {
+    this.settingsTarget.set({ type: 'chain', data: chain });
+  }
+
+  onSettingsSaved(): void {
+    this.settingsTarget.set(null);
+    this.loadChains();
+  }
+
+  onSettingsCancelled(): void {
+    this.settingsTarget.set(null);
   }
 
   onChainClick(chain: WorkflowChainResponseDto): void {

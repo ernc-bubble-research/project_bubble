@@ -31,6 +31,14 @@ import type { WorkflowTemplateResponseDto } from '@project-bubble/shared';
             <div class="actions-dropdown">
               <button
                 class="dropdown-item"
+                (click)="onSettings($event)"
+                [attr.data-testid]="'template-card-' + template().id + '-settings'"
+              >
+                <lucide-icon name="settings" [size]="14"></lucide-icon>
+                Settings
+              </button>
+              <button
+                class="dropdown-item"
                 (click)="onDuplicate($event)"
                 [attr.data-testid]="'template-card-' + template().id + '-duplicate'"
               >
@@ -277,6 +285,7 @@ export class TemplateCardComponent {
   template = input.required<WorkflowTemplateResponseDto>();
   cardClick = output<WorkflowTemplateResponseDto>();
   duplicateClick = output<WorkflowTemplateResponseDto>();
+  settingsClick = output<WorkflowTemplateResponseDto>();
 
   showMenu = signal(false);
   private readonly maxVisibleTags = 3;
@@ -331,6 +340,12 @@ export class TemplateCardComponent {
   toggleMenu(event: Event): void {
     event.stopPropagation();
     this.showMenu.update(v => !v);
+  }
+
+  onSettings(event: Event): void {
+    event.stopPropagation();
+    this.showMenu.set(false);
+    this.settingsClick.emit(this.template());
   }
 
   onDuplicate(event: Event): void {

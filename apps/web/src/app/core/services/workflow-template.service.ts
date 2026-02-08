@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import type {
   WorkflowTemplateResponseDto,
   CreateWorkflowTemplateDto,
+  UpdateWorkflowTemplateDto,
   CreateWorkflowVersionBodyDto,
   WorkflowVersionResponseDto,
   ListWorkflowTemplatesQueryDto,
@@ -41,6 +42,10 @@ export class WorkflowTemplateService {
   // L4: Properly typed return as WorkflowVersionResponseDto
   createVersion(templateId: string, dto: CreateWorkflowVersionBodyDto): Observable<WorkflowVersionResponseDto> {
     return this.http.post<WorkflowVersionResponseDto>(`${this.baseUrl}/${templateId}/versions`, dto);
+  }
+
+  update(id: string, dto: UpdateWorkflowTemplateDto): Observable<WorkflowTemplateResponseDto> {
+    return this.http.patch<WorkflowTemplateResponseDto>(`${this.baseUrl}/${id}`, dto);
   }
 
   delete(id: string): Observable<void> {

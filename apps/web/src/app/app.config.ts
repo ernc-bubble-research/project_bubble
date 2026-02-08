@@ -72,6 +72,9 @@ import {
   Loader,
   Files,
   Folder,
+  Archive,
+  Globe,
+  Shield,
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
@@ -141,6 +144,9 @@ export const appConfig: ApplicationConfig = {
         Loader,
         Files,
         Folder,
+        Archive,
+        Globe,
+        Shield,
       }),
     },
   ],

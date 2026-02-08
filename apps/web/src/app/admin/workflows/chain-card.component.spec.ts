@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LucideIconProvider, LUCIDE_ICONS } from 'lucide-angular';
-import { Link, Layers } from 'lucide-angular';
+import { Link, Layers, MoreVertical, Settings } from 'lucide-angular';
 import { ChainCardComponent } from './chain-card.component';
 import type { WorkflowChainResponseDto } from '@project-bubble/shared';
 
@@ -35,7 +35,7 @@ describe('[P0] ChainCardComponent', () => {
         {
           provide: LUCIDE_ICONS,
           multi: true,
-          useValue: new LucideIconProvider({ Link, Layers }),
+          useValue: new LucideIconProvider({ Link, Layers, MoreVertical, Settings }),
         },
       ],
     }).compileComponents();
@@ -93,6 +93,82 @@ describe('[P0] ChainCardComponent', () => {
       const stepCount = fixture.nativeElement.querySelector('.step-count');
       expect(stepCount.textContent).toContain('1 step');
       expect(stepCount.textContent).not.toContain('steps');
+    });
+  });
+
+  describe('menu and settings', () => {
+    it('[3.8-UNIT-002] [P0] Given a chain card, when menu button clicked, then shows dropdown', () => {
+      // Given
+      fixture.componentRef.setInput('chain', mockChain);
+      fixture.detectChanges();
+
+      // When
+      const menuBtn = fixture.nativeElement.querySelector('[data-testid="chain-card-chain-123-menu"]');
+      menuBtn.click();
+      fixture.detectChanges();
+
+      // Then
+      const dropdown = fixture.nativeElement.querySelector('.actions-dropdown');
+      expect(dropdown).toBeTruthy();
+    });
+
+    it('[3.8-UNIT-002a] [P0] Given dropdown open, when settings clicked, then emits settingsClick', () => {
+      // Given
+      fixture.componentRef.setInput('chain', mockChain);
+      fixture.detectChanges();
+      const emitSpy = jest.spyOn(component.settingsClick, 'emit');
+
+      // Open menu
+      const menuBtn = fixture.nativeElement.querySelector('[data-testid="chain-card-chain-123-menu"]');
+      menuBtn.click();
+      fixture.detectChanges();
+
+      // When
+      const settingsBtn = fixture.nativeElement.querySelector('[data-testid="chain-card-chain-123-settings"]');
+      settingsBtn.click();
+
+      // Then
+      expect(emitSpy).toHaveBeenCalledWith(mockChain);
+    });
+
+    it('[3.8-UNIT-002b] [P1] Given dropdown open, when settings clicked, then closes menu', () => {
+      // Given
+      fixture.componentRef.setInput('chain', mockChain);
+      fixture.detectChanges();
+
+      // Open menu
+      const menuBtn = fixture.nativeElement.querySelector('[data-testid="chain-card-chain-123-menu"]');
+      menuBtn.click();
+      fixture.detectChanges();
+
+      // When
+      const settingsBtn = fixture.nativeElement.querySelector('[data-testid="chain-card-chain-123-settings"]');
+      settingsBtn.click();
+      fixture.detectChanges();
+
+      // Then
+      expect(component.showMenu()).toBe(false);
+    });
+
+    it('[3.8-UNIT-002c] [P1] Given menu open, when card clicked, then closes menu without navigation', () => {
+      // Given
+      fixture.componentRef.setInput('chain', mockChain);
+      fixture.detectChanges();
+      const cardEmitSpy = jest.spyOn(component.cardClick, 'emit');
+
+      // Open menu
+      const menuBtn = fixture.nativeElement.querySelector('[data-testid="chain-card-chain-123-menu"]');
+      menuBtn.click();
+      fixture.detectChanges();
+      expect(component.showMenu()).toBe(true);
+
+      // When — click card body
+      component.onCardClick();
+      fixture.detectChanges();
+
+      // Then
+      expect(component.showMenu()).toBe(false);
+      expect(cardEmitSpy).not.toHaveBeenCalled();
     });
   });
 

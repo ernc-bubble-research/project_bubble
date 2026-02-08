@@ -9,6 +9,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { TemplateCardComponent } from './template-card.component';
 import { WorkflowFilterBarComponent, WorkflowFilters, StatusCounts } from './workflow-filter-bar.component';
 import { WorkflowSearchComponent } from './workflow-search.component';
+import { WorkflowSettingsModalComponent, type WorkflowSettingsTarget } from './workflow-settings-modal.component';
 import type { WorkflowTemplateResponseDto, CreateWorkflowTemplateDto } from '@project-bubble/shared';
 
 @Component({
@@ -19,6 +20,7 @@ import type { WorkflowTemplateResponseDto, CreateWorkflowTemplateDto } from '@pr
     TemplateCardComponent,
     WorkflowFilterBarComponent,
     WorkflowSearchComponent,
+    WorkflowSettingsModalComponent,
   ],
   selector: 'app-template-list',
   template: `
@@ -73,9 +75,18 @@ import type { WorkflowTemplateResponseDto, CreateWorkflowTemplateDto } from '@pr
               [template]="template"
               (cardClick)="onTemplateClick($event)"
               (duplicateClick)="onDuplicateTemplate($event)"
+              (settingsClick)="onSettingsClick($event)"
             />
           }
         </div>
+      }
+
+      @if (settingsTarget()) {
+        <app-workflow-settings-modal
+          [target]="settingsTarget()!"
+          (saved)="onSettingsSaved()"
+          (cancelled)="onSettingsCancelled()"
+        />
       }
     </div>
   `,
@@ -157,6 +168,7 @@ export class TemplateListComponent implements OnInit {
 
   templates = signal<WorkflowTemplateResponseDto[]>([]);
   isLoading = signal(true);
+  settingsTarget = signal<WorkflowSettingsTarget | null>(null);
 
   filters = signal<WorkflowFilters>({
     status: 'all',
@@ -264,6 +276,19 @@ export class TemplateListComponent implements OnInit {
 
   navigateToCreate(): void {
     this.router.navigate(['/admin/workflows/create']);
+  }
+
+  onSettingsClick(template: WorkflowTemplateResponseDto): void {
+    this.settingsTarget.set({ type: 'template', data: template });
+  }
+
+  onSettingsSaved(): void {
+    this.settingsTarget.set(null);
+    this.loadTemplates();
+  }
+
+  onSettingsCancelled(): void {
+    this.settingsTarget.set(null);
   }
 
   onDuplicateTemplate(template: WorkflowTemplateResponseDto): void {

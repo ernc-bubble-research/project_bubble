@@ -3,7 +3,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { LucideIconProvider, LUCIDE_ICONS } from 'lucide-angular';
-import { FileText, Plus, Search, X, Tag, ChevronDown, Link, Layers } from 'lucide-angular';
+import {
+  FileText, Plus, Search, X, Tag, ChevronDown, Link, Layers, MoreVertical, Settings,
+  Eye, Globe, Shield, Users, Archive, RefreshCw, AlertCircle, Loader2,
+} from 'lucide-angular';
 import { ChainListComponent } from './chain-list.component';
 import type { WorkflowChainResponseDto } from '@project-bubble/shared';
 
@@ -66,7 +69,10 @@ describe('[P0] ChainListComponent', () => {
         {
           provide: LUCIDE_ICONS,
           multi: true,
-          useValue: new LucideIconProvider({ FileText, Plus, Search, X, Tag, ChevronDown, Link, Layers }),
+          useValue: new LucideIconProvider({
+            FileText, Plus, Search, X, Tag, ChevronDown, Link, Layers, MoreVertical, Settings,
+            Eye, Globe, Shield, Users, Archive, RefreshCw, AlertCircle, Loader2,
+          }),
         },
       ],
     }).compileComponents();
@@ -193,6 +199,58 @@ describe('[P0] ChainListComponent', () => {
       // Then
       const createButton = fixture.nativeElement.querySelector('[data-testid="create-chain-button"]');
       expect(createButton).toBeTruthy();
+    });
+  });
+
+  describe('settings modal', () => {
+    it('[3.8-UNIT-004] [P0] Given chain, when onSettingsClick called, then sets settingsTarget', () => {
+      // Given
+      fixture.detectChanges();
+      const req = httpMock.expectOne('/api/admin/workflow-chains');
+      req.flush(mockChains);
+      fixture.detectChanges();
+
+      // When
+      component.onSettingsClick(mockChains[0]);
+
+      // Then
+      const target = component.settingsTarget();
+      expect(target).toBeTruthy();
+      expect(target!.type).toBe('chain');
+      expect(target!.data.id).toBe('chain-1');
+    });
+
+    it('[3.8-UNIT-004a] [P0] Given settings open, when onSettingsCancelled called, then clears settingsTarget', () => {
+      // Given
+      fixture.detectChanges();
+      const req = httpMock.expectOne('/api/admin/workflow-chains');
+      req.flush(mockChains);
+      fixture.detectChanges();
+      component.onSettingsClick(mockChains[0]);
+      expect(component.settingsTarget()).toBeTruthy();
+
+      // When
+      component.onSettingsCancelled();
+
+      // Then
+      expect(component.settingsTarget()).toBeNull();
+    });
+
+    it('[3.8-UNIT-004b] [P0] Given settings open, when onSettingsSaved called, then clears target and reloads', () => {
+      // Given
+      fixture.detectChanges();
+      const req = httpMock.expectOne('/api/admin/workflow-chains');
+      req.flush(mockChains);
+      fixture.detectChanges();
+      component.onSettingsClick(mockChains[0]);
+
+      // When
+      component.onSettingsSaved();
+
+      // Then — target cleared and reload triggered
+      expect(component.settingsTarget()).toBeNull();
+      const reloadReq = httpMock.expectOne('/api/admin/workflow-chains');
+      reloadReq.flush(mockChains);
     });
   });
 

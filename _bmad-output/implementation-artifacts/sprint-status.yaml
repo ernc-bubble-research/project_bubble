@@ -447,7 +447,7 @@ development_status:
   3-6a-workflow-chain-crud-api: done # Code review passed, 52 tests (24 validator + 21 service + 7 controller), 432 total tests, 0 lint errors
   3-6b-workflow-chain-builder-ui: done # Code review passed 2026-02-04, 8 fixes applied (H1-H2, M1, M3-M4, L1), 228 tests, 0 lint errors
   3-7-workflow-studio-template-library: done # Code review passed 2026-02-04, 9 fixes applied (7 issues + takeUntilDestroyed), 291 tests, 0 lint errors.
-  3-8-workflow-management-view: ready-for-dev # Added from Epic 3 retro item #2: visibility editing post-creation
+  3-8-workflow-management-view: done # Settings modal for visibility, tenants, archive/unarchive. Party mode review: 10 findings, all fixed. 49 story tests. 823 total tests, 0 lint errors.
   3-9-workflow-wizard-documentation-tooltips: done # 12 tooltips added across 5 wizard step files. Code review: 3 findings fixed (M1, M2, L1 — consolidated section tooltips to group label). 878 tests, 0 lint errors.
   3-10-file-type-preset-groups: backlog              # UX-1 from user testing feedback. Chip-toggle presets for wizard file type restrictions. Party mode consensus 2026-02-08.
   3h-rxjs-subscription-cleanup-hardening: done # Code review passed. 37 subscriptions fixed (19 files). ESLint plugin installed. 291 tests, 0 lint errors.

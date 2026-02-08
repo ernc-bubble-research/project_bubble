@@ -3,7 +3,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { LucideIconProvider, LUCIDE_ICONS } from 'lucide-angular';
-import { FileText, Plus, Search, X, Tag, ChevronDown, GitBranch, MoreVertical, Copy } from 'lucide-angular';
+import {
+  FileText, Plus, Search, X, Tag, ChevronDown, GitBranch, MoreVertical, Copy, Settings,
+  Eye, Globe, Shield, Users, Archive, RefreshCw, AlertCircle, Loader2, Link,
+} from 'lucide-angular';
 import { TemplateListComponent } from './template-list.component';
 import type { WorkflowTemplateResponseDto } from '@project-bubble/shared';
 
@@ -66,7 +69,10 @@ describe('[P0] TemplateListComponent', () => {
         {
           provide: LUCIDE_ICONS,
           multi: true,
-          useValue: new LucideIconProvider({ FileText, Plus, Search, X, Tag, ChevronDown, GitBranch, MoreVertical, Copy }),
+          useValue: new LucideIconProvider({
+            FileText, Plus, Search, X, Tag, ChevronDown, GitBranch, MoreVertical, Copy, Settings,
+            Eye, Globe, Shield, Users, Archive, RefreshCw, AlertCircle, Loader2, Link,
+          }),
         },
       ],
     }).compileComponents();
@@ -214,6 +220,58 @@ describe('[P0] TemplateListComponent', () => {
       // Then
       const createButton = fixture.nativeElement.querySelector('[data-testid="create-workflow-button"]');
       expect(createButton).toBeTruthy();
+    });
+  });
+
+  describe('settings modal', () => {
+    it('[3.8-UNIT-003] [P0] Given template, when onSettingsClick called, then sets settingsTarget', () => {
+      // Given
+      fixture.detectChanges();
+      const req = httpMock.expectOne('/api/admin/workflow-templates');
+      req.flush(mockTemplates);
+      fixture.detectChanges();
+
+      // When
+      component.onSettingsClick(mockTemplates[0]);
+
+      // Then
+      const target = component.settingsTarget();
+      expect(target).toBeTruthy();
+      expect(target!.type).toBe('template');
+      expect(target!.data.id).toBe('template-1');
+    });
+
+    it('[3.8-UNIT-003a] [P0] Given settings open, when onSettingsCancelled called, then clears settingsTarget', () => {
+      // Given
+      fixture.detectChanges();
+      const req = httpMock.expectOne('/api/admin/workflow-templates');
+      req.flush(mockTemplates);
+      fixture.detectChanges();
+      component.onSettingsClick(mockTemplates[0]);
+      expect(component.settingsTarget()).toBeTruthy();
+
+      // When
+      component.onSettingsCancelled();
+
+      // Then
+      expect(component.settingsTarget()).toBeNull();
+    });
+
+    it('[3.8-UNIT-003b] [P0] Given settings open, when onSettingsSaved called, then clears target and reloads', () => {
+      // Given
+      fixture.detectChanges();
+      const req = httpMock.expectOne('/api/admin/workflow-templates');
+      req.flush(mockTemplates);
+      fixture.detectChanges();
+      component.onSettingsClick(mockTemplates[0]);
+
+      // When
+      component.onSettingsSaved();
+
+      // Then — target cleared and reload triggered
+      expect(component.settingsTarget()).toBeNull();
+      const reloadReq = httpMock.expectOne('/api/admin/workflow-templates');
+      reloadReq.flush(mockTemplates);
     });
   });
 

@@ -1,0 +1,217 @@
+<div
+  class="dialog-backdrop"
+  data-testid="settings-modal-backdrop"
+  role="presentation"
+  (click)="onCancel()"
+  (keydown.escape)="onCancel()"
+>
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="'settings-dialog-title'"
+    data-testid="settings-modal"
+    (click)="$event.stopPropagation()"
+    (keydown)="$event.stopPropagation()"
+  >
+    <!-- Header -->
+    <div class="dialog-header">
+      <h2 id="settings-dialog-title" class="dialog-title">
+        <lucide-icon [name]="isTemplate() ? 'settings' : 'link'" [size]="20"></lucide-icon>
+        {{ isTemplate() ? 'Template' : 'Chain' }} Settings
+      </h2>
+      <button
+        type="button"
+        class="close-btn"
+        aria-label="Close dialog"
+        data-testid="settings-close-btn"
+        (click)="onCancel()"
+      >
+        <lucide-icon name="x" [size]="18"></lucide-icon>
+      </button>
+    </div>
+
+    <!-- Workflow name display -->
+    <div class="workflow-name-section">
+      <span class="workflow-name" data-testid="settings-workflow-name">{{ targetName() }}</span>
+      <span class="status-badge" [class]="target().data.status" data-testid="settings-status-badge">
+        {{ target().data.status | uppercase }}
+      </span>
+    </div>
+
+    <!-- Error banner -->
+    @if (error()) {
+      <div class="error-banner" data-testid="settings-error">
+        <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+        <span>{{ error() }}</span>
+      </div>
+    }
+
+    <!-- Form -->
+    <form [formGroup]="form" (ngSubmit)="onSave()" class="dialog-form">
+      <!-- Visibility -->
+      <div class="form-group" role="radiogroup" aria-label="Visibility">
+        <span class="form-label">
+          <lucide-icon name="eye" [size]="14"></lucide-icon>
+          Visibility
+        </span>
+        <div class="radio-group" data-testid="settings-visibility">
+          <label class="radio-label">
+            <input
+              type="radio"
+              formControlName="visibility"
+              value="public"
+              (change)="onVisibilityChange()"
+              data-testid="visibility-public"
+            />
+            <div class="radio-content">
+              <lucide-icon name="globe" [size]="14"></lucide-icon>
+              <div>
+                <span class="radio-title">Public</span>
+                <span class="radio-description">All tenants can access this workflow</span>
+              </div>
+            </div>
+          </label>
+          <label class="radio-label">
+            <input
+              type="radio"
+              formControlName="visibility"
+              value="private"
+              (change)="onVisibilityChange()"
+              data-testid="visibility-private"
+            />
+            <div class="radio-content">
+              <lucide-icon name="shield" [size]="14"></lucide-icon>
+              <div>
+                <span class="radio-title">Private</span>
+                <span class="radio-description">Only selected tenants can access</span>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Tenant Selection (shown when private) -->
+      @if (form.controls.visibility.value === 'private') {
+        <div class="form-group" data-testid="settings-tenant-section">
+          <span class="form-label">
+            <lucide-icon name="users" [size]="14"></lucide-icon>
+            Allowed Tenants
+            <span class="required">*</span>
+          </span>
+
+          @if (tenantsLoading()) {
+            <div class="tenants-loading">Loading tenants...</div>
+          } @else if (tenants().length === 0) {
+            <div class="tenants-empty">No tenants available</div>
+          } @else {
+            <div class="tenants-list" data-testid="settings-tenants-list">
+              @for (tenant of tenants(); track tenant.id) {
+                <label
+                  class="tenant-checkbox"
+                  [class.selected]="isTenantSelected(tenant.id)"
+                  [attr.data-testid]="'tenant-option-' + tenant.id"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="isTenantSelected(tenant.id)"
+                    (change)="onTenantToggle(tenant.id)"
+                  />
+                  <span class="tenant-name">{{ tenant.name }}</span>
+                  <span class="tenant-status" [class]="tenant.status">{{ tenant.status }}</span>
+                </label>
+              }
+            </div>
+            <span class="field-hint">
+              {{ form.controls.allowedTenants.value.length }} tenant(s) selected
+            </span>
+          }
+        </div>
+      }
+
+      <!-- Archive/Unarchive Section -->
+      <div class="form-group archive-section">
+        <span class="form-label">
+          <lucide-icon name="archive" [size]="14"></lucide-icon>
+          Lifecycle
+        </span>
+        @if (canArchive()) {
+          @if (confirmingArchive()) {
+            <div class="confirm-archive" data-testid="settings-archive-confirm">
+              <span class="confirm-text">Are you sure you want to archive this workflow?</span>
+              <div class="confirm-actions">
+                <button
+                  type="button"
+                  class="btn btn-danger-outline btn-sm"
+                  data-testid="settings-archive-confirm-btn"
+                  [disabled]="submitting()"
+                  (click)="onArchiveConfirm()"
+                >
+                  Yes, Archive
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  data-testid="settings-archive-cancel-btn"
+                  (click)="onArchiveCancel()"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          } @else {
+            <button
+              type="button"
+              class="btn btn-danger-outline"
+              data-testid="settings-archive-btn"
+              [disabled]="submitting()"
+              (click)="onArchiveClick()"
+            >
+              <lucide-icon name="archive" [size]="14"></lucide-icon>
+              Archive
+            </button>
+          }
+          <span class="field-hint">Archived workflows are hidden from tenants but can be restored</span>
+        } @else {
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-testid="settings-unarchive-btn"
+            [disabled]="submitting()"
+            (click)="onUnarchive()"
+          >
+            <lucide-icon name="refresh-cw" [size]="14"></lucide-icon>
+            Restore to Draft
+          </button>
+          <span class="field-hint">This will restore the workflow to draft status</span>
+        }
+      </div>
+
+      <!-- Actions -->
+      <div class="dialog-actions">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          data-testid="settings-cancel-btn"
+          (click)="onCancel()"
+          [disabled]="submitting()"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          data-testid="settings-save-btn"
+          [disabled]="submitting()"
+        >
+          @if (submitting()) {
+            <lucide-icon name="loader-2" [size]="16" class="spinner"></lucide-icon>
+            Saving...
+          } @else {
+            Save Changes
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
