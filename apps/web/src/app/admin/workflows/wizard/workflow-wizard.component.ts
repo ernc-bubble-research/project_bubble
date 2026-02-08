@@ -24,7 +24,7 @@ import { WizardInputsStepComponent } from './steps/wizard-inputs-step.component'
 import { WizardExecutionStepComponent } from './steps/wizard-execution-step.component';
 // Knowledge step deferred to Phase 2 (see Epic 3 retrospective discussion item #8)
 import { WizardPromptStepComponent } from './steps/wizard-prompt-step.component';
-import { WizardOutputStepComponent } from './steps/wizard-output-step.component';
+// Output step removed — prompt defines output structure, LLM returns markdown, report UI renders it (party mode decision 2026-02-08)
 
 export interface WizardStep {
   label: string;
@@ -40,7 +40,6 @@ export interface WizardStep {
     WizardInputsStepComponent,
     WizardExecutionStepComponent,
     WizardPromptStepComponent,
-    WizardOutputStepComponent,
   ],
   selector: 'app-workflow-wizard',
   templateUrl: './workflow-wizard.component.html',
@@ -58,7 +57,6 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
   private readonly inputsStep = viewChild(WizardInputsStepComponent);
   private readonly executionStep = viewChild(WizardExecutionStepComponent);
   private readonly promptStep = viewChild(WizardPromptStepComponent);
-  private readonly outputStep = viewChild(WizardOutputStepComponent);
 
   // Knowledge step deferred to Phase 2 (see Epic 3 retrospective item #8)
   steps: WizardStep[] = [
@@ -66,7 +64,6 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
     { label: 'Inputs', icon: 'layers' },
     { label: 'Execution', icon: 'zap' },
     { label: 'Prompt', icon: 'message-square' },
-    { label: 'Output', icon: 'file-output' },
   ];
 
   currentStep = signal(0);
@@ -272,7 +269,6 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
       case 1: return this.inputsStep()?.isValid() ?? false;
       case 2: return this.executionStep()?.isValid() ?? false;
       case 3: return this.promptStep()?.isValid() ?? false;
-      case 4: return this.outputStep()?.isValid() ?? false;
       default: return false;
     }
   }
@@ -285,7 +281,6 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
       ['input', 'subject'],
       ['execution', 'model', 'temperature', 'processing'],
       ['prompt'],
-      ['output', 'filename', 'section', 'json_schema'],
     ];
 
     const errorText = errors.join(' ').toLowerCase();

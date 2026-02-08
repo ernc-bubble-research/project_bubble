@@ -502,22 +502,8 @@ This document provides the complete epic and story breakdown for project_bubble,
 
 > **Party Mode Consensus (2026-02-08):** Standalone UX story, not part of Story 3.8. Hardcoded presets (not admin-configurable). Chip-toggle UI pattern. ~half day effort. Shared constant in libs/shared for frontend + backend reuse.
 
-#### Story 3.11: Prompt-to-Output Section Auto-Population
-**As a** Bubble Admin,
-**I want** the wizard to automatically parse my prompt's output structure and populate the Output step's sections,
-**So that** I don't have to manually re-define the document structure that's already described in my prompt.
-
-**Acceptance Criteria:**
-**Given** I have written a prompt in Step 5 (Prompt) that includes an `## Output Structure` section (or equivalent convention)
-**When** I navigate to Step 6 (Output)
-**Then** the wizard parses the prompt for structured output section definitions and auto-populates the sections list
-**And** the admin can review and edit the auto-populated sections
-**And** the prompt is the single source of truth — if the admin corrects the structure, they correct it in the prompt
-**And** if no structure is detected in the prompt, a warning is shown asking the admin to confirm
-**And** if the admin confirms no structure, a single default section is created using the workflow template name as the title
-**And** the parsing logic uses convention-based detection (documented template with `## Output Structure` section pattern)
-
-> **Epic 3 Retro Decision (2026-02-08):** Option A (convention-based parsing) was unanimously chosen by the team. Prompt is single source of truth — no manual re-entry of output sections. Fallback: single section with workflow template name. LLM-assisted parsing (Option C) deferred to future epic as enhancement. Must be completed before Epic 4 starts.
+#### Story 3.11: ~~Prompt-to-Output Section Auto-Population~~ — CANCELLED
+> **CANCELLED (Party Mode Decision 2026-02-08):** The prompt already defines output structure via its own markdown instructions. The LLM returns a formatted markdown report. The report UI (Epic 5) renders it directly. Pre-defined output sections in the wizard are unnecessary — they collect data the execution engine never uses. Output step hidden from wizard UI, validator relaxed (output optional). Per-section regeneration deferred to LangGraph phase. Feedback loop model: input + previous report + user feedback → LLM → updated report (full-document regeneration, not per-section).
 
 ### Epic 4: Workflow Execution Engine (The Creator)
 **Goal:** The heart of the system. Enable Creators to browse available workflows, submit runs with dynamic input forms, and execute LLM-orchestrated analysis asynchronously via BullMQ. Handles prompt assembly, fan-out/fan-in execution, output validation with automatic retry, token budget checks, credit pre-checks, and workflow chain orchestration.

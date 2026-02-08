@@ -103,43 +103,27 @@ export function validateWorkflowDefinition(
     }
   }
 
-  // Validate output
-  if (!definition.output) {
-    errors.push('output is required');
-  } else {
-    if (!VALID_OUTPUT_FORMATS.includes(definition.output.format)) {
+  // Validate output (optional — prompt defines output structure, LLM returns markdown directly)
+  // Output config will be redesigned in Epic 4/5 when execution engine and report UI are built.
+  // Party mode decision 2026-02-08: output sections are unnecessary, prompt is source of truth.
+  if (definition.output) {
+    if (definition.output.format && !VALID_OUTPUT_FORMATS.includes(definition.output.format)) {
       errors.push(
         `output.format must be one of: ${VALID_OUTPUT_FORMATS.join(', ')}`,
       );
     }
-    if (
-      !definition.output.filename_template ||
-      typeof definition.output.filename_template !== 'string'
-    ) {
-      errors.push('output.filename_template is required and must be a string');
-    }
 
-    // Conditional: sections required for markdown, json_schema for json
-    if (definition.output.format === 'markdown') {
-      if (
-        !definition.output.sections ||
-        !Array.isArray(definition.output.sections) ||
-        definition.output.sections.length === 0
-      ) {
-        errors.push(
-          'output.sections is required and must be a non-empty array when format is "markdown"',
-        );
-      } else {
-        for (const section of definition.output.sections) {
-          if (!section.name || typeof section.name !== 'string') {
-            errors.push('Each output section must have a name (string)');
-          }
-          if (!section.label || typeof section.label !== 'string') {
-            errors.push('Each output section must have a label (string)');
-          }
-          if (typeof section.required !== 'boolean') {
-            errors.push('Each output section must have a required (boolean) field');
-          }
+    // Validate sections structure if provided (but not required)
+    if (definition.output.sections && Array.isArray(definition.output.sections)) {
+      for (const section of definition.output.sections) {
+        if (!section.name || typeof section.name !== 'string') {
+          errors.push('Each output section must have a name (string)');
+        }
+        if (!section.label || typeof section.label !== 'string') {
+          errors.push('Each output section must have a label (string)');
+        }
+        if (typeof section.required !== 'boolean') {
+          errors.push('Each output section must have a required (boolean) field');
         }
       }
     }

@@ -131,10 +131,10 @@ describe('[P0] WorkflowWizardComponent', () => {
   });
 
   it('[3.2-UNIT-011] should navigate to first error step on validation failure', () => {
-    // Given we are on step 5 (set directly to avoid validation)
-    component.highestVisitedStep.set(5);
-    component.currentStep.set(5);
-    expect(component.currentStep()).toBe(5);
+    // Given we are on the last step (set directly to avoid validation)
+    component.highestVisitedStep.set(3);
+    component.currentStep.set(3);
+    expect(component.currentStep()).toBe(3);
     // When save triggers validation with metadata errors
     component.save();
     // Then it should navigate back to step 0 (metadata errors)

@@ -364,8 +364,8 @@
 # ===================================================
 # This is the team-agreed execution plan from the interactive Epic 3 retrospective:
 #   1. ✅ Finalize Epic 3 retrospective (done)
-#   2. Story 3.11 — Prompt-to-output auto-population (Option A, convention-based)
-#   3. Story MW-1 — Module wiring tests for Epics 1, 2, 3 (new test category)
+#   2. ❌ Story 3.11 — CANCELLED (party mode 2026-02-08: prompt defines structure, LLM returns markdown, report UI renders it)
+#   3. Story MW-1 — Module wiring tests for Epics 1, 2, 3 (new test category) ← NEXT
 #   4. Run wiring tests, fix any issues found
 #   5. Story 3E update — +4 E2E tests (3 workflow management + 1 file type preset)
 #   6. Story 4E — ~12 E2E tests (tenant lifecycle, RBAC/guards, invitations)
@@ -474,7 +474,7 @@ development_status:
   3-10-file-type-preset-groups: done                   # UX-1 from user testing feedback. Chip-toggle presets for wizard file type restrictions. Code review: 7 findings (6 fixed). 19 new tests. 944 total tests, 0 lint errors.
   3h-rxjs-subscription-cleanup-hardening: done # Code review passed. 37 subscriptions fixed (19 files). ESLint plugin installed. 291 tests, 0 lint errors.
   3e-e2e-test-coverage-epic-3: done # Code review passed (7 findings: 3 fixed, 4 accepted). 8 tests, 3 spec files. Seed: template + version + chain + LLM model. 878 unit tests, 0 lint errors.
-  3-11-prompt-to-output-auto-population: backlog       # Epic 3 Retro decision: Option A (convention-based parsing). Prompt is single source of truth. Fallback: single section with template name. Must complete before Epic 4.
+  3-11-prompt-to-output-auto-population: cancelled      # CANCELLED (party mode 2026-02-08): Prompt defines output structure via markdown instructions → LLM returns formatted markdown → report UI renders it. Output sections in wizard are unnecessary. Output step hidden from wizard UI. Validator relaxed (output optional).
   mw-1-module-wiring-tests: backlog                     # Epic 3 Retro decision: NestJS module compilation tests + Angular component integration tests for Epics 1, 2, 3. New standard test category. Includes tenantId automated grep/CI check. Must complete before Epic 4.
   epic-3-retrospective: done # Interactive retro completed 2026-02-08. 10 key learnings, 7 mandatory action items, 8 new team agreements. Party mode is default. Module wiring tests are standard.
 

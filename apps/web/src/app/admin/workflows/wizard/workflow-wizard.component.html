@@ -103,12 +103,7 @@
           (stateChange)="updateState($event)"
         />
       }
-      @case (4) {
-        <app-wizard-output-step
-          [state]="wizardState()"
-          (stateChange)="updateState($event)"
-        />
-      }
+      <!-- Output step removed — prompt defines structure, LLM returns markdown (party mode decision 2026-02-08) -->
     }
   </div>
 

@@ -362,8 +362,8 @@ describe('validateWorkflowDefinition', () => {
   });
 
   describe('Output format validation', () => {
-    it('[3.1-UNIT-019] [P0] Given markdown format without sections, when validated, then returns error', () => {
-      // Given
+    it('[3.1-UNIT-019] [P0] Given markdown format without sections, when validated, then result is valid (sections optional)', () => {
+      // Given — output.sections is now optional (party mode decision 2026-02-08: prompt defines structure)
       const definition = createValidDefinition();
       definition.output.format = 'markdown';
       definition.output.sections = undefined;
@@ -371,15 +371,20 @@ describe('validateWorkflowDefinition', () => {
       // When
       const result = validateWorkflowDefinition(definition);
 
+      // Then — sections are no longer required for markdown format
+      expect(result.valid).toBe(true);
+    });
+
+    it('[3.1-UNIT-019b] [P0] Given no output at all, when validated, then result is valid (output optional)', () => {
+      // Given — output is now entirely optional
+      const definition = createValidDefinition();
+      (definition as any).output = undefined;
+
+      // When
+      const result = validateWorkflowDefinition(definition);
+
       // Then
-      expect(result.valid).toBe(false);
-      expect(result.errors).toEqual(
-        expect.arrayContaining([
-          expect.stringContaining(
-            'output.sections is required',
-          ),
-        ]),
-      );
+      expect(result.valid).toBe(true);
     });
 
     it('[3.1-UNIT-020] [P0] Given json format without json_schema, when validated, then returns error', () => {
