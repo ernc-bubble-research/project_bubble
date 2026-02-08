@@ -29,13 +29,14 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { TenantStatusGuard } from '../guards/tenant-status.guard';
 import { KnowledgeSearchService } from './knowledge-search.service';
 import { ValidatedInsightService } from './validated-insight.service';
 
 @ApiTags('Knowledge Base')
 @ApiBearerAuth()
 @Controller('app/knowledge')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantStatusGuard, RolesGuard)
 @Roles(UserRole.BUBBLE_ADMIN, UserRole.CUSTOMER_ADMIN, UserRole.CREATOR)
 export class KnowledgeController {
   constructor(

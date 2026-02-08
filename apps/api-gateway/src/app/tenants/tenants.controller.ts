@@ -3,11 +3,13 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   ParseUUIDPipe,
   UseGuards,
   Request,
+  HttpCode,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import {
@@ -106,5 +108,39 @@ export class TenantsController {
     @Request() req: { user: { userId: string } },
   ): Promise<ImpersonateResponseDto> {
     return this.tenantsService.impersonate(id, req.user.userId);
+  }
+
+  @Patch(':id/archive')
+  @ApiOperation({ summary: 'Archive a tenant' })
+  @ApiResponse({ status: 200, description: 'Tenant archived successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid status transition or UUID format' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing credentials' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
+  archive(@Param('id', ParseUUIDPipe) id: string) {
+    return this.tenantsService.archive(id);
+  }
+
+  @Patch(':id/unarchive')
+  @ApiOperation({ summary: 'Unarchive a tenant (restore to active)' })
+  @ApiResponse({ status: 200, description: 'Tenant unarchived successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid status transition or UUID format' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing credentials' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
+  unarchive(@Param('id', ParseUUIDPipe) id: string) {
+    return this.tenantsService.unarchive(id);
+  }
+
+  @Delete(':id')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Permanently delete a tenant and all associated data' })
+  @ApiResponse({ status: 200, description: 'Tenant permanently deleted' })
+  @ApiResponse({ status: 400, description: 'Tenant must be archived before deletion' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing credentials' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.tenantsService.hardDelete(id);
   }
 }

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { createMockFolder } from '@project-bubble/db-layer/testing';
 import { FoldersController } from './folders.controller';
 import { FoldersService } from './folders.service';
+import { TenantStatusGuard } from '../guards/tenant-status.guard';
 
 describe('FoldersController [P2]', () => {
   let controller: FoldersController;
@@ -25,7 +26,10 @@ describe('FoldersController [P2]', () => {
           },
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(TenantStatusGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get(FoldersController);
     service = module.get(FoldersService);

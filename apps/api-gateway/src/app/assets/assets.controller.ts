@@ -20,12 +20,13 @@ import { UploadAssetDto, UpdateAssetDto, AssetResponseDto, ListAssetsQueryDto } 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { TenantStatusGuard } from '../guards/tenant-status.guard';
 import { AssetsService } from './assets.service';
 
 @ApiTags('Assets')
 @ApiBearerAuth()
 @Controller('app/assets')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantStatusGuard, RolesGuard)
 @Roles(UserRole.BUBBLE_ADMIN, UserRole.CUSTOMER_ADMIN, UserRole.CREATOR)
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}

@@ -6,14 +6,21 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { QueryFailedError, Repository } from 'typeorm';
+import { DataSource, QueryFailedError, Repository } from 'typeorm';
 import { TenantEntity, TenantStatus, PlanTier } from '@project-bubble/db-layer';
 import { createMockTenant } from '@project-bubble/db-layer/testing';
 import { TenantsService } from './tenants.service';
 
+// Mock fs/promises at module level
+jest.mock('fs/promises', () => ({
+  rm: jest.fn().mockResolvedValue(undefined),
+}));
+
 describe('TenantsService [P1]', () => {
   let service: TenantsService;
   let repo: jest.Mocked<Repository<TenantEntity>>;
+  let mockManager: Record<string, jest.Mock>;
+  let mockDataSource: { transaction: jest.Mock };
 
   const mockTenant = createMockTenant({
     id: '123e4567-e89b-12d3-a456-426614174000',
@@ -33,6 +40,20 @@ describe('TenantsService [P1]', () => {
   };
 
   beforeEach(async () => {
+    mockManager = {
+      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      createQueryBuilder: jest.fn().mockReturnValue({
+        delete: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({ affected: 1 }),
+      }),
+    };
+
+    mockDataSource = {
+      transaction: jest.fn().mockImplementation(async (cb) => cb(mockManager)),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TenantsService,
@@ -48,6 +69,10 @@ describe('TenantsService [P1]', () => {
         {
           provide: JwtService,
           useValue: mockJwtService,
+        },
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
         },
       ],
     }).compile();
@@ -191,6 +216,18 @@ describe('TenantsService [P1]', () => {
         BadRequestException,
       );
     });
+
+    it('[1-13-UNIT-001a] should throw BadRequestException for archived tenant', async () => {
+      const archivedTenant = {
+        ...mockTenant,
+        status: TenantStatus.ARCHIVED,
+      };
+      repo.findOne.mockResolvedValue(archivedTenant);
+
+      await expect(service.impersonate(mockTenant.id)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
   });
 
   describe('update', () => {
@@ -247,6 +284,139 @@ describe('TenantsService [P1]', () => {
       const result = await service.update(mockTenant.id, { status: 'active' });
 
       expect(result.status).toBe(TenantStatus.ACTIVE);
+    });
+  });
+
+  describe('archive', () => {
+    it('[1-13-UNIT-002] should set status to archived from active', async () => {
+      const activeTenant = { ...mockTenant, status: TenantStatus.ACTIVE };
+      const archivedTenant = { ...mockTenant, status: TenantStatus.ARCHIVED };
+      repo.findOne.mockResolvedValue(activeTenant);
+      repo.save.mockResolvedValue(archivedTenant);
+
+      const result = await service.archive(mockTenant.id);
+
+      expect(result.status).toBe(TenantStatus.ARCHIVED);
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: TenantStatus.ARCHIVED }),
+      );
+    });
+
+    it('[1-13-UNIT-002a] should set status to archived from suspended', async () => {
+      const suspendedTenant = { ...mockTenant, status: TenantStatus.SUSPENDED };
+      const archivedTenant = { ...mockTenant, status: TenantStatus.ARCHIVED };
+      repo.findOne.mockResolvedValue(suspendedTenant);
+      repo.save.mockResolvedValue(archivedTenant);
+
+      const result = await service.archive(mockTenant.id);
+
+      expect(result.status).toBe(TenantStatus.ARCHIVED);
+    });
+
+    it('[1-13-UNIT-002b] should reject already-archived tenant', async () => {
+      const archivedTenant = { ...mockTenant, status: TenantStatus.ARCHIVED };
+      repo.findOne.mockResolvedValue(archivedTenant);
+
+      await expect(service.archive(mockTenant.id)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('[1-13-UNIT-002c] should throw NotFoundException for missing tenant', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(service.archive('nonexistent-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('unarchive', () => {
+    it('[1-13-UNIT-003] should set status to active from archived', async () => {
+      const archivedTenant = { ...mockTenant, status: TenantStatus.ARCHIVED };
+      const activeTenant = { ...mockTenant, status: TenantStatus.ACTIVE };
+      repo.findOne.mockResolvedValue(archivedTenant);
+      repo.save.mockResolvedValue(activeTenant);
+
+      const result = await service.unarchive(mockTenant.id);
+
+      expect(result.status).toBe(TenantStatus.ACTIVE);
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: TenantStatus.ACTIVE }),
+      );
+    });
+
+    it('[1-13-UNIT-003a] should reject non-archived tenant', async () => {
+      const activeTenant = { ...mockTenant, status: TenantStatus.ACTIVE };
+      repo.findOne.mockResolvedValue(activeTenant);
+
+      await expect(service.unarchive(mockTenant.id)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('hardDelete', () => {
+    it('[1-13-UNIT-004] should delete archived tenant', async () => {
+      const archivedTenant = { ...mockTenant, status: TenantStatus.ARCHIVED };
+      repo.findOne.mockResolvedValue(archivedTenant);
+
+      await service.hardDelete(mockTenant.id);
+
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+    });
+
+    it('[1-13-UNIT-004a] should reject non-archived tenant', async () => {
+      const activeTenant = { ...mockTenant, status: TenantStatus.ACTIVE };
+      repo.findOne.mockResolvedValue(activeTenant);
+
+      await expect(service.hardDelete(mockTenant.id)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('[1-13-UNIT-005] should cascade delete all 9 entity types in transaction', async () => {
+      const archivedTenant = { ...mockTenant, status: TenantStatus.ARCHIVED };
+      repo.findOne.mockResolvedValue(archivedTenant);
+
+      await service.hardDelete(mockTenant.id);
+
+      // manager.delete called for: Invitation, WorkflowRun, WorkflowVersion, Asset, Folder, User, Tenant
+      expect(mockManager.delete).toHaveBeenCalledTimes(7);
+      // createQueryBuilder called for: WorkflowChain, WorkflowTemplate, KnowledgeChunk (soft-delete entities)
+      expect(mockManager.createQueryBuilder).toHaveBeenCalledTimes(3);
+    });
+
+    it('[1-13-UNIT-005a] should delete physical files after DB transaction', async () => {
+      const archivedTenant = { ...mockTenant, status: TenantStatus.ARCHIVED };
+      repo.findOne.mockResolvedValue(archivedTenant);
+
+      const fsRm = jest.requireMock('fs/promises').rm;
+
+      await service.hardDelete(mockTenant.id);
+
+      expect(fsRm).toHaveBeenCalledWith(
+        expect.stringContaining(mockTenant.id),
+        { recursive: true, force: true },
+      );
+    });
+
+    it('[1-13-UNIT-005b] should not throw if physical file deletion fails', async () => {
+      const archivedTenant = { ...mockTenant, status: TenantStatus.ARCHIVED };
+      repo.findOne.mockResolvedValue(archivedTenant);
+
+      const fsRm = jest.requireMock('fs/promises').rm;
+      fsRm.mockRejectedValueOnce(new Error('ENOENT'));
+
+      await expect(service.hardDelete(mockTenant.id)).resolves.not.toThrow();
+    });
+
+    it('[1-13-UNIT-004b] should throw NotFoundException for missing tenant', async () => {
+      repo.findOne.mockResolvedValue(null);
+
+      await expect(service.hardDelete('nonexistent-id')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

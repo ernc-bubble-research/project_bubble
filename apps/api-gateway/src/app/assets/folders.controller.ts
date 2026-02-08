@@ -16,12 +16,13 @@ import { CreateFolderDto, UpdateFolderDto, FolderResponseDto } from '@project-bu
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { TenantStatusGuard } from '../guards/tenant-status.guard';
 import { FoldersService } from './folders.service';
 
 @ApiTags('Folders')
 @ApiBearerAuth()
 @Controller('app/folders')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantStatusGuard, RolesGuard)
 @Roles(UserRole.BUBBLE_ADMIN, UserRole.CUSTOMER_ADMIN, UserRole.CREATOR)
 export class FoldersController {
   constructor(private readonly foldersService: FoldersService) {}

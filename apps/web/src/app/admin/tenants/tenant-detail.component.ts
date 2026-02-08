@@ -10,6 +10,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { ImpersonateConfirmDialogComponent } from './impersonate-confirm-dialog.component';
 import { InviteUserDialogComponent } from './invite-user-dialog.component';
+import { DeleteConfirmDialogComponent } from './delete-confirm-dialog.component';
 import type { UpdateTenantPayload, InvitationResponseDto } from '@project-bubble/shared';
 
 @Component({
@@ -21,6 +22,7 @@ import type { UpdateTenantPayload, InvitationResponseDto } from '@project-bubble
     StatusBadgeComponent,
     ImpersonateConfirmDialogComponent,
     InviteUserDialogComponent,
+    DeleteConfirmDialogComponent,
   ],
   selector: 'app-tenant-detail',
   templateUrl: './tenant-detail.component.html',
@@ -60,6 +62,12 @@ export class TenantDetailComponent implements OnInit {
 
   // Suspend/Activate dialog
   showSuspendDialog = signal(false);
+
+  // Archive/Delete dialogs
+  showArchiveDialog = signal(false);
+  showDeleteDialog = signal(false);
+  archiving = signal(false);
+  deleting = signal(false);
 
   readonly tabs = [
     { key: 'general' as const, label: 'General' },
@@ -299,6 +307,7 @@ export class TenantDetailComponent implements OnInit {
   confirmSuspendToggle(): void {
     const t = this.tenant();
     if (!t) return;
+    if (t.status !== 'active' && t.status !== 'suspended') return;
 
     const newStatus = t.status === 'active' ? 'suspended' : 'active';
     this.showSuspendDialog.set(false);
@@ -345,6 +354,84 @@ export class TenantDetailComponent implements OnInit {
       error: () => {
         this.impersonating.set(false);
         this.toastService.show('Failed to start impersonation. The tenant may be suspended or not found.');
+      },
+    });
+  }
+
+  // Archive / Unarchive
+  openArchiveDialog(): void {
+    this.showArchiveDialog.set(true);
+  }
+
+  closeArchiveDialog(): void {
+    this.showArchiveDialog.set(false);
+  }
+
+  confirmArchive(): void {
+    const t = this.tenant();
+    if (!t) return;
+
+    this.showArchiveDialog.set(false);
+    this.archiving.set(true);
+
+    this.tenantService.archive(t.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (updated) => {
+        this.tenant.set(updated);
+        this.syncFormFromTenant(updated);
+        this.archiving.set(false);
+        this.toastService.show('Tenant archived');
+      },
+      error: () => {
+        this.archiving.set(false);
+        this.toastService.show('Failed to archive tenant');
+      },
+    });
+  }
+
+  confirmUnarchive(): void {
+    const t = this.tenant();
+    if (!t) return;
+
+    this.archiving.set(true);
+
+    this.tenantService.unarchive(t.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (updated) => {
+        this.tenant.set(updated);
+        this.syncFormFromTenant(updated);
+        this.archiving.set(false);
+        this.toastService.show('Tenant restored to active');
+      },
+      error: () => {
+        this.archiving.set(false);
+        this.toastService.show('Failed to unarchive tenant');
+      },
+    });
+  }
+
+  // Delete
+  openDeleteDialog(): void {
+    this.showDeleteDialog.set(true);
+  }
+
+  closeDeleteDialog(): void {
+    this.showDeleteDialog.set(false);
+  }
+
+  confirmDelete(): void {
+    const t = this.tenant();
+    if (!t) return;
+
+    this.showDeleteDialog.set(false);
+    this.deleting.set(true);
+
+    this.tenantService.hardDelete(t.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.toastService.show('Tenant permanently deleted');
+        this.router.navigate(['/admin/tenants']);
+      },
+      error: () => {
+        this.deleting.set(false);
+        this.toastService.show('Failed to delete tenant');
       },
     });
   }

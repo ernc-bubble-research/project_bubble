@@ -26,6 +26,14 @@
   >
     Suspended <span class="tab-count">{{ suspendedCount() }}</span>
   </button>
+  <button
+    class="filter-tab"
+    [class.active]="filter() === 'archived'"
+    (click)="setFilter('archived')"
+    data-testid="filter-tab-archived"
+  >
+    Archived <span class="tab-count">{{ archivedCount() }}</span>
+  </button>
 </div>
 
 <!-- Tenant Table -->
@@ -50,7 +58,7 @@
       </thead>
       <tbody>
         @for (tenant of filteredTenants(); track tenant.id) {
-          <tr class="tenant-row" (click)="navigateToTenant(tenant)">
+          <tr class="tenant-row" [class.tenant-row-archived]="tenant.status === 'archived'" (click)="navigateToTenant(tenant)">
             <td class="tenant-name-cell">{{ tenant.name }}</td>
             <td>&mdash;</td>
             <td>&mdash;</td>

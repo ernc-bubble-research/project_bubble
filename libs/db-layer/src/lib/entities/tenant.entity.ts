@@ -9,6 +9,7 @@ import {
 export enum TenantStatus {
   ACTIVE = 'active',
   SUSPENDED = 'suspended',
+  ARCHIVED = 'archived',
 }
 
 export enum PlanTier {

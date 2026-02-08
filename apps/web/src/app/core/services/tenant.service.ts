@@ -25,4 +25,16 @@ export class TenantService {
   update(id: string, payload: UpdateTenantPayload): Observable<Tenant> {
     return this.http.patch<Tenant>(`${this.baseUrl}/${id}`, payload);
   }
+
+  archive(id: string): Observable<Tenant> {
+    return this.http.patch<Tenant>(`${this.baseUrl}/${id}/archive`, {});
+  }
+
+  unarchive(id: string): Observable<Tenant> {
+    return this.http.patch<Tenant>(`${this.baseUrl}/${id}/unarchive`, {});
+  }
+
+  hardDelete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
 }

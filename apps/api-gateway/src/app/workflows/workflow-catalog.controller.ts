@@ -24,12 +24,13 @@ class CatalogQueryDto extends PickType(ListWorkflowTemplatesQueryDto, [
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { TenantStatusGuard } from '../guards/tenant-status.guard';
 import { WorkflowTemplatesService } from './workflow-templates.service';
 
 @ApiTags('Workflow Catalog')
 @ApiBearerAuth()
 @Controller('app/workflow-templates')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantStatusGuard, RolesGuard)
 @Roles(UserRole.BUBBLE_ADMIN, UserRole.CUSTOMER_ADMIN, UserRole.CREATOR)
 export class WorkflowCatalogController {
   constructor(

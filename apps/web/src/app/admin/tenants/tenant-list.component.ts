@@ -20,11 +20,12 @@ export class TenantListComponent implements OnInit {
 
   tenants = signal<Tenant[]>([]);
   loading = signal(false);
-  filter = signal<'all' | 'active' | 'suspended'>('all');
+  filter = signal<'all' | 'active' | 'suspended' | 'archived'>('all');
 
   allCount = computed(() => this.tenants().length);
   activeCount = computed(() => this.tenants().filter((t) => t.status === 'active').length);
   suspendedCount = computed(() => this.tenants().filter((t) => t.status === 'suspended').length);
+  archivedCount = computed(() => this.tenants().filter((t) => t.status === 'archived').length);
 
   filteredTenants = computed(() => {
     const f = this.filter();
@@ -50,7 +51,7 @@ export class TenantListComponent implements OnInit {
     });
   }
 
-  setFilter(f: 'all' | 'active' | 'suspended'): void {
+  setFilter(f: 'all' | 'active' | 'suspended' | 'archived'): void {
     this.filter.set(f);
   }
 

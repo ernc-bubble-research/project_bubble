@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { InvitationsController } from './invitations.controller';
 import { InvitationsService } from './invitations.service';
 import { InvitationStatus } from '@project-bubble/db-layer';
+import { TenantStatusGuard } from '../guards/tenant-status.guard';
 
 describe('InvitationsController [P2]', () => {
   let controller: InvitationsController;
@@ -33,7 +34,10 @@ describe('InvitationsController [P2]', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [InvitationsController],
       providers: [{ provide: InvitationsService, useValue: service }],
-    }).compile();
+    })
+      .overrideGuard(TenantStatusGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<InvitationsController>(InvitationsController);
   });

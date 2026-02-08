@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TenantStatus, PlanTier } from '@project-bubble/db-layer';
 import { createMockTenant } from '@project-bubble/db-layer/testing';
@@ -36,6 +36,10 @@ describe('TenantsController [P2]', () => {
             findAll: jest.fn(),
             findOne: jest.fn(),
             update: jest.fn(),
+            archive: jest.fn(),
+            unarchive: jest.fn(),
+            hardDelete: jest.fn(),
+            impersonate: jest.fn(),
           },
         },
         {
@@ -159,6 +163,80 @@ describe('TenantsController [P2]', () => {
       await expect(
         controller.getAccessibleWorkflows('nonexistent-id'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('archive', () => {
+    it('[1-13-CTRL-001] should archive a tenant', async () => {
+      const archivedTenant = { ...mockTenant, status: TenantStatus.ARCHIVED };
+      service.archive.mockResolvedValue(archivedTenant);
+
+      const result = await controller.archive(mockTenant.id);
+
+      expect(result.status).toBe(TenantStatus.ARCHIVED);
+      expect(service.archive).toHaveBeenCalledWith(mockTenant.id);
+    });
+
+    it('[1-13-CTRL-002] should propagate BadRequestException for invalid transition', async () => {
+      service.archive.mockRejectedValue(
+        new BadRequestException('Tenant is already archived'),
+      );
+
+      await expect(controller.archive(mockTenant.id)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('unarchive', () => {
+    it('[1-13-CTRL-003] should unarchive a tenant', async () => {
+      const activeTenant = { ...mockTenant, status: TenantStatus.ACTIVE };
+      service.unarchive.mockResolvedValue(activeTenant);
+
+      const result = await controller.unarchive(mockTenant.id);
+
+      expect(result.status).toBe(TenantStatus.ACTIVE);
+      expect(service.unarchive).toHaveBeenCalledWith(mockTenant.id);
+    });
+
+    it('[1-13-CTRL-004] should propagate BadRequestException for non-archived tenant', async () => {
+      service.unarchive.mockRejectedValue(
+        new BadRequestException('Cannot unarchive non-archived tenant'),
+      );
+
+      await expect(controller.unarchive(mockTenant.id)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('remove (hard delete)', () => {
+    it('[1-13-CTRL-005] should hard delete an archived tenant', async () => {
+      service.hardDelete.mockResolvedValue(undefined);
+
+      await controller.remove(mockTenant.id);
+
+      expect(service.hardDelete).toHaveBeenCalledWith(mockTenant.id);
+    });
+
+    it('[1-13-CTRL-006] should propagate BadRequestException for non-archived tenant', async () => {
+      service.hardDelete.mockRejectedValue(
+        new BadRequestException('Tenant must be archived first'),
+      );
+
+      await expect(controller.remove(mockTenant.id)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('[1-13-CTRL-007] should propagate NotFoundException for missing tenant', async () => {
+      service.hardDelete.mockRejectedValue(
+        new NotFoundException('Tenant not found'),
+      );
+
+      await expect(controller.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

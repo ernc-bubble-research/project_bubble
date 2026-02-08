@@ -1,7 +1,7 @@
 export interface Tenant {
   id: string;
   name: string;
-  status: 'active' | 'suspended';
+  status: 'active' | 'suspended' | 'archived';
   primaryContact: string | null;
   planTier: 'free' | 'starter' | 'professional' | 'enterprise';
   dataResidency: string;

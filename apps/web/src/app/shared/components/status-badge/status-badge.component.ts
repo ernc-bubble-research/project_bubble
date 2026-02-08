@@ -32,9 +32,14 @@ import { NgClass } from '@angular/common';
         color: var(--danger-text);
         border: 1px solid #fecaca;
       }
+      .badge-archived {
+        background: var(--slate-100, #f1f5f9);
+        color: var(--slate-500, #64748b);
+        border: 1px solid var(--slate-300, #cbd5e1);
+      }
     `,
   ],
 })
 export class StatusBadgeComponent {
-  @Input() status: 'active' | 'suspended' = 'active';
+  @Input() status: 'active' | 'suspended' | 'archived' = 'active';
 }

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { createMockAsset } from '@project-bubble/db-layer/testing';
 import { AssetsController } from './assets.controller';
 import { AssetsService } from './assets.service';
+import { TenantStatusGuard } from '../guards/tenant-status.guard';
 
 describe('AssetsController [P2]', () => {
   let controller: AssetsController;
@@ -26,7 +27,10 @@ describe('AssetsController [P2]', () => {
           },
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(TenantStatusGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get(AssetsController);
     service = module.get(AssetsService);

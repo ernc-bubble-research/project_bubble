@@ -30,19 +30,57 @@
       <button
         class="btn btn-danger-outline"
         (click)="openImpersonateDialog()"
-        [disabled]="impersonating() || t.status === 'suspended'"
+        [disabled]="impersonating() || t.status === 'suspended' || t.status === 'archived'"
+        data-testid="impersonate-btn"
       >
         <lucide-icon name="alert-triangle" [size]="16"></lucide-icon>
         Impersonate
       </button>
-      <button
-        class="btn btn-outline"
-        [class.btn-danger-outline]="t.status === 'active'"
-        (click)="openSuspendDialog()"
-        [disabled]="saving()"
-      >
-        {{ t.status === 'active' ? 'Suspend' : 'Activate' }}
-      </button>
+      @if (t.status === 'active' || t.status === 'suspended') {
+        <button
+          class="btn btn-outline"
+          [class.btn-danger-outline]="t.status === 'active'"
+          (click)="openSuspendDialog()"
+          [disabled]="saving()"
+          data-testid="suspend-toggle-btn"
+        >
+          {{ t.status === 'active' ? 'Suspend' : 'Activate' }}
+        </button>
+      }
+      @if (t.status === 'archived') {
+        <button
+          class="btn btn-outline"
+          (click)="confirmUnarchive()"
+          [disabled]="archiving()"
+          data-testid="unarchive-btn"
+          title="Restore this tenant to active status"
+        >
+          {{ archiving() ? 'Restoring...' : 'Unarchive' }}
+        </button>
+      } @else {
+        <button
+          class="btn btn-outline"
+          (click)="openArchiveDialog()"
+          [disabled]="archiving() || saving()"
+          data-testid="archive-btn"
+          title="Archive this tenant. Users will lose access. Data is preserved and can be restored."
+        >
+          <lucide-icon name="archive" [size]="16"></lucide-icon>
+          Archive
+        </button>
+      }
+      @if (t.status === 'archived') {
+        <button
+          class="btn btn-danger"
+          (click)="openDeleteDialog()"
+          [disabled]="deleting()"
+          data-testid="delete-btn"
+          title="Permanently delete this tenant and all data. This cannot be undone."
+        >
+          <lucide-icon name="trash-2" [size]="16"></lucide-icon>
+          {{ deleting() ? 'Deleting...' : 'Delete' }}
+        </button>
+      }
     </div>
   </div>
 
@@ -336,6 +374,34 @@
         </div>
       </div>
     </div>
+  }
+  <!-- Archive Confirmation Dialog -->
+  @if (showArchiveDialog()) {
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
+    <div class="dialog-overlay" (click)="closeArchiveDialog()" role="dialog" aria-modal="true" data-testid="archive-confirm-dialog">
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+      <div class="dialog-card" (click)="$event.stopPropagation()">
+        <h2 class="dialog-title">Archive {{ t.name }}?</h2>
+        <p class="dialog-text">
+          Users will lose access immediately. All data is preserved and the tenant can be restored later.
+        </p>
+        <div class="dialog-actions">
+          <button class="btn btn-outline" (click)="closeArchiveDialog()" data-testid="archive-cancel-btn">Cancel</button>
+          <button class="btn btn-danger" (click)="confirmArchive()" data-testid="archive-confirm-btn">
+            Archive
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Delete Confirmation Dialog -->
+  @if (showDeleteDialog()) {
+    <app-delete-confirm-dialog
+      [tenantName]="t.name"
+      (confirmed)="confirmDelete()"
+      (cancelled)="closeDeleteDialog()"
+    ></app-delete-confirm-dialog>
   }
 } @else {
   <div class="loading-state">Tenant not found.</div>

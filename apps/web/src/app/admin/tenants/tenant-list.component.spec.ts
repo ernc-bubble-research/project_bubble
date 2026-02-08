@@ -35,6 +35,13 @@ describe('TenantListComponent [P2]', () => {
       createdAt: '2026-01-14T00:00:00Z',
       updatedAt: '2026-01-14T00:00:00Z',
     },
+    {
+      id: 'id-3',
+      name: 'Gamma Ltd',
+      status: 'archived' as const,
+      createdAt: '2026-01-13T00:00:00Z',
+      updatedAt: '2026-01-13T00:00:00Z',
+    },
   ];
 
   beforeEach(async () => {
@@ -68,19 +75,20 @@ describe('TenantListComponent [P2]', () => {
   });
 
   it('[1H.1-UNIT-002] should load tenants on init', () => {
-    expect(component.tenants().length).toBe(2);
+    expect(component.tenants().length).toBe(3);
   });
 
   it('[1H.1-UNIT-003] should render tenant table with rows', () => {
     const el: HTMLElement = fixture.nativeElement;
     const rows = el.querySelectorAll('.tenant-row');
-    expect(rows.length).toBe(2);
+    expect(rows.length).toBe(3);
   });
 
   it('[1H.1-UNIT-004] should render filter tabs with correct counts', () => {
-    expect(component.allCount()).toBe(2);
+    expect(component.allCount()).toBe(3);
     expect(component.activeCount()).toBe(1);
     expect(component.suspendedCount()).toBe(1);
+    expect(component.archivedCount()).toBe(1);
   });
 
   it('[1H.1-UNIT-005] should filter tenants by status', () => {
@@ -92,8 +100,25 @@ describe('TenantListComponent [P2]', () => {
     expect(component.filteredTenants().length).toBe(1);
     expect(component.filteredTenants()[0].name).toBe('Beta Inc');
 
+    component.setFilter('archived');
+    expect(component.filteredTenants().length).toBe(1);
+    expect(component.filteredTenants()[0].name).toBe('Gamma Ltd');
+
     component.setFilter('all');
-    expect(component.filteredTenants().length).toBe(2);
+    expect(component.filteredTenants().length).toBe(3);
+  });
+
+  it('[1-13-UNIT-LIST-001] should render archived filter tab', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const archivedTab = el.querySelector('[data-testid="filter-tab-archived"]');
+    expect(archivedTab).toBeTruthy();
+    expect(archivedTab?.textContent).toContain('Archived');
+  });
+
+  it('[1-13-UNIT-LIST-002] should apply muted styling to archived tenant rows', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const archivedRows = el.querySelectorAll('.tenant-row-archived');
+    expect(archivedRows.length).toBe(1);
   });
 
   it('[1H.1-UNIT-006] should navigate to tenant detail on row click', () => {

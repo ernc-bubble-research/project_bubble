@@ -401,7 +401,7 @@ development_status:
   1-10-login-password-pages-auth-ui: done
   1-11-ci-cd-pipeline-setup: deferred # Moved to post-MVP. BMAD workflow covers lint/test/build per story.
   1-12-user-invitations-email-flow: done
-  1-13-tenant-lifecycle-management: ready-for-dev # Added from Epic 3 retro item #3: archive/suspend/delete tenants
+  1-13-tenant-lifecycle-management: done # Archive/suspend/delete tenants + TenantStatusGuard. Code review: 7 findings (1H, 3M, 3L), party mode: 5 fixed, 1 deferred (Epic 4), 1 dismissed. 880 total tests, 0 lint errors.
   epic-1-retrospective: done
   epic-1-nfr-assessment: done # NFR assessment completed 2026-01-31, FAIL status, hardening story required
   1e-e2e-test-coverage-epic-1: done # Code review passed (9 findings, all fixed). Party mode review: TEA+Dev+Architect consensus SHIP IT. 3 smoke tests, test DB lifecycle, auth fixture, webServer config. 376 unit tests, 0 lint errors.

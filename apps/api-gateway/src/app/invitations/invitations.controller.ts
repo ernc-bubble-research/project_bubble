@@ -15,12 +15,13 @@ import { UserRole } from '@project-bubble/db-layer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { TenantStatusGuard } from '../guards/tenant-status.guard';
 import { InvitationsService } from './invitations.service';
 
 @ApiTags('App - Invitations')
 @ApiBearerAuth()
 @Controller('app/invitations')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantStatusGuard, RolesGuard)
 @Roles(UserRole.CUSTOMER_ADMIN, UserRole.BUBBLE_ADMIN)
 export class InvitationsController {
   constructor(private readonly invitationsService: InvitationsService) {}

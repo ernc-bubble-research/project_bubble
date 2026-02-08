@@ -12,6 +12,8 @@ import {
   ArrowLeft,
   X,
   Info,
+  Archive,
+  Trash2,
 } from 'lucide-angular';
 import { TenantDetailComponent } from './tenant-detail.component';
 import { TenantService } from '../../core/services/tenant.service';
@@ -41,6 +43,9 @@ describe('TenantDetailComponent [P2]', () => {
     tenantServiceMock = {
       getOne: jest.fn().mockReturnValue(of(mockTenant)),
       update: jest.fn().mockReturnValue(of(mockTenant)),
+      archive: jest.fn().mockReturnValue(of({ ...mockTenant, status: 'archived' })),
+      unarchive: jest.fn().mockReturnValue(of({ ...mockTenant, status: 'active' })),
+      hardDelete: jest.fn().mockReturnValue(of(undefined)),
     };
 
     await TestBed.configureTestingModule({
@@ -65,6 +70,8 @@ describe('TenantDetailComponent [P2]', () => {
             ArrowLeft,
             X,
             Info,
+            Archive,
+            Trash2,
           }),
         },
       ],
@@ -211,5 +218,102 @@ describe('TenantDetailComponent [P2]', () => {
       mockTenant.id,
       { maxMonthlyRuns: 200 },
     );
+  });
+
+  // Story 1-13: Archive / Unarchive / Delete tests
+  it('[1-13-UNIT-DET-001] should show Archive button for active tenant', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const archiveBtn = el.querySelector('[data-testid="archive-btn"]');
+    expect(archiveBtn).toBeTruthy();
+    expect(archiveBtn?.textContent).toContain('Archive');
+  });
+
+  it('[1-13-UNIT-DET-002] should show Suspend button for active tenant', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const suspendBtn = el.querySelector('[data-testid="suspend-toggle-btn"]');
+    expect(suspendBtn).toBeTruthy();
+    expect(suspendBtn?.textContent?.trim()).toBe('Suspend');
+  });
+
+  it('[1-13-UNIT-DET-003] should NOT show Delete button for active tenant', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const deleteBtn = el.querySelector('[data-testid="delete-btn"]');
+    expect(deleteBtn).toBeNull();
+  });
+
+  it('[1-13-UNIT-DET-004] should NOT show Unarchive button for active tenant', () => {
+    const el: HTMLElement = fixture.nativeElement;
+    const unarchiveBtn = el.querySelector('[data-testid="unarchive-btn"]');
+    expect(unarchiveBtn).toBeNull();
+  });
+
+  it('[1-13-UNIT-DET-005] should open archive confirmation dialog', () => {
+    expect(component.showArchiveDialog()).toBe(false);
+    component.openArchiveDialog();
+    expect(component.showArchiveDialog()).toBe(true);
+  });
+
+  it('[1-13-UNIT-DET-006] should call tenantService.archive on confirmArchive', () => {
+    component.confirmArchive();
+
+    expect(tenantServiceMock['archive']).toHaveBeenCalledWith(mockTenant.id);
+  });
+
+  describe('archived tenant', () => {
+    const archivedTenant = {
+      ...mockTenant,
+      status: 'archived' as const,
+    };
+
+    beforeEach(() => {
+      tenantServiceMock['getOne'] = jest.fn().mockReturnValue(of(archivedTenant));
+      fixture = TestBed.createComponent(TenantDetailComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    });
+
+    it('[1-13-UNIT-DET-007] should show Unarchive button for archived tenant', () => {
+      const el: HTMLElement = fixture.nativeElement;
+      const unarchiveBtn = el.querySelector('[data-testid="unarchive-btn"]');
+      expect(unarchiveBtn).toBeTruthy();
+      expect(unarchiveBtn?.textContent).toContain('Unarchive');
+    });
+
+    it('[1-13-UNIT-DET-008] should show Delete button for archived tenant', () => {
+      const el: HTMLElement = fixture.nativeElement;
+      const deleteBtn = el.querySelector('[data-testid="delete-btn"]');
+      expect(deleteBtn).toBeTruthy();
+      expect(deleteBtn?.textContent).toContain('Delete');
+    });
+
+    it('[1-13-UNIT-DET-009] should NOT show Suspend button for archived tenant', () => {
+      const el: HTMLElement = fixture.nativeElement;
+      const suspendBtn = el.querySelector('[data-testid="suspend-toggle-btn"]');
+      expect(suspendBtn).toBeNull();
+    });
+
+    it('[1-13-UNIT-DET-010] should NOT show Archive button for archived tenant', () => {
+      const el: HTMLElement = fixture.nativeElement;
+      const archiveBtn = el.querySelector('[data-testid="archive-btn"]');
+      expect(archiveBtn).toBeNull();
+    });
+
+    it('[1-13-UNIT-DET-011] should disable Impersonate for archived tenant', () => {
+      const el: HTMLElement = fixture.nativeElement;
+      const impersonateBtn = el.querySelector('[data-testid="impersonate-btn"]') as HTMLButtonElement;
+      expect(impersonateBtn?.disabled).toBe(true);
+    });
+
+    it('[1-13-UNIT-DET-012] should open delete dialog', () => {
+      expect(component.showDeleteDialog()).toBe(false);
+      component.openDeleteDialog();
+      expect(component.showDeleteDialog()).toBe(true);
+    });
+
+    it('[1-13-UNIT-DET-013] should call tenantService.unarchive on confirmUnarchive', () => {
+      component.confirmUnarchive();
+
+      expect(tenantServiceMock['unarchive']).toHaveBeenCalledWith(archivedTenant.id);
+    });
   });
 });

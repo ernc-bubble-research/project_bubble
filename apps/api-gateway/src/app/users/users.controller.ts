@@ -21,12 +21,13 @@ import { UserRole } from '@project-bubble/db-layer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { TenantStatusGuard } from '../guards/tenant-status.guard';
 import { UsersService } from './users.service';
 
 @ApiTags('App - Users')
 @ApiBearerAuth()
 @Controller('app/users')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantStatusGuard, RolesGuard)
 @Roles(UserRole.CUSTOMER_ADMIN, UserRole.BUBBLE_ADMIN)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
