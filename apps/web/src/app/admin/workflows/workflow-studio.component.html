@@ -32,7 +32,8 @@
       <div class="tab-content" data-testid="templates-content">
         <app-template-list />
       </div>
-    } @else {
+    }
+    @if (activeTab() === 'chains') {
       <div class="tab-content" data-testid="chains-content">
         <app-chain-list />
       </div>

@@ -476,6 +476,50 @@ development_status:
   3.1-4-provider-credential-storage: done # LlmProviderConfigEntity + encrypted credential storage + CRUD API + Providers tab UI. 70 story tests. Code review: 8 fixes (3H, 3M, 2L). 878 total tests, 0 failures, 0 lint errors.
 
   # ═══════════════════════════════════════════════════════
+  # USER TESTING FEEDBACK (2026-02-08 — post-Story-3.9 live session)
+  # Captured during hands-on browser testing of the full app.
+  # ═══════════════════════════════════════════════════════
+  #
+  # BUG-1: ZONELESS CHANGE DETECTION FLICKERING
+  #   Symptom: Settings page items (models, providers) appear one-by-one on click.
+  #            Workflow Studio shows empty list, requires a click to render workflows.
+  #   Root cause: Likely zoneless Angular change detection — computed signals or
+  #   async data not triggering view updates without zone.js.
+  #   Affects: Settings tabs (LLM Models, Providers), Workflow Studio template list.
+  #   Priority: Medium — cosmetic but gives impression of broken UI.
+  #   Target: Dedicated investigation story or 7-7 UI polish pass.
+  #
+  # BUG-2: EMAIL INVITATIONS FAIL (expected)
+  #   Symptom: "Cannot send email" when inviting users.
+  #   Root cause: No SMTP service configured. Expected for local dev.
+  #   Priority: Low — not blocking until tenant onboarding is needed.
+  #   Target: Epic 7P or production deployment setup.
+  #
+  # UX-1: FILE TYPE RESTRICTIONS — MANUAL ENTRY TOO TEDIOUS
+  #   Symptom: Wizard file-upload step requires typing each extension individually
+  #            (rtf, doc, docx, txt, pdf, etc.). Dozens of formats exist.
+  #   Improvement: Add preset file-type groups ("Documents", "Images", "Spreadsheets")
+  #   with one-click selection. Keep manual entry as override.
+  #   Target: Story 3.8 (Workflow Management) or dedicated UX story.
+  #
+  # UX-2: NO PUBLISH UI FOR WORKFLOW TEMPLATES
+  #   Symptom: After creating a template, no way to publish it from the UI.
+  #   Status: ALREADY PLANNED — this is Story 3.8 (Workflow Management View).
+  #   Target: Story 3.8 (next in execution order).
+  #
+  # FEATURE-1: WORKFLOW RUN FORM SIMULATOR / PREVIEW
+  #   Request: Admin should be able to preview how end-users will experience the
+  #            workflow run form (file uploads, input fields, instructions) before
+  #            publishing. Like a "Preview as user" mode.
+  #   Target: Could be part of Story 3.8 or a standalone story after Epic 4.
+  #
+  # BUGS FIXED IN THIS SESSION:
+  #   - tenant_id → tenantId mismatch in 8 controllers (commit 74ab37a)
+  #   - SET LOCAL parameterized query → string interpolation with UUID validation
+  #   - Role tooltip clarified (Subject vs Context)
+  #
+
+  # ═══════════════════════════════════════════════════════
   # Epic 4: Workflow Execution Engine (The Creator)
   # FRs: FR7-FR13, FR34, FR36, FR37, FR46, FR47
   # REWRITTEN 2026-02-02: Updated for LLM-orchestrated execution, fan-out/fan-in, chain orchestration.

@@ -30,9 +30,9 @@ describe('[P0] WorkflowStudioComponent', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
 
-    // Flush the templates request made by TemplateListComponent
-    const req = httpMock.expectOne('/api/admin/workflow-templates');
-    req.flush([]);
+    // Only templates tab renders by default (@if), flush its request
+    const templateReq = httpMock.expectOne('/api/admin/workflow-templates');
+    templateReq.flush([]);
   });
 
   afterEach(() => {
@@ -41,28 +41,21 @@ describe('[P0] WorkflowStudioComponent', () => {
 
   describe('container structure', () => {
     it('[3.7-UNIT-001] [P0] Given component renders, when page loads, then templates tab is active by default', () => {
-      // Given/When - component renders via beforeEach
-
-      // Then
       expect(component.activeTab()).toBe('templates');
       const templatesTab = fixture.nativeElement.querySelector('[data-testid="workflow-studio-templates-tab"]');
       expect(templatesTab.classList.contains('active')).toBe(true);
     });
 
     it('[3.7-UNIT-002] [P0] Given templates tab is active, when chains tab is clicked, then chains tab becomes active', () => {
-      // Given
       expect(component.activeTab()).toBe('templates');
 
-      // When
       component.setActiveTab('chains');
       fixture.detectChanges();
 
-      // Flush the chains request made by ChainListComponent
-      const req = httpMock.expectOne('/api/admin/workflow-chains');
-      req.flush([]);
-      fixture.detectChanges();
+      // Chains tab now renders and fires HTTP request
+      const chainReq = httpMock.expectOne('/api/admin/workflow-chains');
+      chainReq.flush([]);
 
-      // Then
       expect(component.activeTab()).toBe('chains');
       const chainsTab = fixture.nativeElement.querySelector('[data-testid="workflow-studio-chains-tab"]');
       expect(chainsTab.classList.contains('active')).toBe(true);
@@ -73,17 +66,11 @@ describe('[P0] WorkflowStudioComponent', () => {
 
   describe('data-testid attributes', () => {
     it('[3.7-UNIT-001a] [P1] Given component renders, when checking testids, then container has correct testid', () => {
-      // Given/When - component renders
-
-      // Then
       const container = fixture.nativeElement.querySelector('[data-testid="workflow-studio-container"]');
       expect(container).toBeTruthy();
     });
 
     it('[3.7-UNIT-001b] [P1] Given component renders, when checking testids, then tabs have correct testids', () => {
-      // Given/When - component renders
-
-      // Then
       const templatesTab = fixture.nativeElement.querySelector('[data-testid="workflow-studio-templates-tab"]');
       const chainsTab = fixture.nativeElement.querySelector('[data-testid="workflow-studio-chains-tab"]');
       expect(templatesTab).toBeTruthy();
@@ -92,29 +79,24 @@ describe('[P0] WorkflowStudioComponent', () => {
   });
 
   describe('tab content', () => {
-    it('[3.7-UNIT-002a] [P1] Given templates tab is active, when rendered, then templates content is visible', () => {
-      // Given
+    it('[3.7-UNIT-002a] [P1] Given templates tab is active, when rendered, then templates content exists and chains content does not', () => {
       component.setActiveTab('templates');
       fixture.detectChanges();
 
-      // When/Then
       const templatesContent = fixture.nativeElement.querySelector('[data-testid="templates-content"]');
       const chainsContent = fixture.nativeElement.querySelector('[data-testid="chains-content"]');
       expect(templatesContent).toBeTruthy();
       expect(chainsContent).toBeFalsy();
     });
 
-    it('[3.7-UNIT-002b] [P1] Given chains tab is active, when rendered, then chains content is visible', () => {
-      // Given
+    it('[3.7-UNIT-002b] [P1] Given chains tab is active, when rendered, then chains content exists and templates content does not', () => {
       component.setActiveTab('chains');
       fixture.detectChanges();
 
-      // Flush the chains request made by ChainListComponent
-      const req = httpMock.expectOne('/api/admin/workflow-chains');
-      req.flush([]);
-      fixture.detectChanges();
+      // Chains tab renders and fires HTTP request
+      const chainReq = httpMock.expectOne('/api/admin/workflow-chains');
+      chainReq.flush([]);
 
-      // When/Then
       const templatesContent = fixture.nativeElement.querySelector('[data-testid="templates-content"]');
       const chainsContent = fixture.nativeElement.querySelector('[data-testid="chains-content"]');
       expect(templatesContent).toBeFalsy();
