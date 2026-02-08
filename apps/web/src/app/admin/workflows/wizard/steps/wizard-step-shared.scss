@@ -310,6 +310,90 @@
   }
 }
 
+// Preset chips for file type groups
+.preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--slate-200);
+  background: var(--slate-50);
+  color: var(--slate-600);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--slate-100);
+    border-color: var(--slate-300);
+  }
+
+  &.active {
+    background: var(--primary-50, #eff6ff);
+    color: var(--primary-700, #1d4ed8);
+    border-color: var(--primary-300, #93c5fd);
+  }
+
+  .preset-hint {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 400;
+  }
+
+  &.active .preset-hint {
+    color: var(--primary-500, #3b82f6);
+  }
+}
+
+// Custom extension tags
+.custom-ext-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.custom-ext-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--slate-100);
+  color: var(--slate-700);
+  border: 1px solid var(--slate-200);
+
+  .custom-ext-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border: none;
+    background: transparent;
+    color: var(--slate-400);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    border-radius: 50%;
+
+    &:hover {
+      color: var(--danger-text);
+      background: var(--danger-bg);
+    }
+  }
+}
+
 // Sections list
 .sections-list {
   display: flex;

@@ -1,6 +1,6 @@
 ---
 project_name: 'project_bubble'
-user_name: 'Erinckaratoprak'
+user_name: 'erinc'
 date: '2026-02-02'
 sections_completed: ['technology_stack', 'implementation_rules', 'testing', 'quality', 'workflow', 'security']
 existing_patterns_found: 4

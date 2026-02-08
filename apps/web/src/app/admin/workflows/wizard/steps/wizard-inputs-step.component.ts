@@ -14,7 +14,13 @@ import type {
   WorkflowInput,
   WorkflowInputSourceType,
 } from '@project-bubble/shared';
+import { FILE_TYPE_PRESETS } from '@project-bubble/shared';
 import { InfoTooltipComponent } from '../../../../shared/components/info-tooltip/info-tooltip.component';
+
+interface InputPresetState {
+  activePresets: Set<string>;
+  customExtensions: string[];
+}
 
 @Component({
   standalone: true,
@@ -32,6 +38,9 @@ export class WizardInputsStepComponent implements OnInit {
 
   form!: FormGroup;
   collapsedCards = signal<Set<number>>(new Set());
+  readonly presets = FILE_TYPE_PRESETS;
+
+  inputPresetState = signal<InputPresetState[]>([]);
 
   subjectCount = computed(() => {
     const inputs = this.state()?.inputs || [];
@@ -75,6 +84,28 @@ export class WizardInputsStepComponent implements OnInit {
   }
 
   private createInputGroup(inp?: WorkflowInput): FormGroup {
+    const existingExts = new Set(inp?.accept?.extensions || []);
+    const activePresets = new Set<string>();
+    const customExtensions: string[] = [];
+
+    // Reverse-map: check if ALL extensions of a preset are present
+    const nonAllPresets = FILE_TYPE_PRESETS.filter((p) => p.key !== 'all');
+    for (const preset of nonAllPresets) {
+      if (preset.extensions.length > 0 && preset.extensions.every((ext) => existingExts.has(ext))) {
+        activePresets.add(preset.key);
+        for (const ext of preset.extensions) {
+          existingExts.delete(ext);
+        }
+      }
+    }
+
+    // Remaining unmatched extensions are custom
+    for (const ext of existingExts) {
+      customExtensions.push(ext);
+    }
+
+    this.inputPresetState.update((states) => [...states, { activePresets, customExtensions }]);
+
     return this.fb.group({
       name: [inp?.name || '', [Validators.required]],
       label: [inp?.label || '', [Validators.required]],
@@ -84,7 +115,6 @@ export class WizardInputsStepComponent implements OnInit {
       source_upload: [inp?.source?.includes('upload') || false],
       source_text: [inp?.source?.includes('text') || false],
       required: [inp?.required ?? true],
-      accept_extensions: [inp?.accept?.extensions?.join(', ') || ''],
       accept_max_size_mb: [inp?.accept?.max_size_mb ?? null, [Validators.min(1)]],
       text_placeholder: [inp?.text_config?.placeholder || ''],
       text_max_length: [inp?.text_config?.max_length ?? null, [Validators.min(1)]],
@@ -98,6 +128,11 @@ export class WizardInputsStepComponent implements OnInit {
 
   removeInput(index: number): void {
     this.inputsArray.removeAt(index);
+    this.inputPresetState.update((states) => {
+      const updated = [...states];
+      updated.splice(index, 1);
+      return updated;
+    });
     this.syncToParent();
   }
 
@@ -127,9 +162,82 @@ export class WizardInputsStepComponent implements OnInit {
     return group.get('source_text')?.value;
   }
 
+  isPresetActive(index: number, key: string): boolean {
+    return this.inputPresetState()[index]?.activePresets.has(key) || false;
+  }
+
+  getCustomExtensions(index: number): string[] {
+    return this.inputPresetState()[index]?.customExtensions || [];
+  }
+
+  togglePreset(index: number, key: string): void {
+    this.inputPresetState.update((states) => {
+      const updated = [...states];
+      const current = updated[index];
+      const activePresets = new Set(current.activePresets);
+      let customExtensions = [...current.customExtensions];
+
+      if (key === 'all') {
+        if (activePresets.has('all')) {
+          activePresets.delete('all');
+        } else {
+          activePresets.clear();
+          activePresets.add('all');
+          customExtensions = [];
+        }
+      } else {
+        activePresets.delete('all');
+        if (activePresets.has(key)) {
+          activePresets.delete(key);
+        } else {
+          activePresets.add(key);
+        }
+      }
+
+      updated[index] = { activePresets, customExtensions };
+      return updated;
+    });
+    this.syncToParent();
+  }
+
+  addCustomExtension(index: number, value: string): void {
+    let normalized = value.replace(/,/g, '').trim().toLowerCase();
+    if (!normalized) return;
+    if (!normalized.startsWith('.')) normalized = '.' + normalized;
+
+    this.inputPresetState.update((states) => {
+      const updated = [...states];
+      const current = updated[index];
+      const activePresets = new Set(current.activePresets);
+      const customExtensions = [...current.customExtensions];
+
+      if (!customExtensions.includes(normalized)) {
+        customExtensions.push(normalized);
+      }
+      activePresets.delete('all');
+
+      updated[index] = { activePresets, customExtensions };
+      return updated;
+    });
+    this.syncToParent();
+  }
+
+  removeCustomExtension(index: number, ext: string): void {
+    this.inputPresetState.update((states) => {
+      const updated = [...states];
+      const current = updated[index];
+      updated[index] = {
+        activePresets: new Set(current.activePresets),
+        customExtensions: current.customExtensions.filter((e) => e !== ext),
+      };
+      return updated;
+    });
+    this.syncToParent();
+  }
+
   private syncToParent(): void {
     const rawInputs = this.inputsArray.value;
-    const inputs: WorkflowInput[] = rawInputs.map((raw: Record<string, unknown>) => {
+    const inputs: WorkflowInput[] = rawInputs.map((raw: Record<string, unknown>, inputIndex: number) => {
       const source: WorkflowInputSourceType[] = [];
       if (raw['source_asset']) source.push('asset');
       if (raw['source_upload']) source.push('upload');
@@ -148,13 +256,20 @@ export class WizardInputsStepComponent implements OnInit {
       }
 
       if (raw['source_asset'] || raw['source_upload']) {
-        const extensions = (raw['accept_extensions'] as string)
-          ?.split(',')
-          .map((e: string) => e.trim())
-          .filter((e: string) => e);
-        if (extensions?.length || raw['accept_max_size_mb']) {
+        const presetState = this.inputPresetState()[inputIndex];
+        const extensions: string[] = [];
+
+        if (presetState && !presetState.activePresets.has('all')) {
+          for (const presetKey of presetState.activePresets) {
+            const preset = FILE_TYPE_PRESETS.find((p) => p.key === presetKey);
+            if (preset) extensions.push(...preset.extensions);
+          }
+          extensions.push(...presetState.customExtensions);
+        }
+
+        if (extensions.length || raw['accept_max_size_mb']) {
           inp.accept = {};
-          if (extensions?.length) inp.accept.extensions = extensions;
+          if (extensions.length) inp.accept.extensions = extensions;
           if (raw['accept_max_size_mb']) inp.accept.max_size_mb = raw['accept_max_size_mb'] as number;
         }
       }

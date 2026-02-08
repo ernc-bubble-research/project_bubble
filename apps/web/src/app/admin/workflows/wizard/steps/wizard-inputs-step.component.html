@@ -154,16 +154,52 @@
 
               <!-- Conditional: File restrictions -->
               @if (hasFileSource(i)) {
+                <div class="form-group">
+                  <span class="field-label">
+                    Allowed File Types
+                    <app-info-tooltip text="Select common file type groups or add custom extensions. Choose 'All Files' to allow any file type." />
+                  </span>
+                  <div class="preset-chips" [attr.data-testid]="'preset-chips-' + i">
+                    @for (preset of presets; track preset.key) {
+                      <button
+                        type="button"
+                        class="preset-chip"
+                        [class.active]="isPresetActive(i, preset.key)"
+                        [attr.data-testid]="'preset-chip-' + preset.key + '-' + i"
+                        (click)="togglePreset(i, preset.key)"
+                      >
+                        {{ preset.label }}
+                        <span class="preset-hint">{{ preset.hint }}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                @if (getCustomExtensions(i).length > 0) {
+                  <div class="custom-ext-tags" [attr.data-testid]="'custom-ext-tags-' + i">
+                    @for (ext of getCustomExtensions(i); track ext) {
+                      <span class="custom-ext-tag" [attr.data-testid]="'custom-ext-tag-' + ext + '-' + i">
+                        {{ ext }}
+                        <button type="button" class="custom-ext-remove" (click)="removeCustomExtension(i, ext)">&times;</button>
+                      </span>
+                    }
+                  </div>
+                }
+
                 <div class="form-row">
                   <div class="form-group">
-                    <span class="field-label">Allowed Extensions</span>
+                    <span class="field-label">
+                      Custom Extension
+                      <app-info-tooltip text="Add file extensions not covered by the preset groups above. Type an extension and press Enter or comma." />
+                    </span>
                     <input
                       type="text"
-                      formControlName="accept_extensions"
-                      placeholder=".pdf, .docx, .txt"
-                      [attr.data-testid]="'input-extensions-' + i"
+                      placeholder=".custom"
+                      [attr.data-testid]="'custom-ext-input-' + i"
+                      (keydown.enter)="addCustomExtension(i, $any($event.target).value); $any($event.target).value = ''; $event.preventDefault()"
+                      (keydown.,)="addCustomExtension(i, $any($event.target).value); $any($event.target).value = ''; $event.preventDefault()"
                     />
-                    <span class="field-hint">Comma-separated, e.g., .pdf, .docx</span>
+                    <span class="field-hint">Press Enter or comma to add</span>
                   </div>
                   <div class="form-group">
                     <span class="field-label">Max File Size (MB)</span>
