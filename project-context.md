@@ -418,28 +418,38 @@ _This file contains critical rules and patterns that AI agents must follow when 
     *   If there's no answer, there's a missing story.
 *   **This analysis must NOT include assumptions.** If a gap or even a slight issue is identified, it must be brought to the user's attention for discussion.
 
-## Party Mode & Collaboration Rules (from Epic 3 Retrospective — 2026-02-08)
+## Mandatory Process Gate (from Epic 3 Retrospective + Disciplinary Review — 2026-02-08)
 
-### 23. The "Party Mode Default" Rule
-*   **Party mode is the DEFAULT** for every story lifecycle stage: planning, post-implementation review, and code review.
-*   Small stories can be exempted case-by-case if the team raises it, but the default is always party mode.
-*   **REASON:** Party mode discussions during Epic 3 produced better architectural decisions (node-graph → atomic workflow pivot, BullMQ safety split, knowledge base deferral, prompt-to-output design). Individual agent analysis missed issues that multi-agent discussion caught.
+### BEFORE ANY STORY WORK — MANDATORY FIRST OUTPUT
 
-### 24. The "Module Wiring Tests" Rule
-*   **Every epic MUST include module wiring / integration tests** as a standard test category alongside unit tests and E2E tests.
-*   **NestJS:** Module compilation tests — verify `Test.createTestingModule({...}).compile()` succeeds with real providers (not mocked).
-*   **Angular:** Component integration tests — render with real child components for critical paths (not stubs).
-*   **REASON:** 555+ unit tests passed while the app crashed on startup. TypeORM entities not registered, circular dependencies, 20 Lucide icons silently failing — none caught by mocked unit tests. The three-layer testing pyramid (unit → wiring → E2E) is required for confidence.
+The developer MUST output this declaration block BEFORE any tool call (Read, Glob, Grep, Write, Edit, Bash). If the first action is a tool call instead of this declaration, that is a process violation.
 
-### 25. The "Guard Ordering Documentation" Rule
-*   **ANY** new guard registration **MUST** specify explicit execution order in a comment or documentation.
-*   Document: what guards run before this one? What does this guard expect from the request context? What happens if a prerequisite guard hasn't run?
-*   **REASON:** TenantStatusGuard was registered as APP_GUARD but ran before JwtAuthGuard, making `request.user` undefined and the guard a complete no-op. NestJS guard execution order: APP_GUARD (global) → controller @UseGuards → route guards.
+```
+PROCESS DECLARATION
+───────────────────
+Task: [name]
+Execution order step: [X of Y]
+Prior steps verified complete: [list each prior step + done/not done]
+Process path: party-mode → create-story → implement → code-review party-mode
+Current step: [which]
+Shared infra changes: [none / if yes → STOP, create tracked issue]
+```
 
-### 26. The "Browser Smoke Test" Rule
-*   **Every UI story MUST include a browser smoke test** before code review.
-*   At minimum: does the page load? Can you click through the happy path? Do icons render?
-*   **REASON:** Lucide icon bug, tags comma bug, markdown sections bug, TenantStatusGuard no-op — all invisible to automated tests, found in minutes by a human clicking through the UI.
+After completing each execution order step, the developer must explicitly state: "Step X complete. Next step is Y. Proceeding." No silent transitions. No batching multiple steps.
+
+**VIOLATION OF THIS GATE IS A TERMINATION-LEVEL OFFENSE. NO WARNINGS.**
+
+**REASON:** Rules 23-26 were defined during the Epic 3 retro and violated repeatedly despite being documented. Verbose rules get skipped. This single structural gate replaces them. One enforceable checkpoint, not four forgettable paragraphs.
+
+### Retained Technical Rules (still enforced)
+
+*   **24. Module Wiring Tests:** Every epic MUST include module wiring / integration tests (NestJS compilation + Angular component integration). Three-layer pyramid: unit → wiring → E2E.
+*   **25. Guard Ordering Documentation:** ANY new guard registration MUST specify explicit execution order in a comment. Document prerequisites and what happens if they haven't run.
+*   **26. Browser Smoke Test:** Every UI story MUST include a browser smoke test before code review. At minimum: page loads, happy path clicks through, icons render.
+
+### Shared Infrastructure Protection
+
+The following files are **off-limits for drive-by changes**: `global-setup.ts`, `global-teardown.ts`, `playwright.config.ts`, `fixtures.ts`, `test-db-helpers.ts`, `env.ts`. Any bug found in these files requires a **separate tracked issue with party mode approval** before modification. No hotfixes.
 
 ## Anti-Patterns (Do Not Do)
 

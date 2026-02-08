@@ -145,4 +145,54 @@ test.describe('[P0] Workflow Studio — Wizard', () => {
       page.getByTestId('metadata-description-input'),
     ).toHaveValue(testDescription);
   });
+
+  test('[3E-E2E-002d] file type preset chips toggle and custom extension input', async ({
+    page,
+  }) => {
+    // Given — admin starts creating a new workflow and reaches inputs step
+    await page.goto('/admin/workflows/create');
+    await expect(page.getByTestId('wizard-stepper')).toBeVisible();
+
+    await page.getByTestId('metadata-name-input').fill(`Preset Test ${Date.now()}`);
+    await page.getByTestId('wizard-next-btn').click();
+
+    // ── Step 1: Inputs ────────────────────────────────────────────────
+    await expect(page.getByTestId('add-input-btn')).toBeVisible();
+    await page.getByTestId('add-input-btn').click();
+    await expect(page.getByTestId('input-card-0')).toBeVisible();
+
+    // Fill required fields
+    await page.getByTestId('input-name-0').fill('document');
+    await page.getByTestId('input-label-0').fill('Document');
+    await page.getByTestId('input-role-0').selectOption('subject');
+
+    // When — select "Upload" source (file-based → preset chips appear)
+    await page.getByTestId('input-source-upload-0').check();
+
+    // Then — preset chips container is visible
+    await expect(page.getByTestId('preset-chips-0')).toBeVisible();
+
+    // When — click "Documents" preset chip
+    await page.getByTestId('preset-chip-documents-0').click();
+
+    // Then — chip shows active state
+    await expect(
+      page.getByTestId('preset-chip-documents-0'),
+    ).toHaveClass(/active/);
+
+    // When — add a custom extension via input
+    await page.getByTestId('custom-ext-input-0').fill('.custom');
+    await page.getByTestId('custom-ext-input-0').press('Enter');
+
+    // Then — custom extension tag appears
+    await expect(page.getByTestId('custom-ext-tags-0')).toBeVisible();
+    await expect(
+      page.getByTestId('custom-ext-tag-.custom-0'),
+    ).toBeVisible();
+
+    // Verify Documents chip is still active (custom ext doesn't deactivate presets)
+    await expect(
+      page.getByTestId('preset-chip-documents-0'),
+    ).toHaveClass(/active/);
+  });
 });
