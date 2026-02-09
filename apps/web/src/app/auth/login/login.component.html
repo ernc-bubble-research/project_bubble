@@ -6,12 +6,12 @@
 
     <h1 class="auth-title">Sign in to Bubble</h1>
 
-    @if (successMessage) {
-      <div class="alert alert-success">{{ successMessage }}</div>
+    @if (successMessage()) {
+      <div class="alert alert-success">{{ successMessage() }}</div>
     }
 
-    @if (errorMessage) {
-      <div class="alert alert-error" data-testid="login-error">{{ errorMessage }}</div>
+    @if (errorMessage()) {
+      <div class="alert alert-error" data-testid="login-error">{{ errorMessage() }}</div>
     }
 
     <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form" data-testid="login-form">
@@ -39,7 +39,7 @@
         <div class="password-wrapper">
           <input
             id="password"
-            [type]="showPassword ? 'text' : 'password'"
+            [type]="showPassword() ? 'text' : 'password'"
             formControlName="password"
             class="form-input"
             placeholder="Enter your password"
@@ -50,9 +50,9 @@
             type="button"
             class="password-toggle"
             (click)="togglePassword()"
-            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
           >
-            <lucide-icon [name]="showPassword ? 'eye-off' : 'eye'" [size]="18"></lucide-icon>
+            <lucide-icon [name]="showPassword() ? 'eye-off' : 'eye'" [size]="18"></lucide-icon>
           </button>
         </div>
         @if (loginForm.get('password')?.touched && loginForm.get('password')?.hasError('required')) {
@@ -63,10 +63,10 @@
       <button
         type="submit"
         class="btn btn-primary btn-login"
-        [disabled]="isLoading"
+        [disabled]="isLoading()"
         data-testid="login-submit"
       >
-        {{ isLoading ? 'Signing in...' : 'Sign In' }}
+        {{ isLoading() ? 'Signing in...' : 'Sign In' }}
       </button>
     </form>
   </div>

@@ -2,7 +2,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
-    "types": []
+    "types": [],
+    "paths": {
+      "@project-bubble/shared": ["libs/shared/src/index.ts"],
+      "@project-bubble/shared/web": ["libs/shared/src/web.ts"],
+      "@nestjs/swagger": ["libs/shared/src/shims/nestjs-swagger.ts"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": [

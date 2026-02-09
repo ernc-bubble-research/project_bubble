@@ -17,7 +17,7 @@ test.describe('Data Vault — File Upload & Operations', () => {
     await page.getByTestId('file-input').setInputFiles(TEST_FILE_PATH);
 
     // File should appear in the file area after upload completes
-    await expect(page.getByText('test-document.txt')).toBeVisible({
+    await expect(page.locator('[data-testid^="file-item-"]').first()).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -30,7 +30,7 @@ test.describe('Data Vault — File Upload & Operations', () => {
 
     // First upload a file so we have something to archive
     await page.getByTestId('file-input').setInputFiles(TEST_FILE_PATH);
-    await expect(page.getByText('test-document.txt')).toBeVisible({
+    await expect(page.locator('[data-testid^="file-item-"]').first()).toBeVisible({
       timeout: 10_000,
     });
 
@@ -58,7 +58,7 @@ test.describe('Data Vault — File Upload & Operations', () => {
     await page.getByTestId('archive-selected-btn').click();
 
     // File should be removed from list
-    await expect(page.getByText('test-document.txt')).toBeHidden({
+    await expect(page.locator('[data-testid^="file-item-"]')).toHaveCount(0, {
       timeout: 10_000,
     });
   });

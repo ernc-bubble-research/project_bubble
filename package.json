@@ -7,7 +7,8 @@
     "test:coverage": "npx nx run-many --target=test --all -- --coverage",
     "lint": "npx nx run-many --target=lint --all",
     "e2e": "npx nx e2e web-e2e",
-    "e2e:ui": "npx nx e2e web-e2e -- --ui"
+    "e2e:ui": "npx nx e2e web-e2e -- --ui",
+    "postinstall": "node scripts/postinstall.mjs"
   },
   "private": true,
   "dependencies": {

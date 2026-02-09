@@ -5,7 +5,7 @@ import {
   MaxLength,
   IsEnum,
   IsArray,
-  IsUUID,
+  Matches,
 } from 'class-validator';
 
 export class UpdateWorkflowTemplateDto {
@@ -28,7 +28,7 @@ export class UpdateWorkflowTemplateDto {
   @ApiPropertyOptional({ type: [String], description: 'Tenant UUIDs allowed when visibility is private' })
   @IsOptional()
   @IsArray()
-  @IsUUID('4', { each: true })
+  @Matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, { each: true, message: 'each value in allowedTenants must be a valid UUID' })
   allowedTenants?: string[];
 
   @ApiPropertyOptional({ enum: ['draft', 'published', 'archived'] })

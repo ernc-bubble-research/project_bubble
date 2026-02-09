@@ -66,16 +66,17 @@ test.describe('[P0] Workflow Studio — Wizard', () => {
   test('[3E-E2E-002b] edit seeded template — modify name and persist', async ({
     page,
   }) => {
-    const seededTemplateId = '33333333-0000-0000-0000-000000000001';
+    // Use the draft template (separate from published seed) so currentVersionId updates on save
+    const draftTemplateId = '33333333-0000-0000-0000-000000000010';
     const editedName = `Edited Template ${Date.now()}`;
 
-    // Given — admin navigates to edit the seeded template
-    await page.goto(`/admin/workflows/edit/${seededTemplateId}`);
+    // Given — admin navigates to edit the draft template
+    await page.goto(`/admin/workflows/edit/${draftTemplateId}`);
     await expect(page.getByTestId('wizard-stepper')).toBeVisible();
 
     // Then — metadata step is pre-populated with seeded data
     await expect(page.getByTestId('metadata-name-input')).toHaveValue(
-      'E2E Seed Template',
+      'E2E Draft Template',
       { timeout: 10_000 },
     );
 
@@ -95,7 +96,7 @@ test.describe('[P0] Workflow Studio — Wizard', () => {
     });
 
     // Verify change persists — reload the edit page
-    await page.goto(`/admin/workflows/edit/${seededTemplateId}`);
+    await page.goto(`/admin/workflows/edit/${draftTemplateId}`);
     await expect(page.getByTestId('metadata-name-input')).toHaveValue(
       editedName,
       { timeout: 10_000 },
@@ -142,6 +143,7 @@ test.describe('[P0] Workflow Studio — Wizard', () => {
     await expect(page.getByTestId('wizard-stepper')).toBeVisible();
 
     await page.getByTestId('metadata-name-input').fill(`Preset Test ${Date.now()}`);
+    await page.getByTestId('metadata-description-input').fill('E2E preset test');
     await page.getByTestId('wizard-next-btn').click();
 
     // ── Step 1: Inputs ────────────────────────────────────────────────

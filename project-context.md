@@ -446,6 +446,10 @@ After completing each execution order step, the developer must explicitly state:
 *   **24. Module Wiring Tests:** Every epic MUST include module wiring / integration tests (NestJS compilation + Angular component integration). Three-layer pyramid: unit → wiring → E2E.
 *   **25. Guard Ordering Documentation:** ANY new guard registration MUST specify explicit execution order in a comment. Document prerequisites and what happens if they haven't run.
 *   **26. Browser Smoke Test:** Every UI story MUST include a browser smoke test before code review. At minimum: page loads, happy path clicks through, icons render.
+*   **27. No @IsUUID with Version Constraints:** NEVER use `@IsUUID('4')`, `@IsUUID('all')`, or `@IsUUID(undefined)` from class-validator on DTO fields. These require RFC-compliant variant bits (8/9/a/b) and reject valid-looking UUIDs like seed data. ALWAYS use `@Matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)` instead.
+*   **28. E2E Regression Gate:** Run the full E2E suite (`npx nx e2e web-e2e`) as a regression gate after every 2-3 stories during an epic. Do not batch E2E fixes to the end — catch regressions early.
+*   **29. E2E in Story DoD:** Every story's Definition of Done MUST include "E2E suite still passes (46+ tests)" as a checkbox item. Stories that break E2E tests are not done.
+*   **30. E2E State Isolation:** E2E tests that mutate shared seed data (archive, delete, status changes) MUST restore original state in an `afterEach`/`afterAll` block, OR be written to be resilient to state left by prior tests. Document which seed entities each test modifies.
 
 ### Shared Infrastructure Protection
 
@@ -473,5 +477,8 @@ The following files are **off-limits for drive-by changes**: `global-setup.ts`, 
 *   ❌ **No Epics Without Wiring Tests:** Every epic must include module wiring tests (NestJS compile + Angular integration). Unit tests alone are not sufficient.
 *   ❌ **No Guards Without Ordering Docs:** Every guard registration must document execution order and prerequisite guards.
 *   ❌ **No UI Stories Without Browser Test:** Every UI story must be manually smoke-tested in the browser before code review.
+*   ❌ **No @IsUUID Validators:** Never use `@IsUUID()` with any version argument on DTO fields. It silently rejects valid UUID formats. Use `@Matches` regex.
+*   ❌ **No Batched E2E Fixes:** Never defer E2E regression testing to the end of an epic. Run the full suite every 2-3 stories.
+*   ❌ **No E2E State Pollution:** Never write E2E tests that mutate seed data without cleanup or resilience. Cross-test state corruption causes cascading failures.
 
 

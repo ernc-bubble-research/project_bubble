@@ -31,7 +31,7 @@ export class UserEntity {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.CREATOR })
   role!: UserRole;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   name?: string;
 
   @Column({ name: 'tenant_id', type: 'uuid' })

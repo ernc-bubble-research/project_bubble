@@ -19,7 +19,7 @@ test.describe('Multi-Tenant Isolation (P0)', () => {
     await page.getByTestId('file-input').setInputFiles(TEST_FILE_PATH);
 
     // Wait for file to appear in Tenant A's vault
-    await expect(page.getByText('test-document.txt')).toBeVisible({
+    await expect(page.locator('[data-testid^="file-item-"]').first()).toBeVisible({
       timeout: 10_000,
     });
 

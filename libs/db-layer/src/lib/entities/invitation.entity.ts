@@ -34,15 +34,15 @@ export class InvitationEntity {
   @Column({ name: 'invited_by', type: 'uuid' })
   invitedBy!: string;
 
-  @Column({ name: 'inviter_name', nullable: true })
+  @Column({ name: 'inviter_name', type: 'varchar', nullable: true })
   inviterName?: string;
 
   /** Name of the invited user (optional, provided by inviter) */
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   name?: string;
 
   /** First 8 chars of raw token — used to narrow bcrypt search without scanning all rows */
-  @Column({ name: 'token_prefix', length: 8, nullable: true })
+  @Column({ name: 'token_prefix', type: 'varchar', length: 8, nullable: true })
   tokenPrefix?: string;
 
   @Column({

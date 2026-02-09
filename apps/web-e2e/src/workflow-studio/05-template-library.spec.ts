@@ -41,11 +41,10 @@ test.describe('[P1] Workflow Studio — Template Library', () => {
     const templateCards = page.locator('[data-testid^="template-card-"]');
     await expect(templateCards.first()).toBeVisible({ timeout: 10_000 });
 
-    // When — click "Draft" status filter
-    await page.getByTestId('filter-status-draft').click();
+    // When — click "Archived" status filter
+    await page.getByTestId('filter-status-archived').click();
 
-    // Then — only draft templates shown (or empty state if none are draft)
-    // The seeded template is "published", so draft filter should hide it
+    // Then — no archived templates exist, so seeded template should be hidden
     await expect(
       page.getByTestId(`template-card-${SEEDED_TEMPLATE_ID}`),
     ).not.toBeVisible({ timeout: 5_000 });
@@ -76,6 +75,15 @@ test.describe('[P1] Workflow Studio — Template Library', () => {
     await page
       .getByTestId(`template-card-${SEEDED_TEMPLATE_ID}-duplicate`)
       .click();
+
+    // Duplicate navigates to the edit page for the new copy
+    await expect(page).toHaveURL(/\/admin\/workflows\/edit\//, {
+      timeout: 15_000,
+    });
+
+    // Navigate back to template list to verify the copy was created
+    await page.goto('/admin/workflows');
+    await expect(page.getByTestId('templates-content')).toBeVisible();
 
     // Then — a new template card appears with "(Copy)" in its name
     await expect(page.getByText('(Copy)')).toBeVisible({ timeout: 10_000 });

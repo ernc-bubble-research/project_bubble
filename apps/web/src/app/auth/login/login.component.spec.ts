@@ -232,16 +232,16 @@ describe('LoginComponent [P1]', () => {
     component.onSubmit();
     fixture.detectChanges();
 
-    expect(component.errorMessage).toBe('Invalid email or password');
-    expect(component.isLoading).toBe(false);
+    expect(component.errorMessage()).toBe('Invalid email or password');
+    expect(component.isLoading()).toBe(false);
   });
 
   it('[1H.1-UNIT-011] should toggle password visibility', () => {
-    expect(component.showPassword).toBe(false);
+    expect(component.showPassword()).toBe(false);
     component.togglePassword();
-    expect(component.showPassword).toBe(true);
+    expect(component.showPassword()).toBe(true);
     component.togglePassword();
-    expect(component.showPassword).toBe(false);
+    expect(component.showPassword()).toBe(false);
   });
 
   it('[1H.1-UNIT-012] should show success message when redirected from set-password', () => {
@@ -250,7 +250,7 @@ describe('LoginComponent [P1]', () => {
     });
 
     f.detectChanges();
-    expect(f.componentInstance.successMessage).toBe(
+    expect(f.componentInstance.successMessage()).toBe(
       'Password set successfully. Please sign in.'
     );
   });

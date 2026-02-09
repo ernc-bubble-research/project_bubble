@@ -7,7 +7,7 @@ import {
   IsEnum,
   IsObject,
   IsArray,
-  IsUUID,
+  Matches,
 } from 'class-validator';
 
 export class CreateWorkflowChainDto {
@@ -39,6 +39,6 @@ export class CreateWorkflowChainDto {
   })
   @IsOptional()
   @IsArray()
-  @IsUUID('4', { each: true })
+  @Matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, { each: true, message: 'each value in allowedTenants must be a valid UUID' })
   allowedTenants?: string[];
 }

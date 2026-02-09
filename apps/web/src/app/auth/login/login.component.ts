@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -21,10 +21,10 @@ export class LoginComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   loginForm!: FormGroup;
-  isLoading = false;
-  errorMessage = '';
-  successMessage = '';
-  showPassword = false;
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal('');
+  readonly successMessage = signal('');
+  readonly showPassword = signal(false);
 
   ngOnInit(): void {
     this.loginForm = this.fb.group({
@@ -34,12 +34,12 @@ export class LoginComponent implements OnInit {
 
     const message = this.route.snapshot.queryParamMap.get('message');
     if (message === 'password-set') {
-      this.successMessage = 'Password set successfully. Please sign in.';
+      this.successMessage.set('Password set successfully. Please sign in.');
     }
   }
 
   togglePassword(): void {
-    this.showPassword = !this.showPassword;
+    this.showPassword.update((v) => !v);
   }
 
   onSubmit(): void {
@@ -48,15 +48,15 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    this.isLoading = true;
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+    this.successMessage.set('');
 
     const { email, password } = this.loginForm.value;
 
     this.authService.login(email, password).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
-        this.isLoading = false;
+        this.isLoading.set(false);
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
         if (returnUrl && returnUrl.startsWith('/')) {
           this.router.navigateByUrl(returnUrl);
@@ -67,8 +67,8 @@ export class LoginComponent implements OnInit {
         }
       },
       error: () => {
-        this.isLoading = false;
-        this.errorMessage = 'Invalid email or password';
+        this.isLoading.set(false);
+        this.errorMessage.set('Invalid email or password');
       },
     });
   }

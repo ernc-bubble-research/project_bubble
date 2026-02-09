@@ -30,7 +30,7 @@ export class TenantEntity {
   @Column({ type: 'enum', enum: TenantStatus, default: TenantStatus.ACTIVE })
   status!: TenantStatus;
 
-  @Column({ name: 'primary_contact', nullable: true, default: null })
+  @Column({ name: 'primary_contact', type: 'varchar', nullable: true, default: null })
   primaryContact!: string | null;
 
   @Column({ name: 'plan_tier', type: 'enum', enum: PlanTier, default: PlanTier.FREE })

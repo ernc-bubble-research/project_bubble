@@ -14,7 +14,7 @@ import type {
   WorkflowInput,
   WorkflowInputSourceType,
 } from '@project-bubble/shared';
-import { FILE_TYPE_PRESETS } from '@project-bubble/shared';
+import { FILE_TYPE_PRESETS } from '@project-bubble/shared/web';
 import { InfoTooltipComponent } from '../../../../shared/components/info-tooltip/info-tooltip.component';
 
 interface InputPresetState {

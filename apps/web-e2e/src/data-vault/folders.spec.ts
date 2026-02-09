@@ -15,8 +15,8 @@ test.describe('Data Vault — Folder Operations', () => {
     const allFilesBtn = page.getByTestId('folder-all-files');
     await expect(allFilesBtn).toHaveClass(/active/);
 
-    // Seeded "Test Folder" should be visible in tree
-    await expect(page.getByText('Test Folder')).toBeVisible();
+    // Seeded "Folder Alpha" should be visible in tree
+    await expect(page.getByText('Folder Alpha')).toBeVisible();
   });
 
   test('[2E-E2E-001b] create folder via dialog', async ({ page }) => {
@@ -46,8 +46,8 @@ test.describe('Data Vault — Folder Operations', () => {
     await page.goto('/app/data-vault');
     await expect(page.getByTestId('data-vault')).toBeVisible();
 
-    // Click on the seeded "Test Folder"
-    const testFolder = page.getByText('Test Folder');
+    // Click on the seeded "Folder Alpha"
+    const testFolder = page.getByText('Folder Alpha');
     await expect(testFolder).toBeVisible();
     await testFolder.click();
 

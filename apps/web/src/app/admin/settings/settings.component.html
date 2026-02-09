@@ -57,7 +57,6 @@
         aria-labelledby="tab-llm-models"
       >
         <app-llm-models-list
-          data-testid="llm-models-list"
           (addModelClicked)="openAddModelDialog()"
           (editModelClicked)="openEditModelDialog($event)"
         ></app-llm-models-list>
@@ -71,7 +70,6 @@
         aria-labelledby="tab-providers"
       >
         <app-provider-config-list
-          data-testid="provider-config-list"
           (addConfigClicked)="openAddProviderDialog()"
           (editConfigClicked)="openEditProviderDialog($event)"
         ></app-provider-config-list>

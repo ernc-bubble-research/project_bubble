@@ -2,45 +2,26 @@ import './env';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
-const ADMIN_DB = 'postgres'; // connect here first to CREATE/DROP test DB
 const TEST_DB = process.env['POSTGRES_DB'] || 'project_bubble_test';
 
 /**
  * Playwright global setup:
- * 1. Connect to the default 'postgres' DB
- * 2. Create the test database (DROP if leftover from a crashed run)
- * 3. Connect to the test DB with TypeORM synchronize to create all tables
- * 4. Seed admin user, tenant users, and test folders
+ * 1. Connect to the test DB (pre-created by playwright.config.ts)
+ * 2. Synchronize schema via TypeORM entities
+ * 3. Truncate all tables for a clean state
+ * 4. Seed admin user, tenant users, and test data
+ *
+ * NOTE: The DB is NOT dropped+recreated here because Playwright starts
+ * webServer (API) BEFORE globalSetup. Dropping would kill the API's
+ * DB connections. Instead we truncate for a clean slate.
  */
 async function globalSetup(): Promise<void> {
-  console.log('[E2E] Global setup — creating test database…');
+  console.log('[E2E] Global setup — preparing test database…');
 
   try {
-    // ── Step 1: Create the test database ──────────────────────────────
-    const adminDs = new DataSource({
-      type: 'postgres',
-      host: process.env['POSTGRES_HOST'] || 'localhost',
-      port: Number(process.env['POSTGRES_PORT'] || 5432),
-      username: process.env['POSTGRES_USER'] || 'bubble_user',
-      password: process.env['POSTGRES_PASSWORD'] || 'bubble_password',
-      database: ADMIN_DB,
-    });
-
-    await adminDs.initialize();
-
-    // Terminate any lingering connections, then drop + recreate
-    await adminDs.query(
-      `SELECT pg_terminate_backend(pid)
-       FROM pg_stat_activity
-       WHERE datname = $1 AND pid <> pg_backend_pid()`,
-      [TEST_DB],
-    );
-    await adminDs.query(`DROP DATABASE IF EXISTS "${TEST_DB}"`);
-    await adminDs.query(`CREATE DATABASE "${TEST_DB}"`);
-    await adminDs.destroy();
-    console.log(`[E2E] Database "${TEST_DB}" created`);
-
-    // ── Step 2: Synchronize schema via TypeORM entities ───────────────
+    // ── Step 1: Synchronize schema via TypeORM entities ───────────────
+    // Import from compiled dist output to avoid decorator compilation issues
+    // (Playwright's TypeScript transformer doesn't support experimentalDecorators)
     const {
       TenantEntity,
       UserEntity,
@@ -54,7 +35,7 @@ async function globalSetup(): Promise<void> {
       WorkflowRunEntity,
       LlmModelEntity,
       LlmProviderConfigEntity,
-    } = await import('@project-bubble/db-layer');
+    } = await import('../../../dist/libs/db-layer/src/index.js');
 
     const entities = [
       TenantEntity,
@@ -83,7 +64,17 @@ async function globalSetup(): Promise<void> {
     });
 
     await testDs.initialize();
-    console.log('[E2E] Schema synchronized — all tables created');
+    console.log('[E2E] Schema synchronized — all tables ready');
+
+    // ── Step 2: Truncate all tables for a clean state ─────────────────
+    const tableNames = entities
+      .map((e) => testDs.getRepository(e).metadata.tableName)
+      .map((t) => `"${t}"`)
+      .join(', ');
+    await testDs.query(
+      `TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE`,
+    );
+    console.log('[E2E] All tables truncated — clean state');
 
     // ── Step 3: Seed tenants and users ─────────────────────────────────
     const tenantRepo = testDs.getRepository(TenantEntity);
@@ -146,14 +137,16 @@ async function globalSetup(): Promise<void> {
     console.log(`[E2E] Tenant B user seeded — ${tenantBEmail}`);
 
     // ── Step 4: Seed one root folder per tenant ─────────────────────
+    // Use unique names because bubble_user is a superuser that bypasses RLS,
+    // so tenant-A's data-vault API returns ALL tenants' folders.
     await folderRepo.save({
       tenantId: tenantAId,
-      name: 'Test Folder',
+      name: 'Folder Alpha',
       parentId: null,
     });
     await folderRepo.save({
       tenantId: tenantBId,
-      name: 'Test Folder',
+      name: 'Folder Beta',
       parentId: null,
     });
     console.log('[E2E] Test folders seeded — one per tenant');
@@ -191,6 +184,35 @@ async function globalSetup(): Promise<void> {
 
     await templateRepo.update(seedTemplate.id, { currentVersionId: seedVersion.id });
 
+    // Draft template for edit tests (002b) — separate from published template
+    const draftTemplate = await templateRepo.save({
+      id: '33333333-0000-0000-0000-000000000010',
+      tenantId: systemTenantId,
+      name: 'E2E Draft Template',
+      description: 'Draft template for edit E2E tests',
+      visibility: 'public',
+      status: 'draft',
+      createdBy: adminUserId,
+    });
+
+    const draftVersion = await versionRepo.save({
+      id: '33333333-0000-0000-0000-000000000011',
+      tenantId: systemTenantId,
+      templateId: draftTemplate.id,
+      versionNumber: 1,
+      definition: {
+        metadata: { name: 'E2E Draft Template', description: 'Draft for edit tests', version: 1, tags: [] },
+        inputs: [{ name: 'subject', label: 'Subject', role: 'subject', source: ['text'], required: true }],
+        execution: { processing: 'parallel', model: 'mock-model', temperature: 0.7, max_output_tokens: 4096 },
+        knowledge: { enabled: false },
+        prompt: 'Analyze {subject}',
+        output: { format: 'markdown', filename_template: 'output-{subject}', sections: [{ name: 'analysis', label: 'Analysis', required: true }] },
+      },
+      createdBy: adminUserId,
+    });
+
+    await templateRepo.update(draftTemplate.id, { currentVersionId: draftVersion.id });
+
     await chainRepo.save({
       id: '33333333-0000-0000-0000-000000000003',
       tenantId: systemTenantId,
@@ -208,7 +230,7 @@ async function globalSetup(): Promise<void> {
       createdBy: adminUserId,
     });
 
-    console.log('[E2E] Workflow data seeded — 1 template + 1 version + 1 chain');
+    console.log('[E2E] Workflow data seeded — 2 templates + 2 versions + 1 chain');
 
     // ── Step 6: Seed LLM model (Story 3E — wizard execution step) ────
     const llmModelRepo = testDs.getRepository(LlmModelEntity);
@@ -221,6 +243,15 @@ async function globalSetup(): Promise<void> {
       isActive: true,
     });
     console.log('[E2E] LLM model seeded — mock-model');
+
+    // ── Step 7: Seed LLM provider config (Story 2E — provider list) ────
+    const providerConfigRepo = testDs.getRepository(LlmProviderConfigEntity);
+    await providerConfigRepo.save({
+      providerKey: 'mock',
+      displayName: 'Mock Provider (Testing)',
+      isActive: true,
+    });
+    console.log('[E2E] LLM provider config seeded — mock');
 
     await testDs.destroy();
     console.log('[E2E] Global setup complete');
