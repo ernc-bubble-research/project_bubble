@@ -3,7 +3,7 @@ import { test, expect } from '../fixtures';
 // Workflow Wizard uses admin auth (default storageState — no override needed)
 
 test.describe('[P0] Workflow Studio — Wizard', () => {
-  test('[3E-E2E-002a] North Star: create workflow through all 5 steps', async ({
+  test('[3E-E2E-002a] North Star: create workflow through all 4 steps', async ({
     page,
   }) => {
     const uniqueName = `E2E Test Workflow ${Date.now()}`;
@@ -46,21 +46,9 @@ test.describe('[P0] Workflow Studio — Wizard', () => {
     }
     await page.getByTestId('wizard-next-btn').click();
 
-    // ── Step 3: Prompt ────────────────────────────────────────────────
+    // ── Step 3: Prompt (last step — save button appears here) ─────────
     await expect(page.getByTestId('prompt-textarea')).toBeVisible();
     await page.getByTestId('prompt-textarea').fill('Analyze {subject}');
-    await page.getByTestId('wizard-next-btn').click();
-
-    // ── Step 4: Output ────────────────────────────────────────────────
-    await expect(
-      page.getByTestId('output-format-markdown'),
-    ).toBeVisible();
-    await page.getByTestId('output-format-markdown').click();
-    await page.getByTestId('output-filename-input').fill('output-{subject}');
-    await page.getByTestId('add-section-btn').click();
-    await expect(page.getByTestId('section-name-0')).toBeVisible();
-    await page.getByTestId('section-name-0').fill('analysis');
-    await page.getByTestId('section-label-0').fill('Analysis');
 
     // ── Save ──────────────────────────────────────────────────────────
     await page.getByTestId('wizard-save-btn').click();
@@ -95,9 +83,9 @@ test.describe('[P0] Workflow Studio — Wizard', () => {
     await page.getByTestId('metadata-name-input').clear();
     await page.getByTestId('metadata-name-input').fill(editedName);
 
-    // Navigate to last step to access save button
+    // Navigate to last step (Prompt — 4-step wizard, Output step removed)
     // In edit mode, all steps are visited so we can click step indicators directly
-    await page.getByTestId('step-indicator-4').click();
+    await page.getByTestId('step-indicator-3').click();
     await expect(page.getByTestId('wizard-save-btn')).toBeVisible();
     await page.getByTestId('wizard-save-btn').click();
 
@@ -194,5 +182,62 @@ test.describe('[P0] Workflow Studio — Wizard', () => {
     await expect(
       page.getByTestId('preset-chip-documents-0'),
     ).toHaveClass(/active/);
+  });
+
+  test('[3E-E2E-006a] validation blocks Next when metadata required fields empty', async ({
+    page,
+  }) => {
+    // Given — admin starts creating a new workflow
+    await page.goto('/admin/workflows/create');
+    await expect(page.getByTestId('wizard-stepper')).toBeVisible();
+
+    // When — leave name and description empty and click Next
+    await page.getByTestId('wizard-next-btn').click();
+
+    // Then — step does NOT advance (still on step 0)
+    // Validation error message should appear
+    await expect(page.getByTestId('step-validation-error')).toBeVisible();
+    // Inputs step add-input-btn should NOT be visible (we didn't advance)
+    await expect(page.getByTestId('add-input-btn')).not.toBeVisible();
+    // Metadata fields should still be visible (still on step 0)
+    await expect(page.getByTestId('metadata-name-input')).toBeVisible();
+  });
+
+  test('[3E-E2E-006b] prompt step shows variable chips matching defined inputs', async ({
+    page,
+  }) => {
+    // Given — admin creates a workflow and adds a "subject" input
+    await page.goto('/admin/workflows/create');
+    await expect(page.getByTestId('wizard-stepper')).toBeVisible();
+
+    // Step 0: Metadata
+    await page.getByTestId('metadata-name-input').fill(`Variable Chip Test ${Date.now()}`);
+    await page.getByTestId('metadata-description-input').fill('Testing variable chips');
+    await page.getByTestId('wizard-next-btn').click();
+
+    // Step 1: Inputs — add "subject" input
+    await expect(page.getByTestId('add-input-btn')).toBeVisible();
+    await page.getByTestId('add-input-btn').click();
+    await page.getByTestId('input-name-0').fill('subject');
+    await page.getByTestId('input-label-0').fill('Subject');
+    await page.getByTestId('input-role-0').selectOption('subject');
+    await page.getByTestId('input-source-text-0').check();
+    await page.getByTestId('wizard-next-btn').click();
+
+    // Step 2: Execution — wait for models, advance
+    const modelSelect = page.getByTestId('exec-model-select');
+    await expect(modelSelect.locator('option')).not.toHaveCount(1, {
+      timeout: 15_000,
+    });
+    const currentValue = await modelSelect.inputValue();
+    if (!currentValue) {
+      await modelSelect.selectOption({ index: 1 });
+    }
+    await page.getByTestId('wizard-next-btn').click();
+
+    // Step 3: Prompt — verify variable chip for "subject" appears
+    await expect(page.getByTestId('prompt-textarea')).toBeVisible();
+    await expect(page.getByTestId('variable-chips')).toBeVisible();
+    await expect(page.getByTestId('variable-chip-subject')).toBeVisible();
   });
 });
