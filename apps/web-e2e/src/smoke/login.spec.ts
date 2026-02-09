@@ -35,3 +35,15 @@ test.describe('[P0] Login Flow', () => {
     await expect(error).toBeVisible({ timeout: 5_000 });
   });
 });
+
+test.describe('[P0] Auth Guard', () => {
+  test('[1E-E2E-002c] unauthenticated user is redirected to login', async ({
+    page,
+  }) => {
+    // Navigate to a protected route without authentication
+    await page.goto('/admin/dashboard');
+
+    // authGuard should redirect to /auth/login
+    await expect(page).toHaveURL(/\/auth\/login/);
+  });
+});

@@ -8,7 +8,7 @@ import { TenantService } from '../../core/services/tenant.service';
   imports: [FormsModule],
   selector: 'app-create-tenant-modal',
   template: `
-    <div class="modal-overlay" role="button" tabindex="0" aria-label="Close modal" (click)="onOverlayClick($event)" (keydown.enter)="close()" (keydown.escape)="close()">
+    <div class="modal-overlay" role="button" tabindex="0" aria-label="Close modal" (click)="onOverlayClick($event)" (keydown.enter)="close()" (keydown.escape)="close()" data-testid="create-tenant-modal">
       <div class="modal-container">
         <div class="modal-header">
           <h2>Create Tenant</h2>
@@ -25,17 +25,19 @@ import { TenantService } from '../../core/services/tenant.service';
             [class.error]="errorMessage()"
             maxlength="255"
             (keydown.enter)="submit()"
+            data-testid="create-tenant-name-input"
           />
           @if (errorMessage()) {
-            <p class="error-text">{{ errorMessage() }}</p>
+            <p class="error-text" data-testid="create-tenant-error">{{ errorMessage() }}</p>
           }
         </div>
         <div class="modal-footer">
-          <button class="btn btn-outline" (click)="close()">Cancel</button>
+          <button class="btn btn-outline" (click)="close()" data-testid="create-tenant-cancel-btn">Cancel</button>
           <button
             class="btn btn-primary"
             (click)="submit()"
             [disabled]="submitting()"
+            data-testid="create-tenant-submit-btn"
           >
             {{ submitting() ? 'Creating...' : 'Create Tenant' }}
           </button>

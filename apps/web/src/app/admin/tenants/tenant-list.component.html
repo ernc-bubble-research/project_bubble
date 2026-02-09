@@ -58,13 +58,13 @@
       </thead>
       <tbody>
         @for (tenant of filteredTenants(); track tenant.id) {
-          <tr class="tenant-row" [class.tenant-row-archived]="tenant.status === 'archived'" (click)="navigateToTenant(tenant)">
+          <tr class="tenant-row" [class.tenant-row-archived]="tenant.status === 'archived'" [attr.data-testid]="'tenant-row-' + tenant.id" (click)="navigateToTenant(tenant)">
             <td class="tenant-name-cell">{{ tenant.name }}</td>
             <td>&mdash;</td>
             <td>&mdash;</td>
             <td>&mdash;</td>
             <td>&mdash;</td>
-            <td><app-status-badge [status]="tenant.status"></app-status-badge></td>
+            <td><app-status-badge [status]="tenant.status" [attr.data-testid]="'tenant-status-' + tenant.id"></app-status-badge></td>
           </tr>
         }
       </tbody>

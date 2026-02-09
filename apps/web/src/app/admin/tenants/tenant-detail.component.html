@@ -16,7 +16,7 @@
     <div class="header-info">
       <div class="header-title-row">
         <h1 class="tenant-name">{{ t.name }}</h1>
-        <app-status-badge [status]="t.status"></app-status-badge>
+        <app-status-badge [status]="t.status" data-testid="tenant-status-badge"></app-status-badge>
       </div>
       <div class="header-meta">
         <span>Created: {{ t.createdAt | date:'mediumDate' }}</span>
@@ -92,6 +92,7 @@
         [class.active]="activeTab() === tab.key"
         [disabled]="tab.key !== 'general' && tab.key !== 'entitlements' && tab.key !== 'users'"
         (click)="setTab(tab.key)"
+        [attr.data-testid]="'tab-' + tab.key"
       >
         {{ tab.label }}
       </button>
@@ -110,6 +111,7 @@
             type="text"
             [value]="editName()"
             (input)="editName.set($any($event.target).value)"
+            data-testid="tenant-name-input"
           />
         </div>
         <div class="form-group">
@@ -179,7 +181,7 @@
         </div>
         <div class="form-actions">
           <button class="btn btn-outline" [disabled]="!isGeneralDirty()" (click)="cancelGeneral()">Cancel</button>
-          <button class="btn btn-primary" [disabled]="!isGeneralDirty() || saving()" (click)="saveGeneral()">
+          <button class="btn btn-primary" [disabled]="!isGeneralDirty() || saving()" (click)="saveGeneral()" data-testid="tenant-save-btn">
             {{ saving() ? 'Saving...' : 'Save Changes' }}
           </button>
         </div>
@@ -258,7 +260,7 @@
       <div class="form-card">
         <div class="users-header">
           <h3 class="section-title">Invitations</h3>
-          <button class="btn btn-primary btn-sm" (click)="openInviteDialog()">
+          <button class="btn btn-primary btn-sm" (click)="openInviteDialog()" data-testid="invite-user-btn">
             <lucide-icon name="user-plus" [size]="16"></lucide-icon>
             Invite User
           </button>
@@ -285,7 +287,7 @@
               </thead>
               <tbody>
                 @for (inv of invitations(); track inv.id) {
-                  <tr>
+                  <tr [attr.data-testid]="'invitation-row-' + inv.id">
                     <td>{{ inv.email }}</td>
                     <td>{{ inv.role }}</td>
                     <td>
@@ -295,6 +297,7 @@
                         [class.status-accepted]="inv.status === 'accepted'"
                         [class.status-expired]="inv.status === 'expired'"
                         [class.status-revoked]="inv.status === 'revoked'"
+                        [attr.data-testid]="'invitation-status-' + inv.id"
                       >
                         {{ inv.status }}
                       </span>
@@ -306,7 +309,7 @@
                         <button class="btn btn-sm btn-outline" (click)="resendInvitation(inv.id)" title="Resend">
                           <lucide-icon name="refresh-cw" [size]="14"></lucide-icon>
                         </button>
-                        <button class="btn btn-sm btn-danger-outline" (click)="revokeInvitation(inv.id)" title="Revoke">
+                        <button class="btn btn-sm btn-danger-outline" (click)="revokeInvitation(inv.id)" title="Revoke" [attr.data-testid]="'invitation-revoke-' + inv.id">
                           <lucide-icon name="x-circle" [size]="14"></lucide-icon>
                         </button>
                       }
@@ -348,7 +351,7 @@
   <!-- Suspend/Activate Confirmation Dialog -->
   @if (showSuspendDialog()) {
     <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
-    <div class="dialog-overlay" (click)="closeSuspendDialog()" role="dialog" aria-modal="true">
+    <div class="dialog-overlay" (click)="closeSuspendDialog()" role="dialog" aria-modal="true" data-testid="suspend-confirm-dialog">
       <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
       <div class="dialog-card" (click)="$event.stopPropagation()">
         <h2 class="dialog-title">
@@ -368,6 +371,7 @@
             [class.btn-danger]="t.status === 'active'"
             [class.btn-primary]="t.status !== 'active'"
             (click)="confirmSuspendToggle()"
+            data-testid="suspend-confirm-btn"
           >
             {{ t.status === 'active' ? 'Suspend' : 'Activate' }}
           </button>

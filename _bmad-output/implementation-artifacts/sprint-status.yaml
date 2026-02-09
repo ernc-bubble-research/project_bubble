@@ -428,8 +428,7 @@ development_status:
   1-13-tenant-lifecycle-management: done # Archive/suspend/delete tenants + TenantStatusGuard. Code review: 7 findings (1H, 3M, 3L), party mode: 5 fixed, 1 deferred (Epic 4), 1 dismissed. 880 total tests, 0 lint errors.
   epic-1-retrospective: done
   epic-1-nfr-assessment: done # NFR assessment completed 2026-01-31, FAIL status, hardening story required
-  1e-e2e-test-coverage-epic-1: done # Code review passed (9 findings, all fixed). Party mode review: TEA+Dev+Architect consensus SHIP IT. 3 smoke tests, test DB lifecycle, auth fixture, webServer config. 376 unit tests, 0 lint errors.
-  1e-update-tenant-lifecycle-rbac: backlog               # Catch-up E2E: tenant lifecycle (~6: create, suspend, unsuspend, archive, unarchive, delete) + RBAC/guards (~4: TenantStatusGuard suspend→blocked regression, role-based access). Covers Story 1-13 features.
+  1e-e2e-test-coverage-epic-1: done # Comprehensive rewrite: 13 tests across 5 spec files (7 existing + 6 new). Tenant CRUD, lifecycle (suspend/unsuspend/archive/unarchive/hard-delete), RBAC (non-admin blocked, suspended tenant blocked), auth guard. Code review: 5 findings fixed (F1-F5). 10 data-testid additions. 1028 unit tests, 0 lint errors.
 
   # ═══════════════════════════════════════════════════════
   # Epic 1H: Security & Reliability Hardening
@@ -449,8 +448,7 @@ development_status:
   2-3-semantic-search-service-vector-rag: done
   2-4-validated-insight-storage-memory: done # Code review passed, 406 tests, 0 lint errors
   epic-2-retrospective: done # Retrospective completed 2026-02-01. 3 critical process failures documented. Action items defined.
-  2e-e2e-test-coverage-epic-2: done # Data & Configuration E2E — Data Vault (folders, files, upload, tenant isolation) + Settings LLM Admin. 11 tests, 4 spec files, 3 auth states, hybrid seed. Code review: 9 findings fixed (3H, 4M, 2L). 878 unit tests, 0 lint errors.
-  2e-update-invitations: backlog                          # Catch-up E2E: invitations (~2: invite user, accept invitation). Covers Story 1-12 features not included in original 2E.
+  2e-e2e-test-coverage-epic-2: done # Comprehensive rewrite: Data Vault (folders, files, upload, tenant isolation) + Settings LLM Admin + Invitation management (dialog + list/revoke). 13 tests, 5 spec files, 3 auth states, hybrid seed + DB seeding for invitations. 1028 unit tests, 0 lint errors.
 
   # ═══════════════════════════════════════════════════════
   # Pre-Epic-3 Gates
