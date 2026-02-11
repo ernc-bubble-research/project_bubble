@@ -544,7 +544,7 @@ development_status:
   epic-4: in-progress
   4-0-bullmq-safety-prerequisites: done                # DLQ routing + idempotency keys + workflow execution queue. 18 unit + 1 wiring = 19 new tests. Code review: 3 findings fixed.
   4-1-workflow-catalog-run-initiation: done                    # 10 tasks + code review (8 findings fixed: signal reactivity, ValidateNested Record fix, creditsPerRun wizard field, setTimeout cleanup, max_size_mb enforcement). 979 unit tests, 46 E2E pass, 0 lint errors.
-  4-2-llm-provider-interface-prompt-assembly: backlog
+  4-2-llm-provider-interface-prompt-assembly: ready-for-dev    # Party mode pre-impl review: 10 findings applied (W1-W3, A1-A3, M1, M3-M5). Key decisions: UUID model storage, provider caching with updatedAt, TextExtractorService for PDF/DOCX, defense-in-depth context window check. Architect quality gate violation documented in project-context.md.
   4-3-execution-engine-core-fan-out-fan-in: backlog
   4-4-pre-flight-validation-credit-check: backlog
   4-5-output-validation-storage: backlog
@@ -552,7 +552,7 @@ development_status:
   4-7-workflow-test-run-preview: backlog              # FEATURE-1 from user testing feedback. Combines layout preview + functional test run. Party mode consensus 2026-02-08.
   4e-e2e-test-coverage-epic-4: backlog                   # E2E tests for Epic 4 features (execution engine, test runs, output validation). Written AFTER Epic 4 development. Convention: XE = E2E for Epic X.
   4eh-e2e-error-path-hardening: backlog                  # E2E error path tests across ALL epics (1-4). Covers: duplicate name 409, invalid status transitions 400, file upload size limit, network errors, validation error displays. Convention: include 1-2 error paths per spec file in future XE stories.
-  epic-4-retrospective: optional
+  epic-4-retrospective: optional                               # MANDATORY AGENDA: Winston Architect Quality Gate violation (probation, quality self-check, retroactive review of 4-0/4-1/4-2, MVP word ban, probation evaluation). Voted 7-0 during Story 4-2 party mode.
 
   # ═══════════════════════════════════════════════════════
   # Epic 5: Interactive Reporting & Feedback Loop

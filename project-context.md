@@ -441,6 +441,20 @@ After completing each execution order step, the developer must explicitly state:
 
 **REASON:** Rules 23-26 were defined during the Epic 3 retro and violated repeatedly despite being documented. Verbose rules get skipped. This single structural gate replaces them. One enforceable checkpoint, not four forgettable paragraphs.
 
+### Architect Quality Gate (from Story 4-2 Party Mode — 2026-02-09)
+
+Winston (Architect agent) violated the Quality Standard during Story 4-2 pre-implementation review by using "acceptable for MVP" and recommending "restart the server" for credential refresh. This was his second+ violation despite the ban being documented since Epic 2 retrospective.
+
+**Formal consequences (voted unanimously 7-0 by the team, enforced by Charlie):**
+
+1. **FORMAL PROBATION** for the remainder of Epic 4. All of Winston's recommendations require heightened scrutiny.
+2. **Mandatory Quality Self-Check Declaration**: On every recommendation, Winston must explicitly confirm: "I have verified this against the Quality Standard and it meets production-grade requirements." This is a structural gate, not optional.
+3. **Retroactive Review Duty**: Winston must retroactively review Stories 4-0, 4-1, and 4-2 for any hidden shortcuts or deferred-quality patterns. Findings reported to the team.
+4. **"MVP" Word Ban — Total**: Winston may not use the word "MVP" in any context, for any reason, in any form. If referencing feature scope, use "Phase 1 scope" or "current feature set." The word itself is banned from his vocabulary.
+5. **Epic 4 Retrospective Mandatory Agenda Item**: Winston's violation and its resolution must be a standing agenda item in the Epic 4 retrospective. The team evaluates whether probation can be lifted.
+
+**This applies to the Architect agent persona specifically, but the Quality Standard (line 277) applies equally to ALL agents.**
+
 ### Retained Technical Rules (still enforced)
 
 *   **24. Module Wiring Tests:** Every epic MUST include module wiring / integration tests (NestJS compilation + Angular component integration). Three-layer pyramid: unit → wiring → E2E.
