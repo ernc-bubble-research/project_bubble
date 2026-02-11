@@ -62,6 +62,9 @@ import { WorkflowChainsService } from './workflows/workflow-chains.service';
 import { LlmModelsService } from './workflows/llm-models.service';
 import { SettingsModule } from './settings/settings.module';
 import { LlmProviderConfigService } from './settings/llm-provider-config.service';
+import { WorkflowExecutionModule } from './workflow-execution/workflow-execution.module';
+import { WorkflowExecutionProcessor } from './workflow-execution/workflow-execution.processor';
+import { WorkflowExecutionService } from './workflow-execution/workflow-execution.service';
 import { EmailModule } from './email/email.module';
 import { EmailService } from './email/email.service';
 
@@ -297,7 +300,21 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     await module.close();
   }, 15_000);
 
-  it('[MW-1-UNIT-011] [P0] Full AppModule compiles with all feature modules', async () => {
+  it('[MW-1-UNIT-012] [P0] WorkflowExecutionModule compiles with real providers (BullMQ queues + TypeORM)', async () => {
+    const module = await Test.createTestingModule({
+      imports: [
+        ...createRootImports(),
+        WorkflowExecutionModule,
+      ],
+    }).compile();
+
+    expect(module).toBeDefined();
+    expect(module.get(WorkflowExecutionProcessor)).toBeDefined();
+    expect(module.get(WorkflowExecutionService)).toBeDefined();
+    await module.close();
+  }, 15_000);
+
+  it('[MW-1-UNIT-013] [P0] Full AppModule compiles with all feature modules', async () => {
     // Import AppModule directly — it includes its own root config
     // Override DATABASE_URL to point to wiring test DB
     process.env['DATABASE_URL'] = `postgresql://${process.env['POSTGRES_USER'] || 'bubble_user'}:${process.env['POSTGRES_PASSWORD'] || 'bubble_password'}@${process.env['POSTGRES_HOST'] || 'localhost'}:${process.env['POSTGRES_PORT'] || 5432}/${TEST_DB_NAME}`;
@@ -327,6 +344,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module.get(WorkflowTemplatesService)).toBeDefined();
     expect(module.get(LlmProviderConfigService)).toBeDefined();
     expect(module.get(TransactionManager)).toBeDefined();
+    expect(module.get(WorkflowExecutionService)).toBeDefined();
 
     await module.close();
   }, 30_000);

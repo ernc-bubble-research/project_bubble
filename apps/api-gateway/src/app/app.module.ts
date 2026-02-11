@@ -17,6 +17,7 @@ import { IngestionModule } from './ingestion/ingestion.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { SettingsModule } from './settings/settings.module';
+import { WorkflowExecutionModule } from './workflow-execution/workflow-execution.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { SettingsModule } from './settings/settings.module';
     KnowledgeModule,
     WorkflowsModule,
     SettingsModule,
+    WorkflowExecutionModule,
   ],
   controllers: [AppController],
   providers: [

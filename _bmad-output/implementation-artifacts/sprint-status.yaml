@@ -541,8 +541,8 @@ development_status:
   # FRs: FR7-FR13, FR34, FR36, FR37, FR46, FR47
   # REWRITTEN 2026-02-02: Updated for LLM-orchestrated execution, fan-out/fan-in, chain orchestration.
   # ═══════════════════════════════════════════════════════
-  epic-4: backlog
-  4-0-bullmq-safety-prerequisites: backlog            # DLQ routing + idempotency keys + workflow execution queue. Split from 7P-5. MUST be first Epic 4 story — safety-critical for charged LLM operations.
+  epic-4: in-progress
+  4-0-bullmq-safety-prerequisites: done                # DLQ routing + idempotency keys + workflow execution queue. 18 unit + 1 wiring = 19 new tests. Code review: 3 findings fixed.
   4-1-workflow-catalog-run-initiation: backlog
   4-2-llm-provider-interface-prompt-assembly: backlog
   4-3-execution-engine-core-fan-out-fan-in: backlog
@@ -630,6 +630,7 @@ development_status:
   doc-1-admin-handbook: backlog                           # Admin's Handbook: system setup (env vars, SETTINGS_ENCRYPTION_KEY, DB config), provider credential configuration, tenant management, LLM model management, monitoring, troubleshooting. Target audience: platform operator / Bubble Admin.
   doc-2-user-manual: backlog                              # User's Manual: end-user guide for tenant admins and creators. Workflow creation, chain building, file uploads, data vault, running workflows, reading reports. Target audience: tenant users.
   doc-3-system-description: backlog                       # System Description / Architecture Overview: deployment architecture, service map, data flow, security model, API reference. For onboarding new developers or auditors.
+  doc-4-operations-runbook: backlog                        # Operations Runbook: queue monitoring (BullMQ queue names, DLQ inspection), log formats (structured JSON fields), env vars (WORKER_CONCURRENCY, THROTTLE_LIMIT, REDIS_*), alerting (saturation warnings), scaling procedures, troubleshooting failed runs. Incrementally updated by each Epic 4 story. Target audience: platform operator / DevOps. Added from Story 4-0 party mode (2026-02-09).
 
   # ═══════════════════════════════════════════════════════
   # Epic 8: Conversational Intelligence (Future Roadmap)
