@@ -76,6 +76,7 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
 
   editMode = signal(false);
   templateId = signal<string | null>(null);
+  creditsPerRun = signal(1);
 
   wizardState = signal<Partial<WorkflowDefinition>>({
     metadata: { name: '', description: '', version: 1, tags: [] },
@@ -116,6 +117,11 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
 
   updateState(partial: Partial<WorkflowDefinition>): void {
     this.wizardState.update((state) => ({ ...state, ...partial }));
+    this.isDirty.set(true);
+  }
+
+  updateCreditsPerRun(value: number): void {
+    this.creditsPerRun.set(value);
     this.isDirty.set(true);
   }
 
@@ -196,7 +202,7 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
     let createdTemplateId: string;
 
     this.templateService
-      .create({ name: meta.name, description: meta.description, visibility: 'public' })
+      .create({ name: meta.name, description: meta.description, visibility: 'public', creditsPerRun: this.creditsPerRun() })
       .pipe(
         switchMap((template) => {
           createdTemplateId = template.id;
@@ -240,6 +246,9 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
   private loadExistingTemplate(id: string): void {
     this.templateService.getById(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (template) => {
+        if (template.creditsPerRun) {
+          this.creditsPerRun.set(template.creditsPerRun);
+        }
         if (template.currentVersion?.definition) {
           const def = template.currentVersion.definition as unknown as WorkflowDefinition;
           const result = validateWorkflowDefinition(def);

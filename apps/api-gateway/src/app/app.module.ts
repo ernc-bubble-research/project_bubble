@@ -18,6 +18,7 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { SettingsModule } from './settings/settings.module';
 import { WorkflowExecutionModule } from './workflow-execution/workflow-execution.module';
+import { WorkflowRunsModule } from './workflow-runs/workflow-runs.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { WorkflowExecutionModule } from './workflow-execution/workflow-execution
     WorkflowsModule,
     SettingsModule,
     WorkflowExecutionModule,
+    WorkflowRunsModule,
   ],
   controllers: [AppController],
   providers: [

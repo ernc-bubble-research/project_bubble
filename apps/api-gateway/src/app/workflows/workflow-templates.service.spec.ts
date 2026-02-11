@@ -43,6 +43,7 @@ describe('WorkflowTemplatesService [P0]', () => {
     allowedTenants: null,
     status: WorkflowTemplateStatus.DRAFT,
     currentVersionId: null,
+    creditsPerRun: 1,
     createdBy: userId,
     createdAt: new Date('2026-02-02'),
     updatedAt: new Date('2026-02-02'),

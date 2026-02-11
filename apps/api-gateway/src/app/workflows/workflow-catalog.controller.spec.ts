@@ -8,12 +8,13 @@ import { WorkflowTemplatesService } from './workflow-templates.service';
 
 describe('WorkflowCatalogController [P1]', () => {
   let controller: WorkflowCatalogController;
-  let service: jest.Mocked<Pick<WorkflowTemplatesService, 'findPublished'>>;
+  let service: jest.Mocked<Pick<WorkflowTemplatesService, 'findPublished' | 'findOne'>>;
 
   const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  const templateId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 
   const mockResponse: WorkflowTemplateResponseDto = {
-    id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    id: templateId,
     tenantId,
     name: 'Analyze Transcript',
     description: 'Analyze interview transcripts',
@@ -22,6 +23,7 @@ describe('WorkflowCatalogController [P1]', () => {
     status: WorkflowTemplateStatus.PUBLISHED,
     currentVersionId: null,
     createdBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    creditsPerRun: 1,
     createdAt: new Date('2026-02-02'),
     updatedAt: new Date('2026-02-02'),
   };
@@ -29,6 +31,7 @@ describe('WorkflowCatalogController [P1]', () => {
   beforeEach(() => {
     service = {
       findPublished: jest.fn(),
+      findOne: jest.fn(),
     };
 
     controller = new WorkflowCatalogController(
@@ -66,6 +69,35 @@ describe('WorkflowCatalogController [P1]', () => {
         limit: 20,
         offset: 10,
       });
+    });
+  });
+
+  describe('findOne', () => {
+    it('[4.1-UNIT-018] [P0] Given valid template ID, when GET /:id is called, then delegates to service.findOne with id and tenantId', async () => {
+      // Given
+      service.findOne.mockResolvedValue(mockResponse);
+      const req = { user: { tenantId } };
+
+      // When
+      const result = await controller.findOne(templateId, req);
+
+      // Then
+      expect(result).toEqual(mockResponse);
+      expect(service.findOne).toHaveBeenCalledWith(templateId, tenantId);
+    });
+
+    it('[4.1-UNIT-019] [P1] Given service throws NotFoundException, when GET /:id is called, then exception propagates', async () => {
+      // Given
+      const { NotFoundException } = require('@nestjs/common');
+      service.findOne.mockRejectedValue(
+        new NotFoundException('Template not found'),
+      );
+      const req = { user: { tenantId } };
+
+      // When/Then
+      await expect(
+        controller.findOne('nonexistent-id', req),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

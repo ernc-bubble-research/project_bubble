@@ -82,7 +82,9 @@
       @case (0) {
         <app-wizard-metadata-step
           [state]="wizardState()"
+          [creditsPerRun]="creditsPerRun()"
           (stateChange)="updateState($event)"
+          (creditsPerRunChange)="updateCreditsPerRun($event)"
         />
       }
       @case (1) {

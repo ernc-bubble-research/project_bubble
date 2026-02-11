@@ -65,6 +65,8 @@ import { LlmProviderConfigService } from './settings/llm-provider-config.service
 import { WorkflowExecutionModule } from './workflow-execution/workflow-execution.module';
 import { WorkflowExecutionProcessor } from './workflow-execution/workflow-execution.processor';
 import { WorkflowExecutionService } from './workflow-execution/workflow-execution.service';
+import { WorkflowRunsModule } from './workflow-runs/workflow-runs.module';
+import { WorkflowRunsService } from './workflow-runs/workflow-runs.service';
 import { EmailModule } from './email/email.module';
 import { EmailService } from './email/email.service';
 
@@ -314,6 +316,22 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     await module.close();
   }, 15_000);
 
+  it('[4.1-MW-001] [P0] WorkflowRunsModule compiles with real providers (imports WorkflowsModule + AssetsModule + WorkflowExecutionModule)', async () => {
+    const module = await Test.createTestingModule({
+      imports: [
+        ...createRootImports(),
+        WorkflowRunsModule,
+      ],
+    }).compile();
+
+    expect(module).toBeDefined();
+    expect(module.get(WorkflowRunsService)).toBeDefined();
+    // Cross-module dependencies resolved
+    expect(module.get(AssetsService)).toBeDefined();
+    expect(module.get(WorkflowExecutionService)).toBeDefined();
+    await module.close();
+  }, 15_000);
+
   it('[MW-1-UNIT-013] [P0] Full AppModule compiles with all feature modules', async () => {
     // Import AppModule directly — it includes its own root config
     // Override DATABASE_URL to point to wiring test DB
@@ -345,6 +363,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module.get(LlmProviderConfigService)).toBeDefined();
     expect(module.get(TransactionManager)).toBeDefined();
     expect(module.get(WorkflowExecutionService)).toBeDefined();
+    expect(module.get(WorkflowRunsService)).toBeDefined();
 
     await module.close();
   }, 30_000);

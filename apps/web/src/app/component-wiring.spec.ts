@@ -92,6 +92,7 @@ import { TenantService } from './core/services/tenant.service';
 import { AssetService } from './core/services/asset.service';
 import { WorkflowTemplateService } from './core/services/workflow-template.service';
 import { WorkflowChainService } from './core/services/workflow-chain.service';
+import { WorkflowCatalogService } from './core/services/workflow-catalog.service';
 import { LlmModelService } from './core/services/llm-model.service';
 import { LlmProviderService } from './core/services/llm-provider.service';
 import { InvitationService } from './core/services/invitation.service';
@@ -108,6 +109,8 @@ import { DataVaultComponent } from './app/data-vault/data-vault.component';
 import { WorkflowStudioComponent } from './admin/workflows/workflow-studio.component';
 import { WorkflowWizardComponent } from './admin/workflows/wizard/workflow-wizard.component';
 import { ChainBuilderComponent } from './admin/workflows/chain-builder/chain-builder.component';
+import { WorkflowCatalogComponent } from './app/workflows/workflow-catalog.component';
+import { WorkflowRunFormComponent } from './app/workflows/workflow-run-form.component';
 
 import type { User } from '@project-bubble/shared';
 
@@ -486,6 +489,71 @@ describe('Component Wiring — Composite Renders [P0]', () => {
     expect(el.querySelector('app-chain-metadata-section')).toBeTruthy();
     // Visibility settings always visible
     expect(el.querySelector('app-chain-visibility-settings')).toBeTruthy();
+    fixture.destroy();
+  });
+
+  // ── Catalog & Run Form Components (Epic 4) ─────────────────────
+
+  it('[4.1-CW-001] [P0] WorkflowCatalogComponent renders with real Lucide icons', async () => {
+    await TestBed.configureTestingModule({
+      imports: [WorkflowCatalogComponent],
+      providers: [
+        {
+          provide: WorkflowCatalogService,
+          useValue: { listPublished: jest.fn().mockReturnValue(of([])) },
+        },
+        { provide: Router, useValue: { navigate: jest.fn() } },
+        provideAllIcons(),
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(WorkflowCatalogComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance).toBeTruthy();
+    const el = fixture.nativeElement as HTMLElement;
+    // Empty state renders with Zap icon
+    expect(el.querySelector('[data-testid="catalog-empty"]')).toBeTruthy();
+    fixture.destroy();
+  });
+
+  it('[4.1-CW-002] [P0] WorkflowRunFormComponent renders with real Lucide icons and FormsModule', async () => {
+    await TestBed.configureTestingModule({
+      imports: [WorkflowRunFormComponent],
+      providers: [
+        {
+          provide: WorkflowCatalogService,
+          useValue: {
+            getById: jest.fn().mockReturnValue(of({
+              id: 'tmpl-1',
+              name: 'Test',
+              creditsPerRun: 1,
+              currentVersion: {
+                id: 'v1',
+                definition: {
+                  inputs: [{ name: 'ctx', label: 'Context', role: 'context', source: ['text'], required: true }],
+                },
+              },
+            })),
+            submitRun: jest.fn(),
+          },
+        },
+        { provide: AssetService, useValue: createMockAssetService() },
+        { provide: Router, useValue: { navigate: jest.fn() } },
+        { provide: ActivatedRoute, useValue: createMockActivatedRoute({ templateId: 'tmpl-1' }) },
+        provideAllIcons(),
+      ],
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(WorkflowRunFormComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance).toBeTruthy();
+    const el = fixture.nativeElement as HTMLElement;
+    // Input group should be rendered
+    expect(el.querySelector('[data-testid="input-group-ctx"]')).toBeTruthy();
     fixture.destroy();
   });
 

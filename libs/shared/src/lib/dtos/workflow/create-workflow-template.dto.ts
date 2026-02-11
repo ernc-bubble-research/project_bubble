@@ -5,6 +5,8 @@ import {
   MaxLength,
   IsOptional,
   IsEnum,
+  IsInt,
+  Min,
 } from 'class-validator';
 
 export class CreateWorkflowTemplateDto {
@@ -23,4 +25,10 @@ export class CreateWorkflowTemplateDto {
   @IsOptional()
   @IsEnum(['public', 'private'] as const)
   visibility?: 'public' | 'private';
+
+  @ApiPropertyOptional({ example: 1, default: 1, description: 'Number of credits consumed per workflow run' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  creditsPerRun?: number;
 }

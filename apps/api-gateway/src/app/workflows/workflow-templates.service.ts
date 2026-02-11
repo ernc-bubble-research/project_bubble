@@ -80,6 +80,7 @@ export class WorkflowTemplatesService {
           ? this.parseVisibility(dto.visibility)
           : WorkflowVisibility.PUBLIC,
         status: WorkflowTemplateStatus.DRAFT,
+        creditsPerRun: dto.creditsPerRun ?? 1,
         createdBy: userId,
       });
 
@@ -181,6 +182,9 @@ export class WorkflowTemplatesService {
       }
       if (dto.allowedTenants !== undefined && template.visibility !== WorkflowVisibility.PUBLIC) {
         template.allowedTenants = dto.allowedTenants ?? null;
+      }
+      if (dto.creditsPerRun !== undefined) {
+        template.creditsPerRun = dto.creditsPerRun;
       }
 
       const updated = await manager.save(WorkflowTemplateEntity, template);
@@ -373,6 +377,7 @@ export class WorkflowTemplatesService {
     dto.allowedTenants = entity.allowedTenants;
     dto.status = entity.status;
     dto.currentVersionId = entity.currentVersionId;
+    dto.creditsPerRun = entity.creditsPerRun;
     dto.createdBy = entity.createdBy;
     dto.createdAt = entity.createdAt;
     dto.updatedAt = entity.updatedAt;

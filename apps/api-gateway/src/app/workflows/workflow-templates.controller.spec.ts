@@ -21,6 +21,7 @@ describe('WorkflowTemplatesController [P1]', () => {
     status: 'draft',
     currentVersionId: null,
     createdBy: userId,
+    creditsPerRun: 1,
     createdAt: new Date('2026-02-02'),
     updatedAt: new Date('2026-02-02'),
   };

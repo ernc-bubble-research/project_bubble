@@ -136,8 +136,15 @@ export const appRoutes: Route[] = [
       {
         path: 'workflows',
         loadComponent: () =>
-          import('./app-shell/coming-soon.component').then(
-            (m) => m.ComingSoonComponent
+          import('./app/workflows/workflow-catalog.component').then(
+            (m) => m.WorkflowCatalogComponent
+          ),
+      },
+      {
+        path: 'workflows/run/:templateId',
+        loadComponent: () =>
+          import('./app/workflows/workflow-run-form.component').then(
+            (m) => m.WorkflowRunFormComponent
           ),
       },
       { path: '', redirectTo: 'data-vault', pathMatch: 'full' },

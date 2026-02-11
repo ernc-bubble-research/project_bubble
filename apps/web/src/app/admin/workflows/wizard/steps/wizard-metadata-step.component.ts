@@ -63,6 +63,26 @@ import { InfoTooltipComponent } from '../../../../shared/components/info-tooltip
           />
           <span class="field-hint">Separate tags with commas</span>
         </div>
+
+        <div class="form-group">
+          <label for="creditsPerRun">
+            Credits per Run
+            <app-info-tooltip text="Number of credits consumed each time this workflow runs. Minimum 1." />
+          </label>
+          <input
+            id="creditsPerRun"
+            type="number"
+            formControlName="creditsPerRun"
+            min="1"
+            data-testid="metadata-credits-input"
+          />
+          @if (form.get('creditsPerRun')?.touched && form.get('creditsPerRun')?.hasError('required')) {
+            <span class="field-error">Credits per run is required</span>
+          }
+          @if (form.get('creditsPerRun')?.touched && form.get('creditsPerRun')?.hasError('min')) {
+            <span class="field-error">Must be at least 1</span>
+          }
+        </div>
       </form>
     </div>
   `,
@@ -74,6 +94,8 @@ export class WizardMetadataStepComponent implements OnInit, OnChanges {
 
   state = input.required<Partial<WorkflowDefinition>>();
   stateChange = output<Partial<WorkflowDefinition>>();
+  creditsPerRun = input<number>(1);
+  creditsPerRunChange = output<number>();
 
   form!: FormGroup;
 
@@ -93,6 +115,7 @@ export class WizardMetadataStepComponent implements OnInit, OnChanges {
       name: [meta?.name || '', [Validators.required]],
       description: [meta?.description || '', [Validators.required]],
       tags: [meta?.tags?.join(', ') || ''],
+      creditsPerRun: [this.creditsPerRun(), [Validators.required, Validators.min(1)]],
     });
 
     this.form.valueChanges
@@ -108,6 +131,7 @@ export class WizardMetadataStepComponent implements OnInit, OnChanges {
       this.form.patchValue({
         name: meta.name || '',
         description: meta.description || '',
+        creditsPerRun: this.creditsPerRun(),
       }, { emitEvent: false });
     }
   }
@@ -126,6 +150,11 @@ export class WizardMetadataStepComponent implements OnInit, OnChanges {
         tags,
       },
     });
+
+    const credits = Number(val.creditsPerRun);
+    if (credits >= 1) {
+      this.creditsPerRunChange.emit(credits);
+    }
   }
 
   isValid(): boolean {

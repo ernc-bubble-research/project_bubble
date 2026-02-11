@@ -54,6 +54,9 @@ export class WorkflowTemplateEntity {
   @Column({ name: 'current_version_id', type: 'uuid', nullable: true })
   currentVersionId!: string | null;
 
+  @Column({ name: 'credits_per_run', type: 'int', default: 1 })
+  creditsPerRun!: number;
+
   @Column({ name: 'created_by', type: 'uuid' })
   createdBy!: string;
 

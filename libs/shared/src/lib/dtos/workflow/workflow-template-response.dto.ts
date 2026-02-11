@@ -26,6 +26,9 @@ export class WorkflowTemplateResponseDto {
   @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440000' })
   currentVersionId!: string | null;
 
+  @ApiProperty({ example: 1, default: 1, description: 'Number of credits consumed per workflow run' })
+  creditsPerRun!: number;
+
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   createdBy!: string;
 

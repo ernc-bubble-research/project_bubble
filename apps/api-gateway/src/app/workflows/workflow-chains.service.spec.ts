@@ -74,6 +74,7 @@ describe('WorkflowChainsService [P0]', () => {
     allowedTenants: null,
     status: WorkflowTemplateStatus.PUBLISHED,
     currentVersionId: 'version-id',
+    creditsPerRun: 1,
     createdBy: userId,
     createdAt: new Date('2026-02-04'),
     updatedAt: new Date('2026-02-04'),

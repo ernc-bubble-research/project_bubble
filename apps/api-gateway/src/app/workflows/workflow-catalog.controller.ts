@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Param,
+  ParseUUIDPipe,
   Query,
   UseGuards,
   Request,
@@ -50,5 +52,18 @@ export class WorkflowCatalogController {
       limit: query.limit,
       offset: query.offset,
     });
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a published workflow template by ID (includes current version definition)' })
+  @ApiResponse({ status: 200, description: 'Template with current version details', type: WorkflowTemplateResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Template not found' })
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: { user: { tenantId: string } },
+  ): Promise<WorkflowTemplateResponseDto> {
+    return this.workflowTemplatesService.findOne(id, req.user.tenantId);
   }
 }

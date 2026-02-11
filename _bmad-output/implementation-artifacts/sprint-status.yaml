@@ -543,7 +543,7 @@ development_status:
   # ═══════════════════════════════════════════════════════
   epic-4: in-progress
   4-0-bullmq-safety-prerequisites: done                # DLQ routing + idempotency keys + workflow execution queue. 18 unit + 1 wiring = 19 new tests. Code review: 3 findings fixed.
-  4-1-workflow-catalog-run-initiation: backlog
+  4-1-workflow-catalog-run-initiation: done                    # 10 tasks + code review (8 findings fixed: signal reactivity, ValidateNested Record fix, creditsPerRun wizard field, setTimeout cleanup, max_size_mb enforcement). 979 unit tests, 46 E2E pass, 0 lint errors.
   4-2-llm-provider-interface-prompt-assembly: backlog
   4-3-execution-engine-core-fan-out-fan-in: backlog
   4-4-pre-flight-validation-credit-check: backlog

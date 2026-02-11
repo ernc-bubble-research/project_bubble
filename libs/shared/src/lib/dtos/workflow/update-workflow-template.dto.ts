@@ -5,6 +5,8 @@ import {
   MaxLength,
   IsEnum,
   IsArray,
+  IsInt,
+  Min,
   Matches,
 } from 'class-validator';
 
@@ -35,4 +37,10 @@ export class UpdateWorkflowTemplateDto {
   @IsOptional()
   @IsEnum(['draft', 'published', 'archived'] as const)
   status?: 'draft' | 'published' | 'archived';
+
+  @ApiPropertyOptional({ example: 1, default: 1, description: 'Number of credits consumed per workflow run' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  creditsPerRun?: number;
 }
