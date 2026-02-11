@@ -371,7 +371,8 @@
 #   6. ✅ Story 1E update — rewrite: 7→13 tests, 5 spec files (done — tenant lifecycle + RBAC)
 #   7. ✅ Story 2E update — rewrite: 11→13 tests, 5 spec files (done — invitations)
 #   8. ✅ Run full E2E suite, fix any issues found (done — 46/46 E2E tests pass, 11 failures fixed across 3 sessions)
-#   9. Epic 4 — Story 4-0 first (BullMQ DLQ + idempotency)
+#   9. ✅ Epic 4 planning party mode — 9 topics decided, document saved (done — 2026-02-09)
+#   10. Epic 4 — Story 4-0 first (BullMQ DLQ + idempotency)
 #   Convention: XE = E2E tests for Epic X. Tests written after epic features are built.
 #
 # KEY TEAM AGREEMENTS (new from Epic 3 retro):
@@ -585,6 +586,7 @@ development_status:
   7-3-service-status-monitor: backlog
   7-4-admin-execution-inspector: backlog
   7-5-refresh-token-rotation: backlog # NFR deferred item — replaces interim 7-day JWT expiry from hardening story
+  7-6-queue-health-dashboard: backlog                   # Bubble Admin queue health dashboard: waiting/active/completed/failed jobs, avg wait time, 80% saturation warning. Added from Epic 4 planning (2026-02-09).
   # 7-6-admin-settings-page: MOVED → 3.1-1 (Epic 3.1: Settings & Essentials)
   7-7-ui-polish-pass: backlog # Retro items #1, #7: Visual consistency (avatar dropdown moved to 3.1-2)
   epic-7-retrospective: optional
@@ -610,6 +612,7 @@ development_status:
   7p-3-secrets-management: backlog                   # Integrate cloud secrets manager. Replace .env with GCP SM / AWS SM / Vault. Key rotation for JWT. Depends on 7P-1.
   7p-4-database-backup-disaster-recovery: backlog    # Automated pg_dump or managed DB PITR. Redis persistence config. File storage versioning. Depends on 7P-1.
   7p-5-bullmq-hardening: backlog                     # Circuit breaker for LLM providers, alerting on failures, advanced monitoring. Pre-production only (safety-critical subset moved to Epic 4 Story 4.0).
+  7p-5b-worker-extraction: backlog                    # Extract BullMQ workflow execution processor to separate worker process for horizontal scaling. In-process is sufficient until scaling needed. Added from Epic 4 planning (2026-02-09).
   7p-6-rls-auth-bypass-security-review: backlog      # Review permissive RLS policies (auth_select_all, auth_insert_users). Consider dedicated DB roles. Document accepted risks or implement mitigations.
   7p-7-load-testing-capacity-planning: backlog       # Define Year 1 targets (tenants, users, runs/day, storage). Set up k6/Artillery. Validate PRD performance NFRs. Run against staging.
   epic-7p-retrospective: optional
