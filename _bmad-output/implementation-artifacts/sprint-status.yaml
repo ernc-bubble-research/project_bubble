@@ -372,8 +372,62 @@
 #   7. ✅ Story 2E update — rewrite: 11→13 tests, 5 spec files (done — invitations)
 #   8. ✅ Run full E2E suite, fix any issues found (done — 46/46 E2E tests pass, 11 failures fixed across 3 sessions)
 #   9. ✅ Epic 4 planning party mode — 9 topics decided, document saved (done — 2026-02-09)
-#   10. Epic 4 — Story 4-0 first (BullMQ DLQ + idempotency)
+#   10. ✅ Story 4-0 — BullMQ DLQ + idempotency (done — 19 new tests, 1047 total)
+#   11. ✅ Story 4-1 — Workflow Catalog + Run Initiation (done — 979 unit + 46 E2E)
+#   12. ✅ Story 4-2 — LLM Provider Interface + Prompt Assembly (done — 1044 unit tests)
+#   13. ✅ Story 4-3 — Execution Engine Core Fan-Out/Fan-In (done — tagged v0.4.3)
+#   14. ✅ Live Test Round 1 with erinc — 16 issues found (3C + 6H + 7M), party mode triage (done — 2026-02-12)
+#   15. Story 4-FIX-A1 — RETURNING engine fixes (C1 fan-in bug, Tier 2 wiring test, audit all RETURNING, update mocks, orphaned run cleanup)
+#   16. Story 4-FIX-A2 — Lifecycle UI/API fixes (C2 publish, C3 catalog findPublishedOne + RLS policy, H2 duplicate hash, H5 accept, H6 redirect)
+#   17. Story 4-FIX-B — Admin UI & settings fixes (H1 provider cascade, H3 data vault render, H4 users endpoint, M1 bulk activate, M2 default private)
+#   18. Live Test Round 2 — agent + erinc validation of all fixes
+#   19. Story 4-RLS — Full RLS enablement (non-superuser role, dual DataSource, policy audit — absorbs 7P-6)
+#   20. Story 4-TESTFIX — Fix test suite breakages from RLS enablement
+#   21. Live Test Round 3 — validation after RLS enablement
+#   22. Story 4-4 — Credit Management (pre-flight validation + credit check)
+#   23. Story 4-PR — Provider Registry (backend-driven, replaces hardcoded constants) — between Epic 4 and Epic 5
+#   24. Epic 5 — Interactive Reporting & Feedback Loop
 #   Convention: XE = E2E tests for Epic X. Tests written after epic features are built.
+#
+# LIVE TEST ROUND 1 FINDINGS (2026-02-12 — party mode triage):
+# =============================================================
+# 16 issues found during first end-to-end live test with erinc.
+# Split into two fix stories by domain:
+#
+# 4-FIX-A1 (RETURNING Engine — 6 tasks):
+#   C1: Fan-in RETURNING result parsing (processor.ts:208-217, 388-394) — pg driver returns [[rows], count]
+#   Tier 2 wiring test for RETURNING query (Rule 31 — test FIRST)
+#   Audit ALL manager.query() RETURNING calls across codebase
+#   Update unit test mocks to match real pg RETURNING behavior
+#   Orphaned run cleanup SQL + operations runbook
+#
+# 4-FIX-A2 (Lifecycle UI/API — 10 tasks):
+#   C2: Publish/Unpublish buttons missing from workflow settings modal
+#   C3: Catalog findPublishedOne + RLS policy (Option A: dual policy, Rule 2c exception)
+#   H2: Duplicate hash 409 → return existing asset (HTTP 200)
+#   H5: Double-dot accept attribute in file input
+#   H6: Remove auto-redirect after run submission (setTimeout removal)
+#   Documentation updates (project-context.md, operations runbook)
+#   Browser smoke test (Rule 26)
+#
+# 4-FIX-B (Admin UI — 5 items):
+#   H1: Provider deactivation doesn't cascade to models
+#   H3: Data vault list doesn't render immediately (Angular change detection)
+#   H4: Admin users endpoint doesn't show all users for tenant
+#   M1: No bulk activate/deactivate for model groups
+#   M2: Models default public, should be private
+#
+# Deferred to planned work:
+#   M3: Provider types hardcoded → Story 4-PR (between Epic 4 and Epic 5)
+#   M4: Data vault list view ugly → Epic 5 / 7-7 UI polish pass
+#   M5: Can't select vault files when running workflow → Epic 5 (run form UX)
+#   M6: "Learn this" button → Phase 2 (knowledge base)
+#   M7: Data vault drag-drop file management → Epic 5 (data vault UX)
+#   H6 redirect: Status view component → Epic 5 Story 5-1 (report dashboard)
+#
+# New rules from this session:
+#   Rule 31: Raw SQL RETURNING wiring test requirement
+#   Rule 32: Fix now unless planned (no "investigate later" bucket)
 #
 # KEY TEAM AGREEMENTS (new from Epic 3 retro):
 #   - Party mode is DEFAULT for every story (planning, post-impl, code review)
@@ -545,11 +599,17 @@ development_status:
   4-0-bullmq-safety-prerequisites: done                # DLQ routing + idempotency keys + workflow execution queue. 18 unit + 1 wiring = 19 new tests. Code review: 3 findings fixed.
   4-1-workflow-catalog-run-initiation: done                    # 10 tasks + code review (8 findings fixed: signal reactivity, ValidateNested Record fix, creditsPerRun wizard field, setTimeout cleanup, max_size_mb enforcement). 979 unit tests, 46 E2E pass, 0 lint errors.
   4-2-llm-provider-interface-prompt-assembly: done            # 10 tasks, code review: 7 findings fixed (H1 cache key collision, M2 DTO null validation, M3 subject file warning, M4 test cleanup, M1 file list, L1+L2 minor). 1044 unit tests (550 api + 494 web), 0 lint errors. Key: UUID model binding, provider factory with updatedAt cache, TextExtractorService for PDF/DOCX, MockLlmProvider.
-  4-3-execution-engine-core-fan-out-fan-in: in-progress    # Fan-out (N jobs for parallel) + fan-in (1 job for batch) + COMPLETED_WITH_ERRORS status + per-file results + run aggregation. 7 tasks.
+  4-3-execution-engine-core-fan-out-fan-in: done            # Fan-out (N jobs for parallel) + fan-in (1 job for batch) + COMPLETED_WITH_ERRORS status + per-file results + run aggregation. 7 tasks. Code review: 3 passes (Amelia + Naz + Murat), 8+5 findings all fixed. Tagged v0.4.3.
+  4-fix-a1-returning-engine-fixes: backlog                  # Live test round 1 — CRITICAL: C1 fan-in RETURNING bug (pg driver [[rows], count] destructuring), Tier 2 wiring test (Rule 31), audit all RETURNING calls, update unit test mocks, orphaned run cleanup.
+  4-fix-a2-lifecycle-ui-api-fixes: backlog                 # Live test round 1 — CRITICAL: C2 publish button, C3 catalog findPublishedOne + RLS policy (Rule 2c exception), H2 duplicate hash 409→200, H5 double-dot accept, H6 remove auto-redirect.
+  4-fix-b-admin-ui-settings-fixes: backlog                 # Live test round 1 findings — admin UI: H1 provider deactivation cascade, H3 data vault render timing, H4 admin users endpoint, M1 bulk activate/deactivate, M2 models default private.
+  4-rls-full-rls-enablement: backlog                       # Full RLS enablement: create bubble_app non-superuser role, dual DataSource (app vs migration), audit ALL RLS policies, test with real RLS enforcement. Absorbs 7P-6 scope.
+  4-testfix-test-suite-rls-fixes: backlog                  # Fix test suite breakages caused by RLS enablement in Story 4-RLS. Separate story to isolate RLS fix validation from test infrastructure changes.
   4-4-pre-flight-validation-credit-check: backlog
   4-5-output-validation-storage: backlog
   4-6-workflow-chain-orchestration: backlog
   4-7-workflow-test-run-preview: backlog              # FEATURE-1 from user testing feedback. Combines layout preview + functional test run. Party mode consensus 2026-02-08.
+  4-pr-provider-registry-backend-driven: backlog            # M3 from live test: Replace hardcoded provider-constants.ts with backend-driven adapter registry. GET /api/admin/settings/llm-provider-types endpoint. Ops doc for adding new providers. Placed between Epic 4 and Epic 5.
   4e-e2e-test-coverage-epic-4: backlog                   # E2E tests for Epic 4 features (execution engine, test runs, output validation). Written AFTER Epic 4 development. Convention: XE = E2E for Epic X.
   4eh-e2e-error-path-hardening: backlog                  # E2E error path tests across ALL epics (1-4). Covers: duplicate name 409, invalid status transitions 400, file upload size limit, network errors, validation error displays. Convention: include 1-2 error paths per spec file in future XE stories.
   epic-4-retrospective: optional                               # MANDATORY AGENDA: Winston Architect Quality Gate violation (probation, quality self-check, retroactive review of 4-0/4-1/4-2, MVP word ban, probation evaluation). Voted 7-0 during Story 4-2 party mode.
@@ -613,7 +673,7 @@ development_status:
   7p-4-database-backup-disaster-recovery: backlog    # Automated pg_dump or managed DB PITR. Redis persistence config. File storage versioning. Depends on 7P-1.
   7p-5-bullmq-hardening: backlog                     # Circuit breaker for LLM providers, alerting on failures, advanced monitoring. Pre-production only (safety-critical subset moved to Epic 4 Story 4.0).
   7p-5b-worker-extraction: backlog                    # Extract BullMQ workflow execution processor to separate worker process for horizontal scaling. In-process is sufficient until scaling needed. Added from Epic 4 planning (2026-02-09).
-  7p-6-rls-auth-bypass-security-review: backlog      # Review permissive RLS policies (auth_select_all, auth_insert_users). Consider dedicated DB roles. Document accepted risks or implement mitigations.
+  7p-6-rls-auth-bypass-security-review: done          # ABSORBED INTO Story 4-RLS (full RLS enablement moved to Epic 4). Non-superuser role + dual DataSource + policy audit. No longer a separate 7P story.
   7p-7-load-testing-capacity-planning: backlog       # Define Year 1 targets (tenants, users, runs/day, storage). Set up k6/Artillery. Validate PRD performance NFRs. Run against staging.
   epic-7p-retrospective: optional
 

@@ -106,6 +106,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
     manager.findOne(WorkflowVersionEntity, { where: { id, tenantId } });
     ```
 *   **This applies to:** All entities with a `tenant_id` column. The only exemptions are entities in the "EXEMPTED SERVICES" table above (no `tenant_id` column).
+*   **DOCUMENTED EXCEPTION — `findPublishedOne`:** The `WorkflowTemplatesService.findPublishedOne(id, requestingTenantId)` method queries `{ where: { id, status: PUBLISHED } }` without `tenantId` in WHERE. This is intentional: workflow templates are created by bubble_admin and shared with tenants via catalog. The method enforces visibility in application code (`restricted` templates check `allowedTenants` array). RLS policy `catalog_read_published` provides database-level enforcement. Approved during Live Test Round 1 party mode triage (2026-02-12).
 *   **REASON:** This rule was added after the same defect was found in code review across Stories 2.4, 3.3, and 3.4. It is a recurring pattern that must stop.
 
 ### 3. The "200ms" Rule (Async)
@@ -464,6 +465,8 @@ Winston (Architect agent) violated the Quality Standard during Story 4-2 pre-imp
 *   **28. E2E Regression Gate:** Run the full E2E suite (`npx nx e2e web-e2e`) as a regression gate after every 2-3 stories during an epic. Do not batch E2E fixes to the end — catch regressions early.
 *   **29. E2E in Story DoD:** Every story's Definition of Done MUST include "E2E suite still passes (46+ tests)" as a checkbox item. Stories that break E2E tests are not done.
 *   **30. E2E State Isolation:** E2E tests that mutate shared seed data (archive, delete, status changes) MUST restore original state in an `afterEach`/`afterAll` block, OR be written to be resilient to state left by prior tests. Document which seed entities each test modifies.
+*   **31. Raw SQL RETURNING Wiring Test:** Any `manager.query()` call using raw SQL with a `RETURNING` clause MUST have a Tier 2 wiring integration test against real PostgreSQL. The pg driver returns `[[rows], affectedCount]` for UPDATE/INSERT ... RETURNING, not `[rows]`. This mismatch caused the critical C1 fan-in bug (Story 4-3 live test). Only a real database test catches this — mocked `manager.query()` returns whatever the mock says.
+*   **32. Fix Now Unless Planned:** If an issue is found during testing, review, or any other activity, it MUST be fixed immediately — unless it directly maps to a planned upcoming activity (an existing epic, story, or testing phase). There is no "investigate later" bucket. There is no "track and revisit." Either fix it now, or document it in an Out-of-Scope table with a specific story reference where it WILL be addressed. This applies to all agents.
 
 ### Shared Infrastructure Protection
 
@@ -494,5 +497,7 @@ The following files are **off-limits for drive-by changes**: `global-setup.ts`, 
 *   ❌ **No @IsUUID Validators:** Never use `@IsUUID()` with any version argument on DTO fields. It silently rejects valid UUID formats. Use `@Matches` regex.
 *   ❌ **No Batched E2E Fixes:** Never defer E2E regression testing to the end of an epic. Run the full suite every 2-3 stories.
 *   ❌ **No E2E State Pollution:** Never write E2E tests that mutate seed data without cleanup or resilience. Cross-test state corruption causes cascading failures.
+*   ❌ **No Raw SQL RETURNING Without Wiring Test:** Never write `manager.query()` with a RETURNING clause without a Tier 2 wiring integration test against real PostgreSQL. The pg driver returns `[[rows], affectedCount]` for UPDATE/INSERT RETURNING — not `[rows]`. Only a real DB test catches this.
+*   ❌ **No Deferred Fixes:** If an issue is found, fix it now — unless it maps to a planned upcoming activity (epic, story, testing phase). No "investigate later" bucket. No "track and revisit." Fix it or document it in an Out-of-Scope table with a specific story reference where it WILL be done.
 
 
