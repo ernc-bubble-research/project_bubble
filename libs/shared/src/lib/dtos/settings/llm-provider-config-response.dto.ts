@@ -16,6 +16,12 @@ export class LlmProviderConfigResponseDto {
   })
   maskedCredentials!: Record<string, string> | null;
 
+  @ApiPropertyOptional({
+    example: 60,
+    description: 'Maximum requests per minute for this provider, or null if unlimited.',
+  })
+  rateLimitRpm!: number | null;
+
   @ApiProperty({ example: true })
   isActive!: boolean;
 

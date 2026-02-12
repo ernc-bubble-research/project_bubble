@@ -7,6 +7,7 @@ const mockResponse: LlmProviderConfigResponseDto = {
   providerKey: 'google-ai-studio',
   displayName: 'Google AI Studio',
   maskedCredentials: { apiKey: '***********3456' },
+  rateLimitRpm: null,
   isActive: true,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),

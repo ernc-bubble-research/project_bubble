@@ -20,6 +20,9 @@ export class LlmProviderConfigEntity {
   @Column({ name: 'encrypted_credentials', type: 'text', nullable: true })
   encryptedCredentials!: string | null;
 
+  @Column({ name: 'rate_limit_rpm', type: 'int', nullable: true })
+  rateLimitRpm!: number | null;
+
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;
 

@@ -36,7 +36,7 @@
       <select formControlName="model" data-testid="exec-model-select">
         <option value="">Select a model</option>
         @for (model of models(); track model.id) {
-          <option [value]="model.modelId">{{ model.displayName }}</option>
+          <option [value]="model.id">{{ model.displayName }}</option>
         }
       </select>
       @if (form.get('model')?.touched && form.get('model')?.hasError('required')) {

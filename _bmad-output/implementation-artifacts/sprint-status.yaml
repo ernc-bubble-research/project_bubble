@@ -544,8 +544,8 @@ development_status:
   epic-4: in-progress
   4-0-bullmq-safety-prerequisites: done                # DLQ routing + idempotency keys + workflow execution queue. 18 unit + 1 wiring = 19 new tests. Code review: 3 findings fixed.
   4-1-workflow-catalog-run-initiation: done                    # 10 tasks + code review (8 findings fixed: signal reactivity, ValidateNested Record fix, creditsPerRun wizard field, setTimeout cleanup, max_size_mb enforcement). 979 unit tests, 46 E2E pass, 0 lint errors.
-  4-2-llm-provider-interface-prompt-assembly: ready-for-dev    # Party mode pre-impl review: 10 findings applied (W1-W3, A1-A3, M1, M3-M5). Key decisions: UUID model storage, provider caching with updatedAt, TextExtractorService for PDF/DOCX, defense-in-depth context window check. Architect quality gate violation documented in project-context.md.
-  4-3-execution-engine-core-fan-out-fan-in: backlog
+  4-2-llm-provider-interface-prompt-assembly: done            # 10 tasks, code review: 7 findings fixed (H1 cache key collision, M2 DTO null validation, M3 subject file warning, M4 test cleanup, M1 file list, L1+L2 minor). 1044 unit tests (550 api + 494 web), 0 lint errors. Key: UUID model binding, provider factory with updatedAt cache, TextExtractorService for PDF/DOCX, MockLlmProvider.
+  4-3-execution-engine-core-fan-out-fan-in: in-progress    # Fan-out (N jobs for parallel) + fan-in (1 job for batch) + COMPLETED_WITH_ERRORS status + per-file results + run aggregation. 7 tasks.
   4-4-pre-flight-validation-credit-check: backlog
   4-5-output-validation-storage: backlog
   4-6-workflow-chain-orchestration: backlog

@@ -5,6 +5,8 @@ import {
   MaxLength,
   IsObject,
   IsOptional,
+  IsInt,
+  Min,
 } from 'class-validator';
 
 export class CreateLlmProviderConfigDto {
@@ -31,4 +33,13 @@ export class CreateLlmProviderConfigDto {
   @IsOptional()
   @IsObject()
   credentials?: Record<string, string>;
+
+  @ApiPropertyOptional({
+    example: 60,
+    description: 'Maximum requests per minute for this provider. Enforcement is handled by the execution engine.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  rateLimitRpm?: number;
 }

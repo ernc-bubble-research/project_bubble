@@ -1,13 +1,27 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
-import { WorkflowRunEntity } from '@project-bubble/db-layer';
+import {
+  WorkflowRunEntity,
+  LlmModelEntity,
+  AssetEntity,
+  LlmProviderConfigEntity,
+} from '@project-bubble/db-layer';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WorkflowExecutionProcessor } from './workflow-execution.processor';
 import { WorkflowExecutionService } from './workflow-execution.service';
+import { LlmProviderFactory } from './llm/llm-provider.factory';
+import { PromptAssemblyService } from './prompt-assembly.service';
+import { SettingsModule } from '../settings/settings.module';
+import { IngestionModule } from '../ingestion/ingestion.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([WorkflowRunEntity]),
+    TypeOrmModule.forFeature([
+      WorkflowRunEntity,
+      LlmModelEntity,
+      AssetEntity,
+      LlmProviderConfigEntity,
+    ]),
     BullModule.registerQueue({
       name: 'workflow-execution',
       defaultJobOptions: {
@@ -24,8 +38,15 @@ import { WorkflowExecutionService } from './workflow-execution.service';
         removeOnFail: false,
       },
     }),
+    SettingsModule,
+    IngestionModule,
   ],
-  providers: [WorkflowExecutionProcessor, WorkflowExecutionService],
+  providers: [
+    WorkflowExecutionProcessor,
+    WorkflowExecutionService,
+    LlmProviderFactory,
+    PromptAssemblyService,
+  ],
   exports: [WorkflowExecutionService],
 })
 export class WorkflowExecutionModule {}

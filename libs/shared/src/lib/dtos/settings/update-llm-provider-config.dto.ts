@@ -5,6 +5,9 @@ import {
   MaxLength,
   IsBoolean,
   IsObject,
+  IsInt,
+  Min,
+  ValidateIf,
 } from 'class-validator';
 
 export class UpdateLlmProviderConfigDto {
@@ -26,4 +29,14 @@ export class UpdateLlmProviderConfigDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    example: 60,
+    description: 'Maximum requests per minute for this provider. Set to null to remove limit.',
+  })
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
+  @IsInt()
+  @Min(1)
+  rateLimitRpm?: number | null;
 }

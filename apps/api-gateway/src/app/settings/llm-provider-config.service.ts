@@ -71,6 +71,7 @@ export class LlmProviderConfigService {
         encryptedCredentials: dto.credentials
           ? this.encryptCredentials(dto.credentials)
           : null,
+        rateLimitRpm: dto.rateLimitRpm ?? null,
         isActive: true,
       });
       const saved = await this.repo.save(config);
@@ -111,6 +112,9 @@ export class LlmProviderConfigService {
     }
     if (dto.isActive !== undefined) {
       config.isActive = dto.isActive;
+    }
+    if (dto.rateLimitRpm !== undefined) {
+      config.rateLimitRpm = dto.rateLimitRpm;
     }
 
     const updated = await this.repo.save(config);
@@ -220,6 +224,7 @@ export class LlmProviderConfigService {
     dto.providerKey = entity.providerKey;
     dto.displayName = entity.displayName;
     dto.maskedCredentials = this.getMaskedCredentials(entity);
+    dto.rateLimitRpm = entity.rateLimitRpm;
     dto.isActive = entity.isActive;
     dto.createdAt = entity.createdAt;
     dto.updatedAt = entity.updatedAt;

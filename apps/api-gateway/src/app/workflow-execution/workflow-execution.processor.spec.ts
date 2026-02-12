@@ -7,23 +7,41 @@ import {
   WorkflowRunEntity,
   WorkflowRunStatus,
 } from '@project-bubble/db-layer';
-import { WorkflowJobPayload } from '@project-bubble/shared';
+import { WorkflowJobPayload, PerFileResult } from '@project-bubble/shared';
 import { EntityManager } from 'typeorm';
+import { PromptAssemblyService } from './prompt-assembly.service';
+import { LlmProviderFactory } from './llm/llm-provider.factory';
 
 describe('WorkflowExecutionProcessor', () => {
   let processor: WorkflowExecutionProcessor;
   let txManager: jest.Mocked<TransactionManager>;
   let dlqQueue: jest.Mocked<Queue>;
-  let mockManager: jest.Mocked<Pick<EntityManager, 'findOne' | 'update'>>;
+  let mockManager: jest.Mocked<Pick<EntityManager, 'findOne' | 'update' | 'query'>>;
+  let promptAssembly: { assemble: jest.Mock };
+  let llmProviderFactory: { getProvider: jest.Mock };
+  let mockLlmProvider: { generate: jest.Mock };
 
   const tenantId = 'aaaaaaaa-0000-0000-0000-000000000001';
   const runId = 'bbbbbbbb-0000-0000-0000-000000000001';
+  const modelUuid = 'dddddddd-0000-0000-0000-000000000001';
 
   const basePayload: WorkflowJobPayload = {
     runId,
     tenantId,
     versionId: 'cccccccc-0000-0000-0000-000000000001',
-    definition: {} as WorkflowJobPayload['definition'],
+    definition: {
+      metadata: { name: 'Test', description: 'Test', version: 1 },
+      inputs: [],
+      execution: {
+        processing: 'parallel',
+        model: modelUuid,
+        temperature: 0.7,
+        max_output_tokens: 4096,
+      },
+      knowledge: { enabled: false },
+      prompt: 'Test prompt {input}',
+      output: { format: 'markdown', filename_template: 'output.md' },
+    },
     contextInputs: {},
   };
 
@@ -54,6 +72,7 @@ describe('WorkflowExecutionProcessor', () => {
     mockManager = {
       findOne: jest.fn(),
       update: jest.fn(),
+      query: jest.fn(),
     };
 
     txManager = {
@@ -67,11 +86,42 @@ describe('WorkflowExecutionProcessor', () => {
       add: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<Queue>;
 
+    promptAssembly = {
+      assemble: jest.fn().mockResolvedValue({
+        prompt: 'Assembled prompt text',
+        warnings: [],
+        assembledPromptLength: 21,
+      }),
+    };
+
+    mockLlmProvider = {
+      generate: jest.fn().mockResolvedValue({
+        text: 'LLM response text',
+        tokenUsage: { inputTokens: 50, outputTokens: 100, totalTokens: 150 },
+      }),
+    };
+
+    llmProviderFactory = {
+      getProvider: jest.fn().mockResolvedValue({
+        provider: mockLlmProvider,
+        model: {
+          id: modelUuid,
+          modelId: 'gemini-1.5-pro',
+          providerKey: 'mock',
+          contextWindow: 1000000,
+          maxOutputTokens: 8192,
+          isActive: true,
+        },
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WorkflowExecutionProcessor,
         { provide: TransactionManager, useValue: txManager },
         { provide: getQueueToken('workflow-execution-dlq'), useValue: dlqQueue },
+        { provide: PromptAssemblyService, useValue: promptAssembly },
+        { provide: LlmProviderFactory, useValue: llmProviderFactory },
       ],
     }).compile();
 
@@ -79,7 +129,7 @@ describe('WorkflowExecutionProcessor', () => {
   });
 
   describe('process()', () => {
-    it('4.1 — updates run status QUEUED -> RUNNING -> COMPLETED', async () => {
+    it('[4.3-UNIT-001] updates run status QUEUED -> RUNNING -> COMPLETED', async () => {
       mockManager.findOne.mockResolvedValue(makeRun());
 
       await processor.process(makeJob());
@@ -95,7 +145,7 @@ describe('WorkflowExecutionProcessor', () => {
       expect(secondUpdate[2]).toMatchObject({ status: WorkflowRunStatus.COMPLETED });
     });
 
-    it('4.2 — sets startedAt, completedAt, durationMs', async () => {
+    it('[4.3-UNIT-002] sets startedAt, completedAt, durationMs', async () => {
       mockManager.findOne.mockResolvedValue(makeRun());
 
       await processor.process(makeJob());
@@ -109,7 +159,7 @@ describe('WorkflowExecutionProcessor', () => {
       expect(secondUpdate.durationMs).toBeGreaterThanOrEqual(0);
     });
 
-    it('4.3 — skips already-COMPLETED runs (returns early, logs warning)', async () => {
+    it('[4.3-UNIT-003] skips already-COMPLETED runs (returns early, logs warning)', async () => {
       mockManager.findOne.mockResolvedValue(
         makeRun({ status: WorkflowRunStatus.COMPLETED }),
       );
@@ -122,7 +172,7 @@ describe('WorkflowExecutionProcessor', () => {
       expect(txManager.run).toHaveBeenCalledTimes(1);
     });
 
-    it('4.3b — skips FAILED runs (terminal state guard)', async () => {
+    it('[4.3-UNIT-004] skips FAILED runs (terminal state guard)', async () => {
       mockManager.findOne.mockResolvedValue(
         makeRun({ status: WorkflowRunStatus.FAILED }),
       );
@@ -132,7 +182,7 @@ describe('WorkflowExecutionProcessor', () => {
       expect(txManager.run).toHaveBeenCalledTimes(1);
     });
 
-    it('4.3c — skips CANCELLED runs (terminal state guard)', async () => {
+    it('[4.3-UNIT-005] skips CANCELLED runs (terminal state guard)', async () => {
       mockManager.findOne.mockResolvedValue(
         makeRun({ status: WorkflowRunStatus.CANCELLED }),
       );
@@ -142,7 +192,7 @@ describe('WorkflowExecutionProcessor', () => {
       expect(txManager.run).toHaveBeenCalledTimes(1);
     });
 
-    it('4.4 — recovers stale RUNNING runs (resets startedAt, proceeds)', async () => {
+    it('[4.3-UNIT-006] recovers stale RUNNING runs (does not re-set RUNNING, proceeds to completion)', async () => {
       const staleStartedAt = new Date('2025-01-01T00:00:00Z');
       mockManager.findOne.mockResolvedValue(
         makeRun({ status: WorkflowRunStatus.RUNNING, startedAt: staleStartedAt }),
@@ -150,17 +200,16 @@ describe('WorkflowExecutionProcessor', () => {
 
       await processor.process(makeJob());
 
-      // 2 txManager calls: atomic (findOne + update RUNNING) + update COMPLETED
+      // 2 txManager calls: atomic (findOne, skip update since already RUNNING) + update COMPLETED
       expect(txManager.run).toHaveBeenCalledTimes(2);
-      // 2 updates: RUNNING (in atomic tx) + COMPLETED
-      expect(mockManager.update).toHaveBeenCalledTimes(2);
+      // Only 1 update: COMPLETED (no re-set of RUNNING since status is already RUNNING)
+      expect(mockManager.update).toHaveBeenCalledTimes(1);
 
-      const firstUpdate = mockManager.update.mock.calls[0][2] as Partial<WorkflowRunEntity>;
-      expect(firstUpdate.startedAt).toBeInstanceOf(Date);
-      expect(firstUpdate.startedAt!.getTime()).toBeGreaterThan(staleStartedAt.getTime());
+      const completedUpdate = mockManager.update.mock.calls[0][2] as Partial<WorkflowRunEntity>;
+      expect(completedUpdate.status).toBe(WorkflowRunStatus.COMPLETED);
     });
 
-    it('4.5 — throws if WorkflowRunEntity not found', async () => {
+    it('[4.3-UNIT-007] throws if WorkflowRunEntity not found', async () => {
       mockManager.findOne.mockResolvedValue(null);
 
       await expect(processor.process(makeJob())).rejects.toThrow(
@@ -168,7 +217,7 @@ describe('WorkflowExecutionProcessor', () => {
       );
     });
 
-    it('4.6 — uses TransactionManager.run(tenantId, ...) for all entity operations', async () => {
+    it('[4.3-UNIT-008] uses TransactionManager.run(tenantId, ...) for all entity operations', async () => {
       mockManager.findOne.mockResolvedValue(makeRun());
 
       await processor.process(makeJob());
@@ -182,8 +231,103 @@ describe('WorkflowExecutionProcessor', () => {
     });
   });
 
+  describe('process() — LLM integration', () => {
+    // [4.2-UNIT-047] Calls prompt assembly, provider factory, and LLM generate
+    it('should call prompt assembly then LLM provider generate', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun());
+
+      await processor.process(makeJob());
+
+      expect(promptAssembly.assemble).toHaveBeenCalledWith(basePayload);
+      expect(llmProviderFactory.getProvider).toHaveBeenCalledWith(modelUuid);
+      expect(mockLlmProvider.generate).toHaveBeenCalledWith(
+        'Assembled prompt text',
+        { temperature: 0.7, maxOutputTokens: 4096 },
+      );
+    });
+
+    // [4.2-UNIT-048] Stores LLM results on entity
+    it('should store assembledPrompt, rawLlmResponse, tokenUsage, modelId', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun());
+
+      await processor.process(makeJob());
+
+      const completedUpdate = mockManager.update.mock.calls[1][2] as Partial<WorkflowRunEntity>;
+      expect(completedUpdate.assembledPrompt).toBe('Assembled prompt text');
+      expect(completedUpdate.rawLlmResponse).toBe('LLM response text');
+      expect(completedUpdate.tokenUsage).toEqual({
+        inputTokens: 50,
+        outputTokens: 100,
+        totalTokens: 150,
+      });
+      expect(completedUpdate.modelId).toBe(modelUuid);
+    });
+
+    // [4.2-UNIT-049] Stores validation warnings when present
+    it('should store validation warnings from prompt assembly', async () => {
+      promptAssembly.assemble.mockResolvedValue({
+        prompt: 'prompt',
+        warnings: ['Input "x" was empty'],
+        assembledPromptLength: 6,
+      });
+      mockManager.findOne.mockResolvedValue(makeRun());
+
+      await processor.process(makeJob());
+
+      const completedUpdate = mockManager.update.mock.calls[1][2] as Partial<WorkflowRunEntity>;
+      expect(completedUpdate.validationWarnings).toEqual(['Input "x" was empty']);
+    });
+
+    // [4.2-UNIT-050] Null validation warnings when no warnings
+    it('should set validationWarnings to null when no warnings', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun());
+
+      await processor.process(makeJob());
+
+      const completedUpdate = mockManager.update.mock.calls[1][2] as Partial<WorkflowRunEntity>;
+      expect(completedUpdate.validationWarnings).toBeNull();
+    });
+
+    // [4.2-UNIT-051] Defense-in-depth: throws when prompt exceeds context window
+    it('should throw if assembled prompt exceeds model context window', async () => {
+      // Return a small context window model
+      llmProviderFactory.getProvider.mockResolvedValue({
+        provider: mockLlmProvider,
+        model: {
+          id: modelUuid,
+          modelId: 'small-model',
+          contextWindow: 10, // very small
+          isActive: true,
+        },
+      });
+
+      // Return a long prompt
+      promptAssembly.assemble.mockResolvedValue({
+        prompt: 'x'.repeat(100),
+        warnings: [],
+        assembledPromptLength: 100, // ~25 tokens, exceeds context window of 10
+      });
+
+      mockManager.findOne.mockResolvedValue(makeRun());
+
+      await expect(processor.process(makeJob())).rejects.toThrow(
+        /exceeds model context window/,
+      );
+    });
+
+    // [4.2-UNIT-052] LLM error propagates to BullMQ retry
+    it('should let LLM errors propagate for BullMQ retry logic', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun());
+      mockLlmProvider.generate.mockRejectedValue(new Error('LLM API timeout'));
+
+      await expect(processor.process(makeJob())).rejects.toThrow(
+        'LLM API timeout',
+      );
+    });
+  });
+
   describe('onFailed() — DLQ handler', () => {
-    it('4.7 — moves job to DLQ queue after all retries exhausted', async () => {
+    it('[4.3-UNIT-009] moves job to DLQ queue after all retries exhausted', async () => {
       const error = new Error('LLM provider timeout');
       const job = makeJob({ attemptsMade: 3 });
 
@@ -202,7 +346,7 @@ describe('WorkflowExecutionProcessor', () => {
       expect(jobData.failedAt).toBeDefined();
     });
 
-    it('4.8 — updates WorkflowRunEntity status to FAILED', async () => {
+    it('[4.3-UNIT-010] updates WorkflowRunEntity status to FAILED', async () => {
       const error = new Error('LLM provider timeout');
       const job = makeJob({ attemptsMade: 3 });
 
@@ -216,7 +360,7 @@ describe('WorkflowExecutionProcessor', () => {
       });
     });
 
-    it('4.9 — sets human-readable errorMessage (not raw stack trace)', async () => {
+    it('[4.3-UNIT-011] sets human-readable errorMessage (not raw stack trace)', async () => {
       const error = new Error('Connection refused to provider endpoint');
       const job = makeJob({ attemptsMade: 3 });
 
@@ -231,7 +375,7 @@ describe('WorkflowExecutionProcessor', () => {
       expect(update.errorMessage).not.toMatch(/\s+at\s+/);
     });
 
-    it('4.10 — includes metadata in DLQ job (originalJobId, attemptsMade, failedAt)', async () => {
+    it('[4.3-UNIT-012] includes metadata in DLQ job (originalJobId, attemptsMade, failedAt)', async () => {
       const error = new Error('fail');
       const job = makeJob({ attemptsMade: 3 });
 
@@ -244,7 +388,7 @@ describe('WorkflowExecutionProcessor', () => {
       expect(jobData).toHaveProperty('payload');
     });
 
-    it('4.11 — does NOT trigger DLQ for intermediate failures (attemptsMade < attempts)', async () => {
+    it('[4.3-UNIT-013] does NOT trigger DLQ for intermediate failures (attemptsMade < attempts)', async () => {
       const error = new Error('transient error');
       const job = makeJob({ attemptsMade: 1, opts: { attempts: 3 } });
 
@@ -254,7 +398,7 @@ describe('WorkflowExecutionProcessor', () => {
       expect(mockManager.update).not.toHaveBeenCalled();
     });
 
-    it('4.12 — logs error but does NOT throw if entity update fails (resilience)', async () => {
+    it('[4.3-UNIT-014] logs error but does NOT throw if entity update fails (resilience)', async () => {
       const error = new Error('LLM timeout');
       const job = makeJob({ attemptsMade: 3 });
 
@@ -267,7 +411,7 @@ describe('WorkflowExecutionProcessor', () => {
       expect(dlqQueue.add).toHaveBeenCalledTimes(1);
     });
 
-    it('4.13 — gracefully handles entity-not-found scenario (logs error, still adds to DLQ)', async () => {
+    it('[4.3-UNIT-015] gracefully handles entity-not-found scenario (logs error, still adds to DLQ)', async () => {
       const error = new Error('entity gone');
       const job = makeJob({ attemptsMade: 3 });
 
@@ -281,6 +425,339 @@ describe('WorkflowExecutionProcessor', () => {
       // DLQ queue should still have the job
       expect(dlqQueue.add).toHaveBeenCalledTimes(1);
       expect(dlqQueue.add.mock.calls[0][1]).toMatchObject({ runId });
+    });
+  });
+
+  describe('process() — fan-out behavioral split', () => {
+    const fanOutJobId = `${runId}:file:0`;
+    const fanOutPayload: WorkflowJobPayload = {
+      ...basePayload,
+      subjectFile: { originalName: 'report.pdf', storagePath: '/uploads/report.pdf', assetId: 'asset-1' },
+    };
+
+    it('[4.3-UNIT-016] fan-out job writes PerFileResult via JSONB append', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
+      mockManager.query.mockResolvedValue([{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }]);
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      // First query = JSONB append for per-file result
+      const appendCall = mockManager.query.mock.calls[0];
+      expect(appendCall[0]).toContain('per_file_results');
+      expect(appendCall[0]).toContain('COALESCE');
+      const parsedResult: PerFileResult = JSON.parse(appendCall[1][0]);
+      expect(parsedResult.index).toBe(0);
+      expect(parsedResult.fileName).toBe('report.pdf');
+      expect(parsedResult.status).toBe('completed');
+      expect(parsedResult.assembledPrompt).toBe('Assembled prompt text');
+      expect(parsedResult.rawLlmResponse).toBe('LLM response text');
+    });
+
+    it('[4.3-UNIT-017] fan-out job atomically increments completed_jobs with RETURNING', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
+      mockManager.query.mockResolvedValue([{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }]);
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      // Second query = atomic increment with RETURNING
+      const incrementCall = mockManager.query.mock.calls[1];
+      expect(incrementCall[0]).toContain('completed_jobs = COALESCE(completed_jobs, 0) + 1');
+      expect(incrementCall[0]).toContain('RETURNING');
+    });
+
+    it('[4.3-UNIT-018] fan-out job does NOT write to entity columns (assembledPrompt, rawLlmResponse)', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
+      mockManager.query.mockResolvedValue([{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }]);
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      // Should NOT have called manager.update with COMPLETED status (that's for single-job only)
+      const updateCalls = mockManager.update.mock.calls;
+      const completedUpdates = updateCalls.filter(
+        (c) => (c[2] as Partial<WorkflowRunEntity>).status === WorkflowRunStatus.COMPLETED,
+      );
+      expect(completedUpdates).toHaveLength(0);
+    });
+
+    it('[4.3-UNIT-019] single-job (non-fan-out) writes directly to entity columns', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
+
+      await processor.process(makeJob()); // default jobId = runId (no :file: segment)
+
+      // Should have called manager.update with COMPLETED + assembledPrompt + rawLlmResponse
+      const completedUpdate = mockManager.update.mock.calls[1][2] as Partial<WorkflowRunEntity>;
+      expect(completedUpdate.status).toBe(WorkflowRunStatus.COMPLETED);
+      expect(completedUpdate.assembledPrompt).toBe('Assembled prompt text');
+      expect(completedUpdate.rawLlmResponse).toBe('LLM response text');
+      // No raw query calls for single-job mode
+      expect(mockManager.query).not.toHaveBeenCalled();
+    });
+
+    it('[4.3-UNIT-020] does not re-set RUNNING for fan-out job when run is already RUNNING', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.RUNNING, startedAt: new Date() }));
+      mockManager.query.mockResolvedValue([{ completed_jobs: 2, failed_jobs: 0, total_jobs: 3 }]);
+
+      await processor.process(makeJob({ id: `${runId}:file:1`, data: fanOutPayload }));
+
+      // Should NOT have called manager.update to set RUNNING (already in RUNNING state)
+      const runningUpdates = mockManager.update.mock.calls.filter(
+        (c) => (c[2] as Partial<WorkflowRunEntity>).status === WorkflowRunStatus.RUNNING,
+      );
+      expect(runningUpdates).toHaveLength(0);
+    });
+
+    it('[4.3-UNIT-021] skips COMPLETED_WITH_ERRORS runs (terminal state)', async () => {
+      mockManager.findOne.mockResolvedValue(
+        makeRun({ status: WorkflowRunStatus.COMPLETED_WITH_ERRORS }),
+      );
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      expect(txManager.run).toHaveBeenCalledTimes(1); // only the status-check tx
+    });
+  });
+
+  describe('process() — fan-out run finalization', () => {
+    const fanOutJobId = `${runId}:file:2`;
+    const fanOutPayload: WorkflowJobPayload = {
+      ...basePayload,
+      subjectFile: { originalName: 'file-c.pdf', storagePath: '/uploads/c.pdf', assetId: 'asset-c' },
+    };
+
+    it('[4.3-UNIT-022] triggers finalization when completed_jobs + failed_jobs >= total_jobs', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(makeRun({ status: WorkflowRunStatus.QUEUED }))
+        .mockResolvedValueOnce(makeRun({
+          status: WorkflowRunStatus.RUNNING,
+          startedAt: new Date('2025-01-01'),
+          perFileResults: [
+            { index: 0, fileName: 'a.pdf', status: 'completed', tokenUsage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 } },
+            { index: 1, fileName: 'b.pdf', status: 'completed', tokenUsage: { inputTokens: 15, outputTokens: 25, totalTokens: 40 } },
+          ] as PerFileResult[],
+        }));
+      // Counter returns: this is the 3rd completed out of 3 total
+      mockManager.query.mockResolvedValue([{ completed_jobs: 3, failed_jobs: 0, total_jobs: 3 }]);
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      // Finalization: update with final status + aggregated token usage
+      const finalUpdate = mockManager.update.mock.calls.find(
+        (c) => c[2] && (c[2] as Partial<WorkflowRunEntity>).status === WorkflowRunStatus.COMPLETED,
+      );
+      expect(finalUpdate).toBeDefined();
+      expect((finalUpdate![2] as Partial<WorkflowRunEntity>).completedAt).toBeInstanceOf(Date);
+    });
+
+    it('[4.3-UNIT-023] does NOT finalize when completed + failed < total', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
+      // Only 1 of 3 done
+      mockManager.query.mockResolvedValue([{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }]);
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      // No finalization update (no COMPLETED/FAILED status set via manager.update)
+      const statusUpdates = mockManager.update.mock.calls.filter(
+        (c) =>
+          c[2] &&
+          [WorkflowRunStatus.COMPLETED, WorkflowRunStatus.FAILED, WorkflowRunStatus.COMPLETED_WITH_ERRORS].includes(
+            (c[2] as Partial<WorkflowRunEntity>).status as WorkflowRunStatus,
+          ),
+      );
+      expect(statusUpdates).toHaveLength(0);
+    });
+
+    it('[4.3-UNIT-024] sets COMPLETED_WITH_ERRORS when some jobs succeed and some fail', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(makeRun({ status: WorkflowRunStatus.QUEUED }))
+        .mockResolvedValueOnce(makeRun({
+          status: WorkflowRunStatus.RUNNING,
+          startedAt: new Date('2025-01-01'),
+          perFileResults: [
+            { index: 0, fileName: 'a.pdf', status: 'completed', tokenUsage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 } },
+            { index: 1, fileName: 'b.pdf', status: 'failed', errorMessage: 'LLM timeout' },
+          ] as PerFileResult[],
+        }));
+      // 2 completed + 1 failed = 3 total
+      mockManager.query.mockResolvedValue([{ completed_jobs: 2, failed_jobs: 1, total_jobs: 3 }]);
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      const finalUpdate = mockManager.update.mock.calls.find(
+        (c) => c[2] && (c[2] as Partial<WorkflowRunEntity>).status === WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+      );
+      expect(finalUpdate).toBeDefined();
+    });
+
+    it('[4.3-UNIT-025] sets FAILED when all jobs fail (completed_jobs === 0)', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(makeRun({ status: WorkflowRunStatus.QUEUED }))
+        .mockResolvedValueOnce(makeRun({
+          status: WorkflowRunStatus.RUNNING,
+          startedAt: new Date('2025-01-01'),
+          perFileResults: [
+            { index: 0, fileName: 'a.pdf', status: 'failed', errorMessage: 'err' },
+            { index: 1, fileName: 'b.pdf', status: 'failed', errorMessage: 'err' },
+          ] as PerFileResult[],
+        }));
+      mockManager.query.mockResolvedValue([{ completed_jobs: 0, failed_jobs: 3, total_jobs: 3 }]);
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      const finalUpdate = mockManager.update.mock.calls.find(
+        (c) => c[2] && (c[2] as Partial<WorkflowRunEntity>).status === WorkflowRunStatus.FAILED,
+      );
+      expect(finalUpdate).toBeDefined();
+    });
+
+    it('[4.3-UNIT-026] aggregates token usage from all perFileResults', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(makeRun({ status: WorkflowRunStatus.QUEUED }))
+        .mockResolvedValueOnce(makeRun({
+          status: WorkflowRunStatus.RUNNING,
+          startedAt: new Date('2025-01-01'),
+          perFileResults: [
+            { index: 0, fileName: 'a.pdf', status: 'completed', tokenUsage: { inputTokens: 100, outputTokens: 200, totalTokens: 300 } },
+            { index: 1, fileName: 'b.pdf', status: 'completed', tokenUsage: { inputTokens: 150, outputTokens: 250, totalTokens: 400 } },
+          ] as PerFileResult[],
+        }));
+      mockManager.query.mockResolvedValue([{ completed_jobs: 3, failed_jobs: 0, total_jobs: 3 }]);
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      const finalUpdate = mockManager.update.mock.calls.find(
+        (c) => c[2] && (c[2] as Partial<WorkflowRunEntity>).tokenUsage,
+      );
+      expect(finalUpdate).toBeDefined();
+      expect((finalUpdate![2] as Partial<WorkflowRunEntity>).tokenUsage).toEqual({
+        inputTokens: 250,
+        outputTokens: 450,
+        totalTokens: 700,
+      });
+    });
+  });
+
+  describe('onFailed() — fan-out behavioral split', () => {
+    it('[4.3-UNIT-027] fan-out failure increments failed_jobs and writes error PerFileResult', async () => {
+      const error = new Error('LLM API timeout');
+      const fanOutJob = makeJob({
+        id: `${runId}:file:1`,
+        data: { ...basePayload, subjectFile: { originalName: 'doc.pdf', storagePath: '/uploads/doc.pdf' } },
+        attemptsMade: 3,
+      });
+
+      // Counter: not last job
+      mockManager.query.mockResolvedValue([{ completed_jobs: 1, failed_jobs: 1, total_jobs: 3 }]);
+
+      await processor.onFailed(fanOutJob, error);
+
+      // DLQ should still be called
+      expect(dlqQueue.add).toHaveBeenCalledTimes(1);
+
+      // JSONB append for error PerFileResult
+      const appendCall = mockManager.query.mock.calls[0];
+      expect(appendCall[0]).toContain('per_file_results');
+      const parsedResult: PerFileResult = JSON.parse(appendCall[1][0]);
+      expect(parsedResult.index).toBe(1);
+      expect(parsedResult.status).toBe('failed');
+      expect(parsedResult.errorMessage).toContain('LLM API timeout');
+
+      // Atomic increment of failed_jobs
+      const incrementCall = mockManager.query.mock.calls[1];
+      expect(incrementCall[0]).toContain('failed_jobs = COALESCE(failed_jobs, 0) + 1');
+    });
+
+    it('[4.3-UNIT-028] fan-out failure triggers finalization when last job', async () => {
+      const error = new Error('fail');
+      const fanOutJob = makeJob({
+        id: `${runId}:file:2`,
+        data: { ...basePayload, subjectFile: { originalName: 'c.pdf', storagePath: '/uploads/c.pdf' } },
+        attemptsMade: 3,
+      });
+
+      // Counter: this is the last job
+      mockManager.query.mockResolvedValue([{ completed_jobs: 2, failed_jobs: 1, total_jobs: 3 }]);
+      // Finalization findOne
+      mockManager.findOne.mockResolvedValue(makeRun({
+        status: WorkflowRunStatus.RUNNING,
+        startedAt: new Date('2025-01-01'),
+        perFileResults: [
+          { index: 0, fileName: 'a.pdf', status: 'completed', tokenUsage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 } },
+        ] as PerFileResult[],
+      }));
+
+      await processor.onFailed(fanOutJob, error);
+
+      // Should have triggered finalization — update with COMPLETED_WITH_ERRORS
+      const finalUpdate = mockManager.update.mock.calls.find(
+        (c) => c[2] && (c[2] as Partial<WorkflowRunEntity>).status === WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+      );
+      expect(finalUpdate).toBeDefined();
+    });
+
+    it('[4.3-UNIT-029] single-job failure marks run FAILED (not fan-out path)', async () => {
+      const error = new Error('LLM provider timeout');
+      const singleJob = makeJob({ attemptsMade: 3 }); // no :file: in jobId
+
+      await processor.onFailed(singleJob, error);
+
+      // DLQ + entity update to FAILED
+      expect(dlqQueue.add).toHaveBeenCalledTimes(1);
+      const updateCall = mockManager.update.mock.calls[0];
+      expect(updateCall[2]).toMatchObject({ status: WorkflowRunStatus.FAILED });
+      // No raw query calls for single-job
+      expect(mockManager.query).not.toHaveBeenCalled();
+    });
+
+    it('[4.3-UNIT-030] fan-out failure does NOT call markRunFailed (no entity-level FAILED update)', async () => {
+      const error = new Error('fail');
+      const fanOutJob = makeJob({
+        id: `${runId}:file:0`,
+        data: { ...basePayload, subjectFile: { originalName: 'a.pdf', storagePath: '/uploads/a.pdf' } },
+        attemptsMade: 3,
+      });
+
+      // Not last job
+      mockManager.query.mockResolvedValue([{ completed_jobs: 0, failed_jobs: 1, total_jobs: 3 }]);
+
+      await processor.onFailed(fanOutJob, error);
+
+      // manager.update should NOT have been called with FAILED status
+      const failedUpdates = mockManager.update.mock.calls.filter(
+        (c) => c[2] && (c[2] as Partial<WorkflowRunEntity>).status === WorkflowRunStatus.FAILED,
+      );
+      expect(failedUpdates).toHaveLength(0);
+    });
+
+    it('[4.3-UNIT-031] fan-out failure truncates long error messages to 200 chars', async () => {
+      const longError = new Error('x'.repeat(300));
+      const fanOutJob = makeJob({
+        id: `${runId}:file:0`,
+        data: { ...basePayload, subjectFile: { originalName: 'a.pdf', storagePath: '/uploads/a.pdf' } },
+        attemptsMade: 3,
+      });
+
+      mockManager.query.mockResolvedValue([{ completed_jobs: 0, failed_jobs: 1, total_jobs: 3 }]);
+
+      await processor.onFailed(fanOutJob, longError);
+
+      const appendCall = mockManager.query.mock.calls[0];
+      const parsedResult: PerFileResult = JSON.parse(appendCall[1][0]);
+      expect(parsedResult.errorMessage!.length).toBeLessThanOrEqual(203); // 200 + '...'
+    });
+
+    it('[4.3-UNIT-032] intermediate fan-out failure (attemptsMade < attempts) does NOT route to DLQ', async () => {
+      const error = new Error('transient');
+      const fanOutJob = makeJob({
+        id: `${runId}:file:0`,
+        data: { ...basePayload, subjectFile: { originalName: 'a.pdf', storagePath: '/uploads/a.pdf' } },
+        attemptsMade: 1,
+        opts: { attempts: 3 },
+      });
+
+      await processor.onFailed(fanOutJob, error);
+
+      expect(dlqQueue.add).not.toHaveBeenCalled();
+      expect(mockManager.query).not.toHaveBeenCalled();
     });
   });
 });

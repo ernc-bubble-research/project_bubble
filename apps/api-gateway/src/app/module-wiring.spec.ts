@@ -65,6 +65,8 @@ import { LlmProviderConfigService } from './settings/llm-provider-config.service
 import { WorkflowExecutionModule } from './workflow-execution/workflow-execution.module';
 import { WorkflowExecutionProcessor } from './workflow-execution/workflow-execution.processor';
 import { WorkflowExecutionService } from './workflow-execution/workflow-execution.service';
+import { LlmProviderFactory } from './workflow-execution/llm/llm-provider.factory';
+import { PromptAssemblyService } from './workflow-execution/prompt-assembly.service';
 import { WorkflowRunsModule } from './workflow-runs/workflow-runs.module';
 import { WorkflowRunsService } from './workflow-runs/workflow-runs.service';
 import { EmailModule } from './email/email.module';
@@ -302,7 +304,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     await module.close();
   }, 15_000);
 
-  it('[MW-1-UNIT-012] [P0] WorkflowExecutionModule compiles with real providers (BullMQ queues + TypeORM)', async () => {
+  it('[MW-1-UNIT-012] [P0] WorkflowExecutionModule compiles with real providers (BullMQ queues + TypeORM + LLM providers)', async () => {
     const module = await Test.createTestingModule({
       imports: [
         ...createRootImports(),
@@ -313,6 +315,8 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module).toBeDefined();
     expect(module.get(WorkflowExecutionProcessor)).toBeDefined();
     expect(module.get(WorkflowExecutionService)).toBeDefined();
+    expect(module.get(LlmProviderFactory)).toBeDefined();
+    expect(module.get(PromptAssemblyService)).toBeDefined();
     await module.close();
   }, 15_000);
 
@@ -363,6 +367,8 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module.get(LlmProviderConfigService)).toBeDefined();
     expect(module.get(TransactionManager)).toBeDefined();
     expect(module.get(WorkflowExecutionService)).toBeDefined();
+    expect(module.get(LlmProviderFactory)).toBeDefined();
+    expect(module.get(PromptAssemblyService)).toBeDefined();
     expect(module.get(WorkflowRunsService)).toBeDefined();
 
     await module.close();

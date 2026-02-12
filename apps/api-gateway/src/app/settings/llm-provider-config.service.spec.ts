@@ -17,6 +17,7 @@ const mockConfig: LlmProviderConfigEntity = {
   providerKey: 'google-ai-studio',
   displayName: 'Google AI Studio',
   encryptedCredentials: null,
+  rateLimitRpm: null,
   isActive: true,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
@@ -385,6 +386,87 @@ describe('LlmProviderConfigService [P0]', () => {
 
       // Then
       expect(result).toEqual({});
+    });
+  });
+
+  describe('rateLimitRpm', () => {
+    it('[4.2-UNIT-001] [P1] should create provider config with rateLimitRpm', async () => {
+      // Given
+      const dto = {
+        providerKey: 'mock',
+        displayName: 'Mock Provider',
+        rateLimitRpm: 15,
+      };
+      const savedConfig = { ...mockConfig, providerKey: 'mock', rateLimitRpm: 15 };
+      repo.create.mockReturnValue(savedConfig);
+      repo.save.mockResolvedValue(savedConfig);
+
+      // When
+      const result = await service.create(dto);
+
+      // Then
+      expect(result.rateLimitRpm).toBe(15);
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ rateLimitRpm: 15 }),
+      );
+    });
+
+    it('[4.2-UNIT-002] [P1] should default rateLimitRpm to null when not provided on create', async () => {
+      // Given
+      const dto = {
+        providerKey: 'mock',
+        displayName: 'Mock Provider',
+      };
+      const savedConfig = { ...mockConfig, providerKey: 'mock', rateLimitRpm: null };
+      repo.create.mockReturnValue(savedConfig);
+      repo.save.mockResolvedValue(savedConfig);
+
+      // When
+      const result = await service.create(dto);
+
+      // Then
+      expect(result.rateLimitRpm).toBeNull();
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ rateLimitRpm: null }),
+      );
+    });
+
+    it('[4.2-UNIT-003] [P1] should update rateLimitRpm on existing config', async () => {
+      // Given
+      repo.findOne.mockResolvedValue({ ...mockConfig });
+      repo.save.mockImplementation(async (entity) => entity as LlmProviderConfigEntity);
+
+      // When
+      const result = await service.update(mockConfig.id, { rateLimitRpm: 60 });
+
+      // Then
+      const savedEntity = repo.save.mock.calls[0][0] as LlmProviderConfigEntity;
+      expect(savedEntity.rateLimitRpm).toBe(60);
+    });
+
+    it('[4.2-UNIT-004] [P1] should allow setting rateLimitRpm to null on update', async () => {
+      // Given
+      repo.findOne.mockResolvedValue({ ...mockConfig, rateLimitRpm: 60 });
+      repo.save.mockImplementation(async (entity) => entity as LlmProviderConfigEntity);
+
+      // When
+      const result = await service.update(mockConfig.id, { rateLimitRpm: null });
+
+      // Then
+      const savedEntity = repo.save.mock.calls[0][0] as LlmProviderConfigEntity;
+      expect(savedEntity.rateLimitRpm).toBeNull();
+    });
+
+    it('[4.2-UNIT-005] [P1] should include rateLimitRpm in response DTO', async () => {
+      // Given
+      const configWithRpm = { ...mockConfig, rateLimitRpm: 30 };
+      repo.find.mockResolvedValue([configWithRpm]);
+
+      // When
+      const result = await service.findAll();
+
+      // Then
+      expect(result[0].rateLimitRpm).toBe(30);
     });
   });
 

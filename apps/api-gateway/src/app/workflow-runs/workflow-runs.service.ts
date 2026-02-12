@@ -10,6 +10,7 @@ import {
   WorkflowVersionEntity,
   WorkflowRunEntity,
   WorkflowRunStatus,
+  AssetEntity,
   TransactionManager,
 } from '@project-bubble/db-layer';
 import {
@@ -17,8 +18,10 @@ import {
   WorkflowRunResponseDto,
   WorkflowJobPayload,
   WorkflowJobContextInput,
+  WorkflowJobSubjectFile,
 } from '@project-bubble/shared';
-import { WorkflowDefinition, WorkflowInput } from '@project-bubble/shared';
+import { WorkflowDefinition, WorkflowInput, WorkflowProcessingMode } from '@project-bubble/shared';
+import { In } from 'typeorm';
 import { AssetsService } from '../assets/assets.service';
 import { WorkflowExecutionService } from '../workflow-execution/workflow-execution.service';
 
@@ -92,7 +95,25 @@ export class WorkflowRunsService {
       userInputs: dto.inputs,
     };
 
-    // 5. Create WorkflowRunEntity + enqueue within transaction
+    // 5. Resolve subject-role inputs into WorkflowJobSubjectFile[]
+    const subjectFiles = await this.resolveSubjectFiles(
+      definitionInputs,
+      dto.inputs,
+      tenantId,
+    );
+
+    // 6. Determine processing mode and compute totalJobs
+    const processingMode: WorkflowProcessingMode =
+      definition.execution.processing || 'parallel';
+    const maxConcurrency = definition.execution.max_concurrency ?? 5;
+    const totalJobs =
+      subjectFiles.length === 0
+        ? 1 // context-only workflow
+        : processingMode === 'parallel'
+          ? subjectFiles.length // 1 job per file
+          : 1; // batch = 1 job
+
+    // 7. Create WorkflowRunEntity with totalJobs set BEFORE enqueue
     return this.txManager.run(tenantId, async (manager) => {
       const runEntity = manager.create(WorkflowRunEntity, {
         tenantId,
@@ -101,11 +122,14 @@ export class WorkflowRunsService {
         startedBy: userId,
         inputSnapshot,
         creditsConsumed: 0,
+        totalJobs,
+        completedJobs: 0,
+        failedJobs: 0,
       });
 
       const savedRun = await manager.save(WorkflowRunEntity, runEntity);
 
-      // 6. Build WorkflowJobPayload
+      // 8. Build context inputs for WorkflowJobPayload
       const contextInputs: Record<string, WorkflowJobContextInput> = {};
       for (const defInput of definitionInputs) {
         if (defInput.role !== 'context') continue;
@@ -132,11 +156,14 @@ export class WorkflowRunsService {
         versionId: version.id,
         definition,
         contextInputs,
-        // subjectFile/subjectFiles left undefined — resolved in Story 4-3 (fan-out)
       };
 
-      // 7. Enqueue
-      await this.executionService.enqueueRun(savedRun.id, payload);
+      // 9. Enqueue with fan-out/fan-in parameters
+      await this.executionService.enqueueRun(savedRun.id, payload, {
+        subjectFiles,
+        processingMode,
+        maxConcurrency,
+      });
 
       this.logger.log({
         message: 'Workflow run initiated',
@@ -144,10 +171,62 @@ export class WorkflowRunsService {
         tenantId,
         templateId: template.id,
         versionId: version.id,
+        totalJobs,
+        processingMode,
       });
 
       return this.toResponse(savedRun);
     });
+  }
+
+  private async resolveSubjectFiles(
+    definitionInputs: WorkflowInput[],
+    userInputs: Record<string, { type: string; assetIds?: string[]; text?: string }>,
+    tenantId: string,
+  ): Promise<WorkflowJobSubjectFile[]> {
+    // Find the subject-role input in the definition
+    const subjectDef = definitionInputs.find((d) => d.role === 'subject');
+    if (!subjectDef) {
+      return []; // No subject input → context-only workflow
+    }
+
+    const userInput = userInputs[subjectDef.name];
+    if (!userInput || userInput.type !== 'asset' || !userInput.assetIds?.length) {
+      return []; // No subject files provided
+    }
+
+    // Bulk-resolve all asset IDs in a single query (defense-in-depth: tenantId in WHERE)
+    const assetIds = userInput.assetIds!;
+    const subjectFiles: WorkflowJobSubjectFile[] = await this.txManager.run(
+      tenantId,
+      async (manager) => {
+        const assets = await manager.find(AssetEntity, {
+          where: { id: In(assetIds), tenantId },
+        });
+
+        // Validate all requested assets were found
+        if (assets.length !== assetIds.length) {
+          const foundIds = new Set(assets.map((a) => a.id));
+          const missing = assetIds.filter((id) => !foundIds.has(id));
+          throw new BadRequestException(
+            `Subject file asset(s) not found in tenant data vault: ${missing.join(', ')}`,
+          );
+        }
+
+        // Return in the same order as the input assetIds
+        const assetMap = new Map(assets.map((a) => [a.id, a]));
+        return assetIds.map((id) => {
+          const asset = assetMap.get(id)!;
+          return {
+            assetId: asset.id,
+            originalName: asset.originalName,
+            storagePath: asset.storagePath,
+          };
+        });
+      },
+    );
+
+    return subjectFiles;
   }
 
   private validateRequiredInputs(
@@ -232,6 +311,10 @@ export class WorkflowRunsService {
     dto.status = entity.status;
     dto.startedBy = entity.startedBy;
     dto.creditsConsumed = entity.creditsConsumed;
+    dto.totalJobs = entity.totalJobs;
+    dto.completedJobs = entity.completedJobs;
+    dto.failedJobs = entity.failedJobs;
+    dto.perFileResults = entity.perFileResults;
     dto.createdAt = entity.createdAt;
     return dto;
   }

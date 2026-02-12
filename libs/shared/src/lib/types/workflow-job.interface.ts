@@ -19,6 +19,16 @@ export interface WorkflowJobSubjectFile {
   storagePath: string;
 }
 
+export interface PerFileResult {
+  index: number;
+  fileName: string;
+  status: 'completed' | 'failed';
+  assembledPrompt?: string;
+  rawLlmResponse?: string;
+  errorMessage?: string;
+  tokenUsage?: { inputTokens: number; outputTokens: number; totalTokens: number };
+}
+
 export interface WorkflowJobPayload {
   runId: string;
   tenantId: string;

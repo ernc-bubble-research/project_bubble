@@ -19,6 +19,7 @@ describe('WorkflowRunsService [P0]', () => {
   let executionService: jest.Mocked<Pick<WorkflowExecutionService, 'enqueueRun'>>;
   let mockManager: {
     findOne: jest.Mock;
+    find: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
   };
@@ -107,6 +108,7 @@ describe('WorkflowRunsService [P0]', () => {
   beforeEach(() => {
     mockManager = {
       findOne: jest.fn(),
+      find: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
     };
@@ -168,6 +170,11 @@ describe('WorkflowRunsService [P0]', () => {
           definition: expect.any(Object),
           contextInputs: expect.any(Object),
         }),
+        expect.objectContaining({
+          subjectFiles: [],
+          processingMode: 'parallel',
+          maxConcurrency: 5,
+        }),
       );
     });
 
@@ -197,6 +204,7 @@ describe('WorkflowRunsService [P0]', () => {
             context_doc: { type: 'text', content: 'Some analysis text' },
           },
         }),
+        expect.any(Object),
       );
     });
 
@@ -226,14 +234,20 @@ describe('WorkflowRunsService [P0]', () => {
             context_doc: { type: 'file', assetId },
           },
         }),
+        expect.any(Object),
       );
     });
 
-    it('[4.1-UNIT-004] [P1] Given subject role input, when initiateRun is called, then does not include it in contextInputs (subject handled in Story 4-3)', async () => {
-      // Given
+    it('[4.1-UNIT-004] [P1] Given subject role input, when initiateRun is called, then resolves subject files and passes to enqueueRun options', async () => {
+      // Given — bulk asset lookup returns matching entities
       mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+        .mockResolvedValueOnce(mockTemplate)   // template lookup (tx 1)
+        .mockResolvedValueOnce(mockVersion);   // version lookup (tx 1)
+      mockManager.find.mockResolvedValueOnce([{  // bulk asset lookup (tx 2: resolveSubjectFiles)
+        id: assetId,
+        originalName: 'transcript.pdf',
+        storagePath: '/uploads/transcript.pdf',
+      }]);
       mockManager.create.mockReturnValue(mockRunEntity);
       mockManager.save.mockResolvedValue(mockRunEntity);
 
@@ -248,15 +262,81 @@ describe('WorkflowRunsService [P0]', () => {
       // When
       await service.initiateRun(dto, tenantId, userId);
 
-      // Then
-      expect(executionService.enqueueRun).toHaveBeenCalledWith(
-        runId,
+      // Then — contextInputs should NOT include subject_files
+      const enqueueCall = executionService.enqueueRun.mock.calls[0];
+      const payloadArg = enqueueCall[1];
+      expect(payloadArg.contextInputs).toEqual({
+        context_doc: { type: 'text', content: 'Context text' },
+      });
+      // Subject files passed via options
+      const optionsArg = enqueueCall[2];
+      expect(optionsArg.subjectFiles).toEqual([
+        { assetId, originalName: 'transcript.pdf', storagePath: '/uploads/transcript.pdf' },
+      ]);
+      expect(optionsArg.processingMode).toBe('parallel');
+    });
+
+    it('[4.3-UNIT-058] [P0] Given 3 subject files in parallel mode, when initiateRun is called, then totalJobs is set to 3 on the run entity', async () => {
+      // Given — 3 subject file assets
+      const assetId2 = 'ffffffff-ffff-ffff-ffff-fffffffffff2';
+      const assetId3 = 'ffffffff-ffff-ffff-ffff-fffffffffff3';
+
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      mockManager.find.mockResolvedValueOnce([
+        { id: assetId, originalName: 'a.pdf', storagePath: '/uploads/a.pdf' },
+        { id: assetId2, originalName: 'b.pdf', storagePath: '/uploads/b.pdf' },
+        { id: assetId3, originalName: 'c.pdf', storagePath: '/uploads/c.pdf' },
+      ]);
+      mockManager.create.mockReturnValue(mockRunEntity);
+      mockManager.save.mockResolvedValue(mockRunEntity);
+
+      const dto = {
+        templateId,
+        inputs: {
+          context_doc: { type: 'text' as const, text: 'Context' },
+          subject_files: { type: 'asset' as const, assetIds: [assetId, assetId2, assetId3] },
+        },
+      };
+
+      // When
+      await service.initiateRun(dto, tenantId, userId);
+
+      // Then — totalJobs should be 3 (1 per subject file in parallel mode)
+      expect(mockManager.create).toHaveBeenCalledWith(
+        WorkflowRunEntity,
         expect.objectContaining({
-          contextInputs: {
-            context_doc: { type: 'text', content: 'Context text' },
-          },
+          totalJobs: 3,
+          completedJobs: 0,
+          failedJobs: 0,
         }),
       );
+      // enqueueRun receives all 3 subject files
+      const optionsArg = executionService.enqueueRun.mock.calls[0][2];
+      expect(optionsArg.subjectFiles).toHaveLength(3);
+      expect(optionsArg.processingMode).toBe('parallel');
+    });
+
+    it('[4.3-UNIT-059] [P0] Given subject file asset not found, when initiateRun is called, then throws BadRequestException listing missing asset ID', async () => {
+      // Given — bulk lookup returns fewer assets than requested
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      mockManager.find.mockResolvedValueOnce([]); // no assets found
+
+      const dto = {
+        templateId,
+        inputs: {
+          context_doc: { type: 'text' as const, text: 'Context' },
+          subject_files: { type: 'asset' as const, assetIds: [assetId] },
+        },
+      };
+
+      // When/Then
+      await expect(
+        service.initiateRun(dto, tenantId, userId),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -471,6 +551,9 @@ describe('WorkflowRunsService [P0]', () => {
           status: WorkflowRunStatus.QUEUED,
           startedBy: userId,
           creditsConsumed: 0,
+          totalJobs: 1,
+          completedJobs: 0,
+          failedJobs: 0,
           inputSnapshot: {
             templateId,
             templateName: 'Test Workflow',

@@ -28,4 +28,5 @@ export type {
   WorkflowJobPayload,
   WorkflowJobContextInput,
   WorkflowJobSubjectFile,
+  PerFileResult,
 } from './workflow-job.interface';

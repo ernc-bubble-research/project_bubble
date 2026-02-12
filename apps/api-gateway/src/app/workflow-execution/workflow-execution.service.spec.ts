@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { WorkflowExecutionService } from './workflow-execution.service';
-import { WorkflowJobPayload } from '@project-bubble/shared';
+import { WorkflowExecutionService, EnqueueOptions } from './workflow-execution.service';
+import { WorkflowJobPayload, WorkflowJobSubjectFile } from '@project-bubble/shared';
 
 describe('WorkflowExecutionService', () => {
   let service: WorkflowExecutionService;
@@ -19,6 +19,12 @@ describe('WorkflowExecutionService', () => {
     contextInputs: {},
   };
 
+  const subjectFiles: WorkflowJobSubjectFile[] = [
+    { originalName: 'file-a.pdf', storagePath: '/uploads/a.pdf', assetId: 'asset-a' },
+    { originalName: 'file-b.pdf', storagePath: '/uploads/b.pdf', assetId: 'asset-b' },
+    { originalName: 'file-c.pdf', storagePath: '/uploads/c.pdf', assetId: 'asset-c' },
+  ];
+
   beforeEach(async () => {
     queue = {
       add: jest.fn().mockResolvedValue({ id: runId }),
@@ -34,31 +40,165 @@ describe('WorkflowExecutionService', () => {
     service = module.get(WorkflowExecutionService);
   });
 
-  it('5.1 — enqueueRun() adds job with runId as jobId', async () => {
-    await service.enqueueRun(runId, payload);
+  describe('context-only (no options)', () => {
+    it('[4.3-UNIT-047] enqueueRun() adds job with runId as jobId', async () => {
+      await service.enqueueRun(runId, payload);
 
-    expect(queue.add).toHaveBeenCalledTimes(1);
-    const [jobName, jobData, jobOpts] = queue.add.mock.calls[0];
-    expect(jobName).toBe('execute-workflow');
-    expect(jobOpts).toEqual({ jobId: runId });
-    expect(jobData).toBe(payload);
+      expect(queue.add).toHaveBeenCalledTimes(1);
+      const [jobName, jobData, jobOpts] = queue.add.mock.calls[0];
+      expect(jobName).toBe('execute-workflow');
+      expect(jobOpts).toEqual({ jobId: runId });
+      expect(jobData).toBe(payload);
+    });
+
+    it('[4.3-UNIT-048] enqueueRun() returns correct jobIds (context-only)', async () => {
+      const result = await service.enqueueRun(runId, payload);
+
+      expect(result).toEqual({ jobIds: [runId] });
+    });
+
+    it('[4.3-UNIT-049] enqueueRun() passes WorkflowJobPayload as job data', async () => {
+      await service.enqueueRun(runId, payload);
+
+      const jobData = queue.add.mock.calls[0][1];
+      expect(jobData).toMatchObject({
+        runId,
+        tenantId,
+        versionId: 'cccccccc-0000-0000-0000-000000000001',
+        contextInputs: {},
+      });
+    });
+
+    it('[4.3-UNIT-050] treats empty subjectFiles array as context-only', async () => {
+      const options: EnqueueOptions = {
+        subjectFiles: [],
+        processingMode: 'parallel',
+        maxConcurrency: 5,
+      };
+
+      const result = await service.enqueueRun(runId, payload, options);
+
+      expect(queue.add).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ jobIds: [runId] });
+    });
   });
 
-  it('5.2 — enqueueRun() returns correct jobId', async () => {
-    const result = await service.enqueueRun(runId, payload);
+  describe('batch mode (fan-in)', () => {
+    it('[4.3-UNIT-051] enqueues single job with all subjectFiles attached (batch)', async () => {
+      const options: EnqueueOptions = {
+        subjectFiles,
+        processingMode: 'batch',
+        maxConcurrency: 5,
+      };
 
-    expect(result).toEqual({ jobId: runId });
+      const result = await service.enqueueRun(runId, payload, options);
+
+      expect(queue.add).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ jobIds: [runId] });
+
+      const [jobName, jobData, jobOpts] = queue.add.mock.calls[0];
+      expect(jobName).toBe('execute-workflow');
+      expect(jobOpts).toEqual({ jobId: runId });
+      expect(jobData.subjectFiles).toEqual(subjectFiles);
+    });
+
+    it('[4.3-UNIT-052] batch job payload merges subjectFiles with base payload', async () => {
+      const options: EnqueueOptions = {
+        subjectFiles,
+        processingMode: 'batch',
+        maxConcurrency: 5,
+      };
+
+      await service.enqueueRun(runId, payload, options);
+
+      const jobData = queue.add.mock.calls[0][1] as WorkflowJobPayload;
+      expect(jobData.runId).toBe(runId);
+      expect(jobData.tenantId).toBe(tenantId);
+      expect(jobData.subjectFiles).toHaveLength(3);
+    });
   });
 
-  it('5.3 — enqueueRun() passes WorkflowJobPayload as job data', async () => {
-    await service.enqueueRun(runId, payload);
+  describe('parallel mode (fan-out)', () => {
+    it('[4.3-UNIT-053] enqueues N jobs, one per subject file (parallel)', async () => {
+      const options: EnqueueOptions = {
+        subjectFiles,
+        processingMode: 'parallel',
+        maxConcurrency: 5,
+      };
 
-    const jobData = queue.add.mock.calls[0][1];
-    expect(jobData).toMatchObject({
-      runId,
-      tenantId,
-      versionId: 'cccccccc-0000-0000-0000-000000000001',
-      contextInputs: {},
+      const result = await service.enqueueRun(runId, payload, options);
+
+      expect(queue.add).toHaveBeenCalledTimes(3);
+      expect(result.jobIds).toHaveLength(3);
+    });
+
+    it('[4.3-UNIT-054] fan-out jobIds follow {runId}:file:{index} format', async () => {
+      const options: EnqueueOptions = {
+        subjectFiles,
+        processingMode: 'parallel',
+        maxConcurrency: 5,
+      };
+
+      const result = await service.enqueueRun(runId, payload, options);
+
+      expect(result.jobIds).toEqual([
+        `${runId}:file:0`,
+        `${runId}:file:1`,
+        `${runId}:file:2`,
+      ]);
+
+      // Verify each queue.add call used the correct jobId
+      for (let i = 0; i < 3; i++) {
+        const jobOpts = queue.add.mock.calls[i][2];
+        expect(jobOpts).toEqual({ jobId: `${runId}:file:${i}` });
+      }
+    });
+
+    it('[4.3-UNIT-055] each fan-out job carries a single subjectFile (not subjectFiles)', async () => {
+      const options: EnqueueOptions = {
+        subjectFiles,
+        processingMode: 'parallel',
+        maxConcurrency: 5,
+      };
+
+      await service.enqueueRun(runId, payload, options);
+
+      for (let i = 0; i < 3; i++) {
+        const jobData = queue.add.mock.calls[i][1] as WorkflowJobPayload;
+        expect(jobData.subjectFile).toEqual(subjectFiles[i]);
+        expect(jobData.subjectFiles).toBeUndefined();
+      }
+    });
+
+    it('[4.3-UNIT-056] fan-out jobs preserve base payload fields', async () => {
+      const options: EnqueueOptions = {
+        subjectFiles,
+        processingMode: 'parallel',
+        maxConcurrency: 5,
+      };
+
+      await service.enqueueRun(runId, payload, options);
+
+      for (let i = 0; i < 3; i++) {
+        const jobData = queue.add.mock.calls[i][1] as WorkflowJobPayload;
+        expect(jobData.runId).toBe(runId);
+        expect(jobData.tenantId).toBe(tenantId);
+        expect(jobData.versionId).toBe(payload.versionId);
+        expect(jobData.contextInputs).toBe(payload.contextInputs);
+      }
+    });
+
+    it('[4.3-UNIT-057] single file with parallel mode creates 1 fan-out job', async () => {
+      const options: EnqueueOptions = {
+        subjectFiles: [subjectFiles[0]],
+        processingMode: 'parallel',
+        maxConcurrency: 5,
+      };
+
+      const result = await service.enqueueRun(runId, payload, options);
+
+      expect(queue.add).toHaveBeenCalledTimes(1);
+      expect(result.jobIds).toEqual([`${runId}:file:0`]);
     });
   });
 });

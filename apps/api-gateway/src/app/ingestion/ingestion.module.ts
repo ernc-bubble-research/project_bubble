@@ -49,6 +49,6 @@ import { IngestionController } from './ingestion.controller';
     IngestionService,
     IngestionProcessor,
   ],
-  exports: [IngestionService, EMBEDDING_PROVIDER],
+  exports: [IngestionService, EMBEDDING_PROVIDER, TextExtractorService],
 })
 export class IngestionModule {}

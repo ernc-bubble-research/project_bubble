@@ -11,11 +11,13 @@ import {
 import { WorkflowVersionEntity } from './workflow-version.entity';
 import { WorkflowChainEntity } from './workflow-chain.entity';
 import { LlmModelEntity } from './llm-model.entity';
+import type { PerFileResult } from '@project-bubble/shared';
 
 export enum WorkflowRunStatus {
   QUEUED = 'queued',
   RUNNING = 'running',
   COMPLETED = 'completed',
+  COMPLETED_WITH_ERRORS = 'completed_with_errors',
   FAILED = 'failed',
   CANCELLED = 'cancelled',
 }
@@ -102,6 +104,18 @@ export class WorkflowRunEntity {
 
   @Column({ name: 'duration_ms', type: 'int', nullable: true })
   durationMs!: number | null;
+
+  @Column({ name: 'total_jobs', type: 'int', nullable: true })
+  totalJobs!: number | null;
+
+  @Column({ name: 'completed_jobs', type: 'int', nullable: true })
+  completedJobs!: number | null;
+
+  @Column({ name: 'failed_jobs', type: 'int', nullable: true })
+  failedJobs!: number | null;
+
+  @Column({ name: 'per_file_results', type: 'jsonb', nullable: true })
+  perFileResults!: PerFileResult[] | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

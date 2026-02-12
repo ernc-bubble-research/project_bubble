@@ -6,7 +6,26 @@ import {
   WorkflowRunEntity,
   WorkflowRunStatus,
 } from '@project-bubble/db-layer';
-import { WorkflowJobPayload } from '@project-bubble/shared';
+import { WorkflowJobPayload, PerFileResult } from '@project-bubble/shared';
+import { PromptAssemblyService } from './prompt-assembly.service';
+import { LlmProviderFactory } from './llm/llm-provider.factory';
+
+/** Detect fan-out job by `:file:` segment in jobId */
+function isFanOutJob(jobId: string | undefined): boolean {
+  return !!jobId && jobId.includes(':file:');
+}
+
+/** Extract file index from fan-out jobId format `{runId}:file:{index}` */
+function extractFileIndex(jobId: string): number {
+  const parts = jobId.split(':file:');
+  return parseInt(parts[1], 10);
+}
+
+interface CompletionCounters {
+  completed_jobs: number;
+  failed_jobs: number;
+  total_jobs: number;
+}
 
 @Processor('workflow-execution', {
   concurrency: parseInt(process.env['WORKER_CONCURRENCY'] || '100'),
@@ -19,18 +38,22 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     private readonly txManager: TransactionManager,
     @InjectQueue('workflow-execution-dlq')
     private readonly dlqQueue: Queue,
+    private readonly promptAssembly: PromptAssemblyService,
+    private readonly llmProviderFactory: LlmProviderFactory,
   ) {
     super();
   }
 
   async process(job: Job<WorkflowJobPayload>): Promise<void> {
     const { runId, tenantId } = job.data;
+    const fanOut = isFanOutJob(job.id);
 
     this.logger.log({
-      message: 'Processing workflow run',
+      message: 'Processing workflow job',
       jobId: job.id,
       runId,
       tenantId,
+      fanOut,
     });
 
     const startedAt = new Date();
@@ -46,6 +69,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
       // Idempotency: skip runs in terminal states
       if (
         entity.status === WorkflowRunStatus.COMPLETED ||
+        entity.status === WorkflowRunStatus.COMPLETED_WITH_ERRORS ||
         entity.status === WorkflowRunStatus.FAILED ||
         entity.status === WorkflowRunStatus.CANCELLED
       ) {
@@ -63,10 +87,13 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         });
       }
 
-      await manager.update(WorkflowRunEntity, { id: runId }, {
-        status: WorkflowRunStatus.RUNNING,
-        startedAt,
-      });
+      // Only transition to RUNNING if currently QUEUED (not already RUNNING from another fan-out job)
+      if (entity.status === WorkflowRunStatus.QUEUED) {
+        await manager.update(WorkflowRunEntity, { id: runId }, {
+          status: WorkflowRunStatus.RUNNING,
+          startedAt,
+        });
+      }
 
       return entity;
     });
@@ -82,32 +109,187 @@ export class WorkflowExecutionProcessor extends WorkerHost {
       return;
     }
 
-    // Placeholder: actual LLM work comes in Story 4-2/4-3
-    this.logger.log({
-      message:
-        'Processing workflow run — LLM integration pending Story 4-2/4-3',
-      jobId: job.id,
-      runId,
-      tenantId,
+    // Step 1: Assemble the prompt from template + inputs
+    const assemblyResult = await this.promptAssembly.assemble(job.data);
+
+    // Step 2: Resolve the LLM provider from model UUID
+    const modelUuid = job.data.definition.execution.model;
+    const { provider, model } = await this.llmProviderFactory.getProvider(modelUuid);
+
+    // Defense-in-depth: check assembled prompt length vs model context window
+    const estimatedTokens = Math.ceil(assemblyResult.assembledPromptLength / 4);
+    if (estimatedTokens > model.contextWindow) {
+      throw new Error(
+        `Assembled prompt (~${estimatedTokens} tokens) exceeds model context window (${model.contextWindow} tokens). ` +
+        `Reduce input size or select a model with a larger context window.`,
+      );
+    }
+
+    // Step 3: Call the LLM provider
+    const llmResult = await provider.generate(assemblyResult.prompt, {
+      temperature: job.data.definition.execution.temperature,
+      maxOutputTokens: job.data.definition.execution.max_output_tokens,
     });
 
-    const completedAt = new Date();
-    const durationMs = completedAt.getTime() - startedAt.getTime();
+    this.logger.log({
+      message: 'LLM generation completed',
+      jobId: job.id,
+      runId,
+      modelId: model.modelId,
+      inputTokens: llmResult.tokenUsage.inputTokens,
+      outputTokens: llmResult.tokenUsage.outputTokens,
+    });
 
+    // Step 4: Store results — behavioral split based on fan-out vs single-job
+    if (fanOut) {
+      await this.recordFanOutSuccess(job, assemblyResult, llmResult, model);
+    } else {
+      // Single-job run (batch or context-only): write to entity columns directly
+      const completedAt = new Date();
+      const durationMs = completedAt.getTime() - startedAt.getTime();
+
+      await this.txManager.run(tenantId, async (manager) => {
+        await manager.update(WorkflowRunEntity, { id: runId }, {
+          status: WorkflowRunStatus.COMPLETED,
+          assembledPrompt: assemblyResult.prompt,
+          rawLlmResponse: llmResult.text,
+          tokenUsage: llmResult.tokenUsage,
+          modelId: model.id,
+          validationWarnings: assemblyResult.warnings.length > 0 ? assemblyResult.warnings : null,
+          completedAt,
+          durationMs,
+        });
+      });
+
+      this.logger.log({
+        message: 'Workflow run completed (single-job)',
+        jobId: job.id,
+        runId,
+        tenantId,
+        durationMs,
+      });
+    }
+  }
+
+  /**
+   * Record a successful fan-out job result and check run completion.
+   * Uses atomic RETURNING clause to prevent race conditions.
+   */
+  private async recordFanOutSuccess(
+    job: Job<WorkflowJobPayload>,
+    assemblyResult: { prompt: string; warnings: string[] },
+    llmResult: { text: string; tokenUsage: { inputTokens: number; outputTokens: number; totalTokens: number } },
+    model: { id: string; modelId: string },
+  ): Promise<void> {
+    const { runId, tenantId } = job.data;
+    const fileIndex = extractFileIndex(job.id!);
+    const fileName = job.data.subjectFile?.originalName ?? `file-${fileIndex}`;
+
+    const perFileResult: PerFileResult = {
+      index: fileIndex,
+      fileName,
+      status: 'completed',
+      assembledPrompt: assemblyResult.prompt,
+      rawLlmResponse: llmResult.text,
+      tokenUsage: llmResult.tokenUsage,
+    };
+
+    // Atomic: append per-file result + increment completed_jobs + RETURNING
+    const counters = await this.txManager.run(tenantId, async (manager) => {
+      // Append to perFileResults JSONB array
+      await manager.query(
+        `UPDATE workflow_runs
+         SET per_file_results = COALESCE(per_file_results, '[]'::jsonb) || $1::jsonb
+         WHERE id = $2`,
+        [JSON.stringify(perFileResult), runId],
+      );
+
+      // Atomic increment + read with RETURNING
+      const rows: CompletionCounters[] = await manager.query(
+        `UPDATE workflow_runs
+         SET completed_jobs = COALESCE(completed_jobs, 0) + 1,
+             model_id = $2
+         WHERE id = $1
+         RETURNING completed_jobs, failed_jobs, total_jobs`,
+        [runId, model.id],
+      );
+
+      return rows[0];
+    });
+
+    this.logger.log({
+      message: 'Fan-out job completed',
+      jobId: job.id,
+      runId,
+      fileIndex,
+      fileName,
+      completedJobs: counters.completed_jobs,
+      failedJobs: counters.failed_jobs,
+      totalJobs: counters.total_jobs,
+    });
+
+    // Check if this is the last job → trigger finalization
+    if (counters.completed_jobs + counters.failed_jobs >= counters.total_jobs) {
+      await this.finalizeRun(runId, tenantId, counters);
+    }
+  }
+
+  /**
+   * Finalize a fan-out run: compute final status, aggregate token usage, set duration.
+   * Only the worker whose RETURNING values satisfy completion triggers this.
+   */
+  private async finalizeRun(
+    runId: string,
+    tenantId: string,
+    counters: CompletionCounters,
+  ): Promise<void> {
     await this.txManager.run(tenantId, async (manager) => {
+      const entity = await manager.findOne(WorkflowRunEntity, { where: { id: runId } });
+      if (!entity) return;
+
+      // Determine final status
+      let finalStatus: WorkflowRunStatus;
+      if (counters.failed_jobs === 0) {
+        finalStatus = WorkflowRunStatus.COMPLETED;
+      } else if (counters.completed_jobs === 0) {
+        finalStatus = WorkflowRunStatus.FAILED;
+      } else {
+        finalStatus = WorkflowRunStatus.COMPLETED_WITH_ERRORS;
+      }
+
+      // Aggregate token usage from perFileResults
+      const perFileResults: PerFileResult[] = entity.perFileResults ?? [];
+      const aggregatedTokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+      for (const result of perFileResults) {
+        if (result.tokenUsage) {
+          aggregatedTokenUsage.inputTokens += result.tokenUsage.inputTokens;
+          aggregatedTokenUsage.outputTokens += result.tokenUsage.outputTokens;
+          aggregatedTokenUsage.totalTokens += result.tokenUsage.totalTokens;
+        }
+      }
+
+      const completedAt = new Date();
+      const durationMs = entity.startedAt
+        ? completedAt.getTime() - new Date(entity.startedAt).getTime()
+        : null;
+
       await manager.update(WorkflowRunEntity, { id: runId }, {
-        status: WorkflowRunStatus.COMPLETED,
+        status: finalStatus,
+        tokenUsage: aggregatedTokenUsage,
         completedAt,
         durationMs,
       });
-    });
 
-    this.logger.log({
-      message: 'Workflow run completed',
-      jobId: job.id,
-      runId,
-      tenantId,
-      durationMs,
+      this.logger.log({
+        message: 'Fan-out run finalized',
+        runId,
+        tenantId,
+        finalStatus,
+        completedJobs: counters.completed_jobs,
+        failedJobs: counters.failed_jobs,
+        totalJobs: counters.total_jobs,
+        durationMs,
+      });
     });
   }
 
@@ -116,28 +298,31 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     const { runId, tenantId } = job.data;
     const attemptsMade = job.attemptsMade;
     const maxAttempts = job.opts?.attempts ?? 3;
+    const fanOut = isFanOutJob(job.id);
 
     // Intermediate failure — let BullMQ retry
     if (attemptsMade < maxAttempts) {
       this.logger.warn({
-        message: `Workflow run attempt ${attemptsMade}/${maxAttempts} failed, will retry`,
+        message: `Workflow job attempt ${attemptsMade}/${maxAttempts} failed, will retry`,
         jobId: job.id,
         runId,
         tenantId,
         error: error.message,
         attemptsMade,
+        fanOut,
       });
       return;
     }
 
     // Final failure — route to DLQ
     this.logger.error({
-      message: 'Workflow run failed after all retries, routing to DLQ',
+      message: 'Workflow job failed after all retries, routing to DLQ',
       jobId: job.id,
       runId,
       tenantId,
       error: error.message,
       attemptsMade,
+      fanOut,
     });
 
     // Add to DLQ queue for admin inspection
@@ -160,7 +345,94 @@ export class WorkflowExecutionProcessor extends WorkerHost {
       });
     }
 
-    // Update entity status to FAILED — wrap in try/catch to prevent cascade failure
+    if (fanOut) {
+      // Fan-out job failure: increment failedJobs, record per-file error, check completion
+      await this.recordFanOutFailure(job, error);
+    } else {
+      // Single-job failure: mark entire run FAILED (backward-compat)
+      await this.markRunFailed(job, error, attemptsMade);
+    }
+  }
+
+  /**
+   * Record a failed fan-out job and check run completion.
+   */
+  private async recordFanOutFailure(
+    job: Job<WorkflowJobPayload>,
+    error: Error,
+  ): Promise<void> {
+    const { runId, tenantId } = job.data;
+    const fileIndex = extractFileIndex(job.id!);
+    const fileName = job.data.subjectFile?.originalName ?? `file-${fileIndex}`;
+
+    try {
+      const errorSummary = error.message.length > 200
+        ? error.message.substring(0, 200) + '...'
+        : error.message;
+
+      const perFileResult: PerFileResult = {
+        index: fileIndex,
+        fileName,
+        status: 'failed',
+        errorMessage: errorSummary,
+      };
+
+      // Atomic: append per-file result + increment failed_jobs + RETURNING
+      const counters = await this.txManager.run(tenantId, async (manager) => {
+        await manager.query(
+          `UPDATE workflow_runs
+           SET per_file_results = COALESCE(per_file_results, '[]'::jsonb) || $1::jsonb
+           WHERE id = $2`,
+          [JSON.stringify(perFileResult), runId],
+        );
+
+        const rows: CompletionCounters[] = await manager.query(
+          `UPDATE workflow_runs
+           SET failed_jobs = COALESCE(failed_jobs, 0) + 1
+           WHERE id = $1
+           RETURNING completed_jobs, failed_jobs, total_jobs`,
+          [runId],
+        );
+
+        return rows[0];
+      });
+
+      this.logger.log({
+        message: 'Fan-out job failure recorded',
+        jobId: job.id,
+        runId,
+        fileIndex,
+        fileName,
+        completedJobs: counters.completed_jobs,
+        failedJobs: counters.failed_jobs,
+        totalJobs: counters.total_jobs,
+      });
+
+      // Check if this is the last job → trigger finalization
+      if (counters.completed_jobs + counters.failed_jobs >= counters.total_jobs) {
+        await this.finalizeRun(runId, tenantId, counters);
+      }
+    } catch (updateError) {
+      this.logger.error({
+        message: 'Failed to record fan-out job failure',
+        jobId: job.id,
+        runId,
+        tenantId,
+        error: updateError instanceof Error ? updateError.message : String(updateError),
+      });
+    }
+  }
+
+  /**
+   * Mark a single-job run as FAILED (backward-compat with pre-fan-out behavior).
+   */
+  private async markRunFailed(
+    job: Job<WorkflowJobPayload>,
+    error: Error,
+    attemptsMade: number,
+  ): Promise<void> {
+    const { runId, tenantId } = job.data;
+
     try {
       const errorSummary = error.message.length > 200
         ? error.message.substring(0, 200) + '...'

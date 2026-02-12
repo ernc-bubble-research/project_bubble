@@ -1,6 +1,6 @@
 # Story 4.2: LLM Provider Interface & Prompt Assembly
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -91,83 +91,83 @@ so that **the execution engine can call any LLM provider without coupling to spe
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Add `rate_limit_rpm` to LlmProviderConfigEntity** (AC: 7)
-  - [ ] 1.1 Add column to entity (`type: 'int', nullable: true`)
-  - [ ] 1.2 Update `CreateLlmProviderConfigDto` and `UpdateLlmProviderConfigDto` with optional `rateLimitRpm` field
-  - [ ] 1.3 Update `LlmProviderConfigResponseDto` to include `rateLimitRpm`
-  - [ ] 1.4 Update `LlmProviderConfigService.create()` and `update()` to handle the new field
-  - [ ] 1.5 Update existing tests for the new field
+- [x] **Task 1: Add `rate_limit_rpm` to LlmProviderConfigEntity** (AC: 7)
+  - [x] 1.1 Add column to entity (`type: 'int', nullable: true`)
+  - [x] 1.2 Update `CreateLlmProviderConfigDto` and `UpdateLlmProviderConfigDto` with optional `rateLimitRpm` field
+  - [x] 1.3 Update `LlmProviderConfigResponseDto` to include `rateLimitRpm`
+  - [x] 1.4 Update `LlmProviderConfigService.create()` and `update()` to handle the new field
+  - [x] 1.5 Update existing tests for the new field
 
-- [ ] **Task 2: Create LLMProvider Interface** (AC: 1)
-  - [ ] 2.1 Create `apps/api-gateway/src/app/workflow-execution/llm/llm.provider.ts`
-  - [ ] 2.2 Define `LLMProvider` interface, `LLMGenerateOptions`, `LLMGenerateResult`
+- [x] **Task 2: Create LLMProvider Interface** (AC: 1)
+  - [x] 2.1 Create `apps/api-gateway/src/app/workflow-execution/llm/llm.provider.ts`
+  - [x] 2.2 Define `LLMProvider` interface, `LLMGenerateOptions`, `LLMGenerateResult`
   - [ ] ~~2.3 Export injection token~~ — REMOVED (party mode W3: `LlmProviderFactory` is a regular `@Injectable()`, no token needed)
 
-- [ ] **Task 3: Implement MockLlmProvider** (AC: 2)
-  - [ ] 3.1 Create `apps/api-gateway/src/app/workflow-execution/llm/mock-llm.provider.ts`
-  - [ ] 3.2 Deterministic response based on input hash (same prompt → same response)
-  - [ ] 3.3 Configurable simulated latency
-  - [ ] 3.4 Synthetic token usage calculation
-  - [ ] 3.5 Unit tests with determinism verification
+- [x] **Task 3: Implement MockLlmProvider** (AC: 2)
+  - [x] 3.1 Create `apps/api-gateway/src/app/workflow-execution/llm/mock-llm.provider.ts`
+  - [x] 3.2 Deterministic response based on input hash (same prompt → same response)
+  - [x] 3.3 Configurable simulated latency
+  - [x] 3.4 Synthetic token usage calculation
+  - [x] 3.5 Unit tests with determinism verification
 
-- [ ] **Task 4: Implement GoogleAIStudioLlmProvider** (AC: 3)
-  - [ ] 4.1 Create `apps/api-gateway/src/app/workflow-execution/llm/google-ai-studio-llm.provider.ts`
-  - [ ] 4.2 Use `@google/generative-ai` SDK (already installed for embeddings)
-  - [ ] 4.3 Accept credentials from factory (passed at construction, not from env)
-  - [ ] 4.4 Retry logic: 3 attempts, exponential backoff, 60s timeout
-  - [ ] 4.5 Extract token usage from API response (`usageMetadata`)
-  - [ ] 4.6 Unit tests with mocked SDK
-  - [ ] 4.7 Canary test file: `google-ai-studio-llm.provider.canary.spec.ts` — `describe.skip('GoogleAIStudio Canary [MANUAL]', ...)` with a real API call test. Enabled manually by removing `.skip` when validating SDK compatibility. See operations runbook for SOP.
-  - [ ] 4.8 Operations runbook section: canary test explanation (what it is, when to run, what to do if it fails) + SOP cadence (daily: N/A, weekly: N/A, monthly: review SDK changelog, before deployment: run canary if SDK updated, before SDK upgrades: run canary BEFORE and AFTER). Written for newcomers — explain what/why/how.
+- [x] **Task 4: Implement GoogleAIStudioLlmProvider** (AC: 3)
+  - [x] 4.1 Create `apps/api-gateway/src/app/workflow-execution/llm/google-ai-studio-llm.provider.ts`
+  - [x] 4.2 Use `@google/generative-ai` SDK (already installed for embeddings)
+  - [x] 4.3 Accept credentials from factory (passed at construction, not from env)
+  - [x] 4.4 Retry logic: 3 attempts, exponential backoff, 60s timeout
+  - [x] 4.5 Extract token usage from API response (`usageMetadata`)
+  - [x] 4.6 Unit tests with mocked SDK
+  - [x] 4.7 Canary test file: `google-ai-studio-llm.provider.canary.spec.ts` — `describe.skip('GoogleAIStudio Canary [MANUAL]', ...)` with a real API call test. Enabled manually by removing `.skip` when validating SDK compatibility. See operations runbook for SOP.
+  - [x] 4.8 Operations runbook section: canary test explanation (what it is, when to run, what to do if it fails) + SOP cadence (daily: N/A, weekly: N/A, monthly: review SDK changelog, before deployment: run canary if SDK updated, before SDK upgrades: run canary BEFORE and AFTER). Written for newcomers — explain what/why/how.
 
-- [ ] **Task 5: Implement LlmProviderFactory** (AC: 4)
-  - [ ] 5.1 Create `apps/api-gateway/src/app/workflow-execution/llm/llm-provider.factory.ts`
-  - [ ] 5.2 `getProvider(modelUuid: string): Promise<{ provider: LLMProvider; model: LlmModelEntity }>`
-  - [ ] 5.3 Look up `LlmModelEntity` by UUID primary key (`id`), validate `isActive`
-  - [ ] 5.4 Look up `LlmProviderConfigEntity` by `providerKey`, validate `isActive`
-  - [ ] 5.5 Get decrypted credentials via `LlmProviderConfigService.getDecryptedCredentials()`
-  - [ ] 5.6 Instantiate correct provider implementation based on `providerKey`
-  - [ ] 5.7 **Provider instance caching**: `Map<providerKey, { provider: LLMProvider; cachedAt: Date }>`. On cache hit, fetch `LlmProviderConfigEntity.updatedAt`. If `updatedAt > cachedAt`, rebuild provider instance. If not, return cached. No TTL, no events, no restarts.
-  - [ ] 5.8 Unit tests: model not found, model inactive, provider inactive, credentials missing, happy path, cache hit, cache invalidation (config updated after cache)
+- [x] **Task 5: Implement LlmProviderFactory** (AC: 4)
+  - [x] 5.1 Create `apps/api-gateway/src/app/workflow-execution/llm/llm-provider.factory.ts`
+  - [x] 5.2 `getProvider(modelUuid: string): Promise<{ provider: LLMProvider; model: LlmModelEntity }>`
+  - [x] 5.3 Look up `LlmModelEntity` by UUID primary key (`id`), validate `isActive`
+  - [x] 5.4 Look up `LlmProviderConfigEntity` by `providerKey`, validate `isActive`
+  - [x] 5.5 Get decrypted credentials via `LlmProviderConfigService.getDecryptedCredentials()`
+  - [x] 5.6 Instantiate correct provider implementation based on `providerKey`
+  - [x] 5.7 **Provider instance caching**: `Map<providerKey, { provider: LLMProvider; cachedAt: Date }>`. On cache hit, fetch `LlmProviderConfigEntity.updatedAt`. If `updatedAt > cachedAt`, rebuild provider instance. If not, return cached. No TTL, no events, no restarts.
+  - [x] 5.8 Unit tests: model not found, model inactive, provider inactive, credentials missing, happy path, cache hit, cache invalidation (config updated after cache)
 
-- [ ] **Task 6: Implement PromptAssemblyService** (AC: 5)
-  - [ ] 6.1 Create `apps/api-gateway/src/app/workflow-execution/prompt-assembly.service.ts` — inject `TransactionManager` (for tenant-scoped AssetEntity lookups) + `TextExtractorService` (for PDF/DOCX extraction)
-  - [ ] 6.2 `assemble(payload: WorkflowJobPayload): Promise<{ prompt: string; warnings: string[]; assembledPromptLength: number }>`
-  - [ ] 6.3 Resolve file-type context inputs: `assetId` → `AssetEntity.storagePath` → `TextExtractorService.extract()` for PDF/DOCX, `fs.readFile()` for text files (TXT, MD)
-  - [ ] 6.4 Resolve text-type context inputs: use `content` directly
-  - [ ] 6.5 Resolve subject file: read from `subjectFile.storagePath` (same extraction logic as 6.3)
-  - [ ] 6.6 Variable substitution using regex `/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g` in prompt template (`{input_name}`, `{subject_name}`, `{knowledge_context}`)
-  - [ ] 6.7 Return warnings for empty/missing inputs
-  - [ ] 6.8 Log `assembledPromptLength` (character count) at INFO level for observability
-  - [ ] 6.9 Unit tests: all input types (text, PDF, DOCX, TXT), missing inputs, variable substitution regex, empty knowledge, prompt length logging
+- [x] **Task 6: Implement PromptAssemblyService** (AC: 5)
+  - [x] 6.1 Create `apps/api-gateway/src/app/workflow-execution/prompt-assembly.service.ts` — inject `TransactionManager` (for tenant-scoped AssetEntity lookups) + `TextExtractorService` (for PDF/DOCX extraction)
+  - [x] 6.2 `assemble(payload: WorkflowJobPayload): Promise<{ prompt: string; warnings: string[]; assembledPromptLength: number }>`
+  - [x] 6.3 Resolve file-type context inputs: `assetId` → `AssetEntity.storagePath` → `TextExtractorService.extract()` for PDF/DOCX, `fs.readFile()` for text files (TXT, MD)
+  - [x] 6.4 Resolve text-type context inputs: use `content` directly
+  - [x] 6.5 Resolve subject file: read from `subjectFile.storagePath` (same extraction logic as 6.3)
+  - [x] 6.6 Variable substitution using regex `/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g` in prompt template (`{input_name}`, `{subject_name}`, `{knowledge_context}`)
+  - [x] 6.7 Return warnings for empty/missing inputs
+  - [x] 6.8 Log `assembledPromptLength` (character count) at INFO level for observability
+  - [x] 6.9 Unit tests: all input types (text, PDF, DOCX, TXT), missing inputs, variable substitution regex, empty knowledge, prompt length logging
 
-- [ ] **Task 7: Integrate into WorkflowExecutionProcessor** (AC: 6, 8)
-  - [ ] 7.1 Inject `PromptAssemblyService` and `LlmProviderFactory` into processor constructor
-  - [ ] 7.2 Replace placeholder (lines 85-92) with: assemble prompt → resolve provider → generate → store results
-  - [ ] 7.3 Store `assembledPrompt`, `rawLlmResponse`, `tokenUsage`, `modelId` on entity
-  - [ ] 7.4 Let LLM errors propagate for BullMQ retry logic
-  - [ ] 7.5 **Defense-in-depth backend safety net**: After prompt assembly, check `assembledPromptLength` against `model.contextWindow`. If prompt exceeds context window, throw a descriptive error (should theoretically never fire once Story 4-4's frontend pre-flight UI lands — this is invisible insurance). Note: this is NOT the primary gate — Story 4-4's UI shows per-file token consumption and lets users deselect files before submission.
-  - [ ] 7.6 Update existing processor unit tests
-  - [ ] 7.7 Add new tests for the LLM integration path (including safety net test)
+- [x] **Task 7: Integrate into WorkflowExecutionProcessor** (AC: 6, 8)
+  - [x] 7.1 Inject `PromptAssemblyService` and `LlmProviderFactory` into processor constructor
+  - [x] 7.2 Replace placeholder (lines 85-92) with: assemble prompt → resolve provider → generate → store results
+  - [x] 7.3 Store `assembledPrompt`, `rawLlmResponse`, `tokenUsage`, `modelId` on entity
+  - [x] 7.4 Let LLM errors propagate for BullMQ retry logic
+  - [x] 7.5 **Defense-in-depth backend safety net**: After prompt assembly, check `assembledPromptLength` against `model.contextWindow`. If prompt exceeds context window, throw a descriptive error (should theoretically never fire once Story 4-4's frontend pre-flight UI lands — this is invisible insurance). Note: this is NOT the primary gate — Story 4-4's UI shows per-file token consumption and lets users deselect files before submission.
+  - [x] 7.6 Update existing processor unit tests
+  - [x] 7.7 Add new tests for the LLM integration path (including safety net test)
 
-- [ ] **Task 8: Update WorkflowExecutionModule** (AC: 9)
-  - [ ] 8.1 Add `SettingsModule` to imports (for `LlmProviderConfigService`)
-  - [ ] 8.2 Add `TypeOrmModule.forFeature([LlmModelEntity, AssetEntity])` to imports
-  - [ ] 8.3 Register `LlmProviderFactory`, `PromptAssemblyService` as providers
-  - [ ] 8.4 Update module wiring tests
+- [x] **Task 8: Update WorkflowExecutionModule** (AC: 9)
+  - [x] 8.1 Add `SettingsModule` to imports (for `LlmProviderConfigService`)
+  - [x] 8.2 Add `TypeOrmModule.forFeature([LlmModelEntity, AssetEntity])` to imports
+  - [x] 8.3 Register `LlmProviderFactory`, `PromptAssemblyService` as providers
+  - [x] 8.4 Update module wiring tests
 
-- [ ] **Task 9: Run Full Test Suite** (AC: 10)
-  - [ ] 9.1 Run all unit tests (`npx nx run-many --target=test --all`)
-  - [ ] 9.2 Run lint (`npx nx run-many --target=lint --all`)
-  - [ ] 9.3 Run E2E suite (`npx nx e2e web-e2e`)
-  - [ ] 9.4 Fix any regressions
+- [x] **Task 9: Run Full Test Suite** (AC: 10)
+  - [x] 9.1 Run all unit tests (`npx nx run-many --target=test --all`) — 1043 passing (549 api-gateway + 494 web)
+  - [x] 9.2 Run lint (`npx nx run-many --target=lint --all`) — 0 errors
+  - [x] 9.3 Run E2E suite (`npx nx e2e web-e2e`) — 42/46 pass, 4 pre-existing flaky failures unrelated to Story 4-2
+  - [x] 9.4 Fix any regressions — fixed canary spec lint error (removed non-existent `jest/no-disabled-tests` rule)
 
-- [ ] **Task 10: Update Wizard Execution Step — UUID Model Binding** (AC: 4)
-  - [ ] 10.1 In wizard execution step component, bind model dropdown `value` to `LlmModelEntity.id` (UUID) instead of `modelId` string
-  - [ ] 10.2 Filter model dropdown to show only `isActive === true` models
-  - [ ] 10.3 Store selected UUID in `WorkflowDefinition.execution.model`
-  - [ ] 10.4 Update wizard execution step unit tests for UUID binding
-  - [ ] 10.5 Verify existing E2E tests still pass with UUID model selection
+- [x] **Task 10: Update Wizard Execution Step — UUID Model Binding** (AC: 4)
+  - [x] 10.1 In wizard execution step component, bind model dropdown `value` to `LlmModelEntity.id` (UUID) instead of `modelId` string
+  - [x] 10.2 Filter model dropdown to show only `isActive === true` models (already done — uses `getActiveModels()` endpoint)
+  - [x] 10.3 Store selected UUID in `WorkflowDefinition.execution.model`
+  - [x] 10.4 Update wizard execution step unit tests for UUID binding — 12 new tests (4.2-UNIT-053 through 4.2-UNIT-064)
+  - [x] 10.5 Verify existing E2E tests still pass with UUID model selection — 42/46 pass (no regressions)
 
 ## Dev Notes
 
@@ -377,3 +377,33 @@ During this review, Winston used "acceptable for MVP" and recommended "restart t
 ### Completion Notes List
 
 ### File List
+
+**New Files (10):**
+- `apps/api-gateway/src/app/workflow-execution/llm/llm.provider.ts` — LLMProvider interface + types
+- `apps/api-gateway/src/app/workflow-execution/llm/mock-llm.provider.ts` — Mock LLM provider
+- `apps/api-gateway/src/app/workflow-execution/llm/mock-llm.provider.spec.ts` — 8 tests
+- `apps/api-gateway/src/app/workflow-execution/llm/google-ai-studio-llm.provider.ts` — Google AI Studio provider
+- `apps/api-gateway/src/app/workflow-execution/llm/google-ai-studio-llm.provider.spec.ts` — 7 tests
+- `apps/api-gateway/src/app/workflow-execution/llm/google-ai-studio-llm.provider.canary.spec.ts` — Manual canary tests (skipped)
+- `apps/api-gateway/src/app/workflow-execution/llm/ops-runbook.md` — Operations runbook
+- `apps/api-gateway/src/app/workflow-execution/llm/llm-provider.factory.ts` — Dynamic provider resolution + cache
+- `apps/api-gateway/src/app/workflow-execution/llm/llm-provider.factory.spec.ts` — 13 tests
+- `apps/api-gateway/src/app/workflow-execution/prompt-assembly.service.ts` — Prompt template assembly
+- `apps/api-gateway/src/app/workflow-execution/prompt-assembly.service.spec.ts` — 14 tests
+- `apps/web/src/app/admin/workflows/wizard/steps/wizard-execution-step.component.spec.ts` — 12 tests
+
+**Modified Files (12):**
+- `libs/db-layer/src/lib/entities/llm-provider-config.entity.ts` — Added `rateLimitRpm` column
+- `libs/shared/src/lib/dtos/settings/create-llm-provider-config.dto.ts` — Added `rateLimitRpm` field
+- `libs/shared/src/lib/dtos/settings/update-llm-provider-config.dto.ts` — Added `rateLimitRpm` field + `@ValidateIf` for null
+- `libs/shared/src/lib/dtos/settings/llm-provider-config-response.dto.ts` — Added `rateLimitRpm` field
+- `apps/api-gateway/src/app/settings/llm-provider-config.service.ts` — Handle `rateLimitRpm` in create/update/toResponse
+- `apps/api-gateway/src/app/settings/llm-provider-config.service.spec.ts` — 5 new tests for rateLimitRpm
+- `apps/api-gateway/src/app/settings/llm-provider-config.controller.spec.ts` — Updated mock data
+- `apps/api-gateway/src/app/workflow-execution/workflow-execution.processor.ts` — Full LLM integration pipeline
+- `apps/api-gateway/src/app/workflow-execution/workflow-execution.processor.spec.ts` — 6 new LLM integration tests
+- `apps/api-gateway/src/app/workflow-execution/workflow-execution.module.ts` — Added imports + providers
+- `apps/api-gateway/src/app/ingestion/ingestion.module.ts` — Exported TextExtractorService
+- `apps/api-gateway/src/app/module-wiring.spec.ts` — Verify LlmProviderFactory + PromptAssemblyService
+- `apps/web/src/app/admin/workflows/wizard/steps/wizard-execution-step.component.ts` — UUID model binding
+- `apps/web/src/app/admin/workflows/wizard/steps/wizard-execution-step.component.html` — Bind option value to model.id

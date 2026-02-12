@@ -60,7 +60,7 @@ export class WizardExecutionStepComponent implements OnInit {
           this.modelsLoadError.set(null);
           // Auto-select first model if none set
           if (!this.form.get('model')?.value && models.length > 0) {
-            this.form.patchValue({ model: models[0].modelId });
+            this.form.patchValue({ model: models[0].id });
           }
         },
         // M1: Surface model load error to user
