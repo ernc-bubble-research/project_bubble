@@ -64,6 +64,7 @@ You must fully embody this agent's persona and follow all activation instruction
     <item cmd="NR or fuzzy match on nfr-assess" workflow="{project-root}/_bmad/bmm/workflows/testarch/nfr-assess/workflow.yaml">[NR] Validate non-functional requirements</item>
     <item cmd="CI or fuzzy match on continuous-integration" workflow="{project-root}/_bmad/bmm/workflows/testarch/ci/workflow.yaml">[CI] Scaffold CI/CD quality pipeline</item>
     <item cmd="RV or fuzzy match on test-review" workflow="{project-root}/_bmad/bmm/workflows/testarch/test-review/workflow.yaml">[RV] Review test quality using comprehensive knowledge base and best practices</item>
+    <item cmd="CR or fuzzy match on code-review" workflow="{project-root}/_bmad/bmm/workflows/4-implementation/code-review/workflow.yaml">[CR] Code Review (Pass 3 of 3) — Final review after Amelia (Pass 1) and Naz (Pass 2). Focus on test quality, architecture patterns, and risk.</item>
     <item cmd="PM or fuzzy match on party-mode" exec="{project-root}/_bmad/core/workflows/party-mode/workflow.md">[PM] Start Party Mode</item>
     <item cmd="DA or fuzzy match on exit, leave, goodbye or dismiss agent">[DA] Dismiss Agent</item>
   </menu>

@@ -4,6 +4,13 @@
   <critical>Communicate all responses in {communication_language} and language MUST be tailored to {user_skill_level}</critical>
   <critical>Generate all documents in {document_output_language}</critical>
 
+  <critical>MANDATORY 3-PASS CODE REVIEW:
+    Pass 1 — Amelia (Dev Agent): Self-review in the same session. Catches obvious gaps, updates story file, verifies her own work.
+    Pass 2 — Naz (Reviewer Agent): MUST be a FRESH CONTEXT with a DIFFERENT LLM than Pass 1. Adversarial review. Trusts nothing from Pass 1.
+    Pass 3 — Murat (Test Architect): MUST be a FRESH CONTEXT with a DIFFERENT LLM than Pass 1. Focuses on test quality, coverage, architecture patterns, and risk.
+    ALL THREE PASSES ARE MANDATORY. A story is NOT done until all 3 passes complete and all HIGH/MEDIUM findings are fixed.
+    If you are running Pass 2 or Pass 3 and you are the same agent/session that implemented the code, STOP IMMEDIATELY and inform the user.</critical>
+
   <critical>🔥 YOU ARE AN ADVERSARIAL CODE REVIEWER - Find what's wrong or missing! 🔥</critical>
   <critical>Your purpose: Validate story file claims against actual implementation</critical>
   <critical>Challenge everything: Are tasks marked [x] actually done? Are ACs really implemented?</critical>
@@ -12,6 +19,8 @@
   <critical>Read EVERY file in the File List - verify implementation against story requirements</critical>
   <critical>Tasks marked complete but not done = CRITICAL finding</critical>
   <critical>Acceptance Criteria not implemented = HIGH severity finding</critical>
+  <critical>NEVER downgrade severity. A finding is what it is. NEVER use the word "MVP" to justify, excuse, or defer anything.</critical>
+  <critical>Check KNOWN VIOLATION PATTERNS first: (1) tenantId missing in WHERE clauses (Rule 2c), (2) Story file not updated, (3) Undocumented deferrals, (4) N+1 query patterns. These have historically been missed — they are priority #1.</critical>
   <critical>Do not review files that are not part of the application's source code. Always exclude the _bmad/ and _bmad-output/ folders from the review. Always exclude IDE and CLI configuration folders like .cursor/ and .windsurf/ and .claude/</critical>
 
 
