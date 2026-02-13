@@ -216,7 +216,8 @@ describe('ValidatedInsightService [2.4-UNIT-001] [P1]', () => {
   describe('softDelete()', () => {
     it('[2.4-UNIT-001m] should set deleted_at on the insight', async () => {
       const insightId = '11111111-1111-1111-1111-111111111111';
-      mockManager.query.mockResolvedValue([{ id: insightId }]);
+      // UPDATE RETURNING via EntityManager returns [[rows], affectedCount]
+      mockManager.query.mockResolvedValue([[{ id: insightId }], 1]);
 
       await service.softDelete(insightId, tenantId);
 
@@ -228,7 +229,8 @@ describe('ValidatedInsightService [2.4-UNIT-001] [P1]', () => {
     });
 
     it('[2.4-UNIT-001n] should use TransactionManager with correct tenantId', async () => {
-      mockManager.query.mockResolvedValue([{ id: 'some-id' }]);
+      // UPDATE RETURNING via EntityManager returns [[rows], affectedCount]
+      mockManager.query.mockResolvedValue([[{ id: 'some-id' }], 1]);
 
       await service.softDelete('some-id', tenantId);
 
@@ -239,7 +241,8 @@ describe('ValidatedInsightService [2.4-UNIT-001] [P1]', () => {
     });
 
     it('[2.4-UNIT-001o] should throw NotFoundException when insight not found', async () => {
-      mockManager.query.mockResolvedValue([]);
+      // UPDATE RETURNING with no matches returns [[], 0]
+      mockManager.query.mockResolvedValue([[], 0]);
 
       await expect(
         service.softDelete('nonexistent-id', tenantId),
@@ -247,7 +250,8 @@ describe('ValidatedInsightService [2.4-UNIT-001] [P1]', () => {
     });
 
     it('[2.4-UNIT-001p] should throw NotFoundException when insight already deleted', async () => {
-      mockManager.query.mockResolvedValue([]);
+      // UPDATE RETURNING with no matches returns [[], 0]
+      mockManager.query.mockResolvedValue([[], 0]);
 
       await expect(
         service.softDelete('already-deleted-id', tenantId),

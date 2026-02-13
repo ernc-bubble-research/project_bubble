@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
-import { WorkflowExecutionProcessor } from './workflow-execution.processor';
+import { WorkflowExecutionProcessor, parseUpdateReturningRow } from './workflow-execution.processor';
 import {
   TransactionManager,
   WorkflowRunEntity,
@@ -437,7 +437,7 @@ describe('WorkflowExecutionProcessor', () => {
 
     it('[4.3-UNIT-016] fan-out job writes PerFileResult via JSONB append', async () => {
       mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
-      mockManager.query.mockResolvedValue([{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }], 1]);
 
       await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
 
@@ -455,7 +455,7 @@ describe('WorkflowExecutionProcessor', () => {
 
     it('[4.3-UNIT-017] fan-out job atomically increments completed_jobs with RETURNING', async () => {
       mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
-      mockManager.query.mockResolvedValue([{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }], 1]);
 
       await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
 
@@ -467,7 +467,7 @@ describe('WorkflowExecutionProcessor', () => {
 
     it('[4.3-UNIT-018] fan-out job does NOT write to entity columns (assembledPrompt, rawLlmResponse)', async () => {
       mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
-      mockManager.query.mockResolvedValue([{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }], 1]);
 
       await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
 
@@ -495,7 +495,7 @@ describe('WorkflowExecutionProcessor', () => {
 
     it('[4.3-UNIT-020] does not re-set RUNNING for fan-out job when run is already RUNNING', async () => {
       mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.RUNNING, startedAt: new Date() }));
-      mockManager.query.mockResolvedValue([{ completed_jobs: 2, failed_jobs: 0, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 2, failed_jobs: 0, total_jobs: 3 }], 1]);
 
       await processor.process(makeJob({ id: `${runId}:file:1`, data: fanOutPayload }));
 
@@ -536,7 +536,7 @@ describe('WorkflowExecutionProcessor', () => {
           ] as PerFileResult[],
         }));
       // Counter returns: this is the 3rd completed out of 3 total
-      mockManager.query.mockResolvedValue([{ completed_jobs: 3, failed_jobs: 0, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 3, failed_jobs: 0, total_jobs: 3 }], 1]);
 
       await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
 
@@ -551,7 +551,7 @@ describe('WorkflowExecutionProcessor', () => {
     it('[4.3-UNIT-023] does NOT finalize when completed + failed < total', async () => {
       mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
       // Only 1 of 3 done
-      mockManager.query.mockResolvedValue([{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }], 1]);
 
       await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
 
@@ -578,7 +578,7 @@ describe('WorkflowExecutionProcessor', () => {
           ] as PerFileResult[],
         }));
       // 2 completed + 1 failed = 3 total
-      mockManager.query.mockResolvedValue([{ completed_jobs: 2, failed_jobs: 1, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 2, failed_jobs: 1, total_jobs: 3 }], 1]);
 
       await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
 
@@ -599,7 +599,7 @@ describe('WorkflowExecutionProcessor', () => {
             { index: 1, fileName: 'b.pdf', status: 'failed', errorMessage: 'err' },
           ] as PerFileResult[],
         }));
-      mockManager.query.mockResolvedValue([{ completed_jobs: 0, failed_jobs: 3, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 0, failed_jobs: 3, total_jobs: 3 }], 1]);
 
       await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
 
@@ -620,7 +620,7 @@ describe('WorkflowExecutionProcessor', () => {
             { index: 1, fileName: 'b.pdf', status: 'completed', tokenUsage: { inputTokens: 150, outputTokens: 250, totalTokens: 400 } },
           ] as PerFileResult[],
         }));
-      mockManager.query.mockResolvedValue([{ completed_jobs: 3, failed_jobs: 0, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 3, failed_jobs: 0, total_jobs: 3 }], 1]);
 
       await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
 
@@ -675,7 +675,7 @@ describe('WorkflowExecutionProcessor', () => {
       });
 
       // Counter: this is the last job
-      mockManager.query.mockResolvedValue([{ completed_jobs: 2, failed_jobs: 1, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 2, failed_jobs: 1, total_jobs: 3 }], 1]);
       // Finalization findOne
       mockManager.findOne.mockResolvedValue(makeRun({
         status: WorkflowRunStatus.RUNNING,
@@ -717,7 +717,7 @@ describe('WorkflowExecutionProcessor', () => {
       });
 
       // Not last job
-      mockManager.query.mockResolvedValue([{ completed_jobs: 0, failed_jobs: 1, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 0, failed_jobs: 1, total_jobs: 3 }], 1]);
 
       await processor.onFailed(fanOutJob, error);
 
@@ -736,7 +736,7 @@ describe('WorkflowExecutionProcessor', () => {
         attemptsMade: 3,
       });
 
-      mockManager.query.mockResolvedValue([{ completed_jobs: 0, failed_jobs: 1, total_jobs: 3 }]);
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 0, failed_jobs: 1, total_jobs: 3 }], 1]);
 
       await processor.onFailed(fanOutJob, longError);
 
@@ -758,6 +758,34 @@ describe('WorkflowExecutionProcessor', () => {
 
       expect(dlqQueue.add).not.toHaveBeenCalled();
       expect(mockManager.query).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── parseUpdateReturningRow direct unit tests ───────────────────
+  describe('parseUpdateReturningRow', () => {
+    it('[4-FIX-A1-UNIT-032] returns row from valid [[row], affectedCount] shape', () => {
+      const result = [[{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }], 1];
+      const row = parseUpdateReturningRow<{ completed_jobs: number; failed_jobs: number; total_jobs: number }>(
+        result,
+        ['completed_jobs', 'failed_jobs', 'total_jobs'],
+      );
+      expect(row.completed_jobs).toBe(1);
+      expect(row.failed_jobs).toBe(0);
+      expect(row.total_jobs).toBe(3);
+    });
+
+    it('[4-FIX-A1-UNIT-033] throws with field name when expected field is undefined', () => {
+      const result = [[{ completed_jobs: 1 }], 1];
+      expect(() =>
+        parseUpdateReturningRow(result, ['completed_jobs', 'missing_field']),
+      ).toThrow(/missing_field/);
+    });
+
+    it('[4-FIX-A1-UNIT-034] throws with clear message when zero rows match', () => {
+      const result = [[], 0];
+      expect(() =>
+        parseUpdateReturningRow(result, ['completed_jobs']),
+      ).toThrow(/zero rows/i);
     });
   });
 });

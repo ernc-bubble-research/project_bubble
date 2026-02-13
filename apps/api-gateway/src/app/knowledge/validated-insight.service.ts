@@ -79,6 +79,9 @@ export class ValidatedInsightService {
       },
     );
 
+    // INSERT RETURNING via EntityManager.query() returns flat [row] (NOT [[rows], affectedCount]).
+    // This is a TypeORM/pg driver asymmetry: only UPDATE RETURNING is nested.
+    // Verified empirically in returning-wiring.spec.ts (WIRE-003, WIRE-008).
     const row = rows[0];
 
     this.logger.log({
@@ -170,7 +173,8 @@ export class ValidatedInsightService {
   }
 
   async softDelete(insightId: string, tenantId: string): Promise<void> {
-    const rows: Array<Record<string, unknown>> = await this.txManager.run(
+    // UPDATE RETURNING via EntityManager.query() returns [[rows], affectedCount]
+    const result = await this.txManager.run(
       tenantId,
       async (manager) => {
         return manager.query(
@@ -182,6 +186,8 @@ export class ValidatedInsightService {
         );
       },
     );
+
+    const [rows] = result as [Array<Record<string, unknown>>, number];
 
     if (rows.length === 0) {
       throw new NotFoundException(

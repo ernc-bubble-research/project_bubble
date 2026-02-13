@@ -27,6 +27,59 @@ interface CompletionCounters {
   total_jobs: number;
 }
 
+/**
+ * Parse the result of an UPDATE ... RETURNING query executed via EntityManager.query().
+ *
+ * TypeORM/pg driver returns `[[rows], affectedCount]` for UPDATE RETURNING queries,
+ * NOT `[row]`. This helper destructures the nested result and validates the row shape
+ * at runtime. If the pg driver changes behavior in a future version, the assertion
+ * produces a clear error instead of silent `undefined` propagation.
+ *
+ * Note: INSERT RETURNING returns flat `[row]` — this helper is ONLY for UPDATE RETURNING.
+ *
+ * **Throws** if zero rows match (i.e., the WHERE clause matched nothing). Callers must
+ * ensure the target row exists, or catch the error to handle the no-match case.
+ *
+ * @see returning-wiring.spec.ts for empirical verification of these shapes
+ */
+export function parseUpdateReturningRow<T>(
+  result: unknown,
+  expectedFields: (keyof T)[],
+): T {
+  if (!Array.isArray(result) || result.length < 2) {
+    throw new Error(
+      `parseUpdateReturningRow: expected [[rows], affectedCount], got ${JSON.stringify(result)}`,
+    );
+  }
+
+  const [rows] = result;
+  if (!Array.isArray(rows)) {
+    throw new Error(
+      `parseUpdateReturningRow: expected rows to be an array, got ${JSON.stringify(rows)}`,
+    );
+  }
+  if (rows.length === 0) {
+    throw new Error(
+      `parseUpdateReturningRow: UPDATE matched zero rows — the WHERE clause found no matching record. ` +
+      `This typically means the row was deleted or does not exist.`,
+    );
+  }
+
+  const row = rows[0] as T;
+
+  // Runtime assertion: verify expected fields exist and are not undefined
+  for (const field of expectedFields) {
+    if ((row as Record<string, unknown>)[field as string] === undefined) {
+      throw new Error(
+        `parseUpdateReturningRow: expected field '${String(field)}' to be defined, got undefined. ` +
+        `Full row: ${JSON.stringify(row)}`,
+      );
+    }
+  }
+
+  return row;
+}
+
 @Processor('workflow-execution', {
   concurrency: parseInt(process.env['WORKER_CONCURRENCY'] || '100'),
   lockDuration: 300000,
@@ -205,7 +258,8 @@ export class WorkflowExecutionProcessor extends WorkerHost {
       );
 
       // Atomic increment + read with RETURNING
-      const rows: CompletionCounters[] = await manager.query(
+      // UPDATE RETURNING via EntityManager.query() returns [[rows], affectedCount]
+      const result = await manager.query(
         `UPDATE workflow_runs
          SET completed_jobs = COALESCE(completed_jobs, 0) + 1,
              model_id = $2
@@ -214,7 +268,11 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         [runId, model.id],
       );
 
-      return rows[0];
+      return parseUpdateReturningRow<CompletionCounters>(result, [
+        'completed_jobs',
+        'failed_jobs',
+        'total_jobs',
+      ]);
     });
 
     this.logger.log({
@@ -229,6 +287,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     });
 
     // Check if this is the last job → trigger finalization
+    // >= (not ==) handles edge case where duplicate BullMQ delivery increments beyond total
     if (counters.completed_jobs + counters.failed_jobs >= counters.total_jobs) {
       await this.finalizeRun(runId, tenantId, counters);
     }
@@ -386,7 +445,8 @@ export class WorkflowExecutionProcessor extends WorkerHost {
           [JSON.stringify(perFileResult), runId],
         );
 
-        const rows: CompletionCounters[] = await manager.query(
+        // UPDATE RETURNING via EntityManager.query() returns [[rows], affectedCount]
+        const result = await manager.query(
           `UPDATE workflow_runs
            SET failed_jobs = COALESCE(failed_jobs, 0) + 1
            WHERE id = $1
@@ -394,7 +454,11 @@ export class WorkflowExecutionProcessor extends WorkerHost {
           [runId],
         );
 
-        return rows[0];
+        return parseUpdateReturningRow<CompletionCounters>(result, [
+          'completed_jobs',
+          'failed_jobs',
+          'total_jobs',
+        ]);
       });
 
       this.logger.log({
@@ -409,6 +473,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
       });
 
       // Check if this is the last job → trigger finalization
+      // >= (not ==) handles edge case where duplicate BullMQ delivery increments beyond total
       if (counters.completed_jobs + counters.failed_jobs >= counters.total_jobs) {
         await this.finalizeRun(runId, tenantId, counters);
       }
