@@ -57,6 +57,8 @@ export class WorkflowSettingsModalComponent {
   readonly isTemplate = computed(() => this.target().type === 'template');
   readonly targetName = computed(() => this.target().data.name);
   readonly canArchive = computed(() => this.target().data.status !== 'archived');
+  readonly canPublish = computed(() => this.isTemplate() && this.target().data.status === 'draft');
+  readonly canUnpublish = computed(() => this.isTemplate() && this.target().data.status === 'published');
 
   readonly form = this.fb.nonNullable.group({
     visibility: ['public' as 'public' | 'private', [Validators.required]],
@@ -134,6 +136,30 @@ export class WorkflowSettingsModalComponent {
         `"${target.data.name}" settings updated`,
       );
     }
+  }
+
+  onPublish(): void {
+    if (this.submitting()) return;
+
+    const target = this.target();
+    if (target.type !== 'template') return;
+
+    this.executeRequest(
+      this.templateService.update(target.data.id, { status: 'published' }),
+      `"${target.data.name}" published`,
+    );
+  }
+
+  onUnpublish(): void {
+    if (this.submitting()) return;
+
+    const target = this.target();
+    if (target.type !== 'template') return;
+
+    this.executeRequest(
+      this.templateService.update(target.data.id, { status: 'draft' }),
+      `"${target.data.name}" unpublished`,
+    );
   }
 
   onArchiveClick(): void {

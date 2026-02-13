@@ -8,7 +8,7 @@ import { WorkflowTemplatesService } from './workflow-templates.service';
 
 describe('WorkflowCatalogController [P1]', () => {
   let controller: WorkflowCatalogController;
-  let service: jest.Mocked<Pick<WorkflowTemplatesService, 'findPublished' | 'findOne'>>;
+  let service: jest.Mocked<Pick<WorkflowTemplatesService, 'findPublished' | 'findPublishedOne'>>;
 
   const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   const templateId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
@@ -31,7 +31,7 @@ describe('WorkflowCatalogController [P1]', () => {
   beforeEach(() => {
     service = {
       findPublished: jest.fn(),
-      findOne: jest.fn(),
+      findPublishedOne: jest.fn(),
     };
 
     controller = new WorkflowCatalogController(
@@ -73,9 +73,9 @@ describe('WorkflowCatalogController [P1]', () => {
   });
 
   describe('findOne', () => {
-    it('[4.1-UNIT-018] [P0] Given valid template ID, when GET /:id is called, then delegates to service.findOne with id and tenantId', async () => {
+    it('[4-FIX-A2-UNIT-007] [P0] Given valid template ID, when GET /:id is called, then delegates to service.findPublishedOne with id and tenantId', async () => {
       // Given
-      service.findOne.mockResolvedValue(mockResponse);
+      service.findPublishedOne.mockResolvedValue(mockResponse);
       const req = { user: { tenantId } };
 
       // When
@@ -83,13 +83,13 @@ describe('WorkflowCatalogController [P1]', () => {
 
       // Then
       expect(result).toEqual(mockResponse);
-      expect(service.findOne).toHaveBeenCalledWith(templateId, tenantId);
+      expect(service.findPublishedOne).toHaveBeenCalledWith(templateId, tenantId);
     });
 
-    it('[4.1-UNIT-019] [P1] Given service throws NotFoundException, when GET /:id is called, then exception propagates', async () => {
+    it('[4-FIX-A2-UNIT-008] [P1] Given service throws NotFoundException, when GET /:id is called, then exception propagates', async () => {
       // Given
       const { NotFoundException } = require('@nestjs/common');
-      service.findOne.mockRejectedValue(
+      service.findPublishedOne.mockRejectedValue(
         new NotFoundException('Template not found'),
       );
       const req = { user: { tenantId } };

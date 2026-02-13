@@ -78,6 +78,7 @@ import {
   Database,
   List,
   LayoutGrid,
+  Undo2,
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
@@ -153,6 +154,7 @@ export const appConfig: ApplicationConfig = {
         Database,
         List,
         LayoutGrid,
+        Undo2,
       }),
     },
   ],

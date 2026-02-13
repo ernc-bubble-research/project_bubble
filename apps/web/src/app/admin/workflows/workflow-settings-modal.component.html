@@ -129,6 +129,46 @@
         </div>
       }
 
+      <!-- Publish/Unpublish Section (templates only) -->
+      @if (canPublish()) {
+        <div class="form-group" data-testid="settings-publish-section">
+          <span class="form-label">
+            <lucide-icon name="send" [size]="14"></lucide-icon>
+            Publishing
+          </span>
+          <button
+            type="button"
+            class="btn btn-primary"
+            data-testid="settings-publish-btn"
+            [disabled]="submitting()"
+            (click)="onPublish()"
+          >
+            <lucide-icon name="send" [size]="14"></lucide-icon>
+            Publish
+          </button>
+          <span class="field-hint">Make this template available to tenants in the catalog</span>
+        </div>
+      }
+      @if (canUnpublish()) {
+        <div class="form-group" data-testid="settings-unpublish-section">
+          <span class="form-label">
+            <lucide-icon name="undo-2" [size]="14"></lucide-icon>
+            Publishing
+          </span>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-testid="settings-unpublish-btn"
+            [disabled]="submitting()"
+            (click)="onUnpublish()"
+          >
+            <lucide-icon name="undo-2" [size]="14"></lucide-icon>
+            Unpublish
+          </button>
+          <span class="field-hint">Remove from tenant catalog. Running workflows will complete normally.</span>
+        </div>
+      }
+
       <!-- Archive/Unarchive Section -->
       <div class="form-group archive-section">
         <span class="form-label">

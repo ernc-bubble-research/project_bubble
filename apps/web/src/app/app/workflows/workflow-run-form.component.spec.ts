@@ -224,4 +224,41 @@ describe('WorkflowRunFormComponent [P1]', () => {
     expect(component.mapSourceToMode('asset')).toBe('asset');
     expect(component.mapSourceToMode('upload')).toBe('asset');
   });
+
+  describe('getAcceptString', () => {
+    it('[4-FIX-A2-UNIT-017] [P0] Given extensions with leading dots, when getAcceptString called, then no double dots', () => {
+      const fixture = setup();
+      const component = fixture.componentInstance;
+
+      const input = {
+        name: 'doc', label: 'Doc', role: 'context' as const,
+        source: ['asset' as const], required: true,
+        accept: { extensions: ['.pdf', '.docx', '.txt'] },
+      };
+      expect(component.getAcceptString(input)).toBe('.pdf,.docx,.txt');
+    });
+
+    it('[4-FIX-A2-UNIT-018] [P1] Given extensions without leading dots, when getAcceptString called, then dots are added', () => {
+      const fixture = setup();
+      const component = fixture.componentInstance;
+
+      const input = {
+        name: 'doc', label: 'Doc', role: 'context' as const,
+        source: ['asset' as const], required: true,
+        accept: { extensions: ['pdf', 'docx'] },
+      };
+      expect(component.getAcceptString(input)).toBe('.pdf,.docx');
+    });
+
+    it('[4-FIX-A2-UNIT-019] [P1] Given no accept config, when getAcceptString called, then returns empty string', () => {
+      const fixture = setup();
+      const component = fixture.componentInstance;
+
+      const input = {
+        name: 'doc', label: 'Doc', role: 'context' as const,
+        source: ['asset' as const], required: true,
+      };
+      expect(component.getAcceptString(input)).toBe('');
+    });
+  });
 });

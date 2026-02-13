@@ -50,6 +50,12 @@ export class RlsSetupService implements OnModuleInit {
     await this.createWorkflowTemplateAccessPolicy();
     await this.createWorkflowChainAccessPolicy();
 
+    // Catalog RLS: tenant users can SELECT published templates and their versions.
+    // These are forward-looking for Story 4-RLS (non-superuser role).
+    // Currently bypassed by superuser — WHERE clauses are the active security layer.
+    await this.createCatalogReadPublishedPolicy();
+    await this.createCatalogReadPublishedVersionsPolicy();
+
     // Seed provider configs BEFORE models (idempotent).
     await this.seedProviderConfigs();
 
@@ -215,6 +221,81 @@ export class RlsSetupService implements OnModuleInit {
       );
     } catch (error) {
       this.logger.error('Failed to create workflow chain access policy:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Catalog RLS: allow tenant users to SELECT published + public templates,
+   * or published + restricted templates where their tenant is in allowed_tenants.
+   * This is a documented Rule 2c exception (Story 4-FIX-A2).
+   */
+  private async createCatalogReadPublishedPolicy(): Promise<void> {
+    try {
+      await this.dataSource.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_policies
+            WHERE tablename = 'workflow_templates' AND policyname = 'catalog_read_published'
+          ) THEN
+            CREATE POLICY catalog_read_published ON workflow_templates
+              FOR SELECT USING (
+                status = 'published'
+                AND deleted_at IS NULL
+                AND (
+                  visibility = 'public'
+                  OR current_setting('app.current_tenant', true)::uuid = ANY(allowed_tenants)
+                )
+              );
+          END IF;
+        END
+        $$;
+      `);
+      this.logger.log(
+        'Catalog SELECT policy created on "workflow_templates" — published + visibility check',
+      );
+    } catch (error) {
+      this.logger.error('Failed to create catalog read published policy:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Catalog RLS: allow tenant users to SELECT versions whose parent template
+   * is published. Uses a subquery to check the template's status.
+   */
+  private async createCatalogReadPublishedVersionsPolicy(): Promise<void> {
+    try {
+      await this.dataSource.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_policies
+            WHERE tablename = 'workflow_versions' AND policyname = 'catalog_read_published_versions'
+          ) THEN
+            CREATE POLICY catalog_read_published_versions ON workflow_versions
+              FOR SELECT USING (
+                EXISTS (
+                  SELECT 1 FROM workflow_templates wt
+                  WHERE wt.id = template_id
+                    AND wt.status = 'published'
+                    AND wt.deleted_at IS NULL
+                    AND (
+                      wt.visibility = 'public'
+                      OR current_setting('app.current_tenant', true)::uuid = ANY(wt.allowed_tenants)
+                    )
+                )
+              );
+          END IF;
+        END
+        $$;
+      `);
+      this.logger.log(
+        'Catalog SELECT policy created on "workflow_versions" — parent template must be published',
+      );
+    } catch (error) {
+      this.logger.error('Failed to create catalog read published versions policy:', error);
       throw error;
     }
   }

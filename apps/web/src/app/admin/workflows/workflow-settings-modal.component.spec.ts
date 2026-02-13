@@ -4,7 +4,7 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { LucideIconProvider, LUCIDE_ICONS } from 'lucide-angular';
 import {
   Settings, X, Eye, Globe, Shield, Users, Archive, RefreshCw,
-  AlertCircle, Loader2, Link,
+  AlertCircle, Loader2, Link, Send, Undo2,
 } from 'lucide-angular';
 import { WorkflowSettingsModalComponent, type WorkflowSettingsTarget } from './workflow-settings-modal.component';
 import type { WorkflowTemplateResponseDto, WorkflowChainResponseDto, Tenant } from '@project-bubble/shared';
@@ -43,7 +43,7 @@ describe('[P0] WorkflowSettingsModalComponent', () => {
         provideHttpClientTesting(),
         {
           provide: LUCIDE_ICONS, multi: true,
-          useValue: new LucideIconProvider({ Settings, X, Eye, Globe, Shield, Users, Archive, RefreshCw, AlertCircle, Loader2, Link }),
+          useValue: new LucideIconProvider({ Settings, X, Eye, Globe, Shield, Users, Archive, RefreshCw, AlertCircle, Loader2, Link, Send, Undo2 }),
         },
       ],
     }).compileComponents();

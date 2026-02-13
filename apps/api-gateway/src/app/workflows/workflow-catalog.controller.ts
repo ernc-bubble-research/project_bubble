@@ -64,6 +64,6 @@ export class WorkflowCatalogController {
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: { user: { tenantId: string } },
   ): Promise<WorkflowTemplateResponseDto> {
-    return this.workflowTemplatesService.findOne(id, req.user.tenantId);
+    return this.workflowTemplatesService.findPublishedOne(id, req.user.tenantId);
   }
 }

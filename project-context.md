@@ -106,8 +106,11 @@ _This file contains critical rules and patterns that AI agents must follow when 
     manager.findOne(WorkflowVersionEntity, { where: { id, tenantId } });
     ```
 *   **This applies to:** All entities with a `tenant_id` column. The only exemptions are entities in the "EXEMPTED SERVICES" table above (no `tenant_id` column).
-*   **DOCUMENTED EXCEPTION — `findPublishedOne`:** The `WorkflowTemplatesService.findPublishedOne(id, requestingTenantId)` method queries `{ where: { id, status: PUBLISHED } }` without `tenantId` in WHERE. This is intentional: workflow templates are created by bubble_admin and shared with tenants via catalog. The method enforces visibility in application code (`restricted` templates check `allowedTenants` array). RLS policy `catalog_read_published` provides database-level enforcement. Approved during Live Test Round 1 party mode triage (2026-02-12).
 *   **REASON:** This rule was added after the same defect was found in code review across Stories 2.4, 3.3, and 3.4. It is a recurring pattern that must stop.
+
+#### Documented Rule 2c Exceptions
+*   **`findPublishedOne` (Story 4-FIX-A2):** The `WorkflowTemplatesService.findPublishedOne(id, requestingTenantId)` method queries `{ where: { id, status: PUBLISHED } }` without `tenantId` in WHERE. This is intentional: workflow templates are created by bubble_admin and shared with tenants via catalog. The method enforces visibility in application code (`restricted` templates check `allowedTenants` array). RLS policy `catalog_read_published` provides database-level enforcement. Approved during Live Test Round 1 party mode triage (2026-02-12).
+*   **`findPublished` and `findAccessibleByTenant` (Story 4-FIX-A2):** These list methods also omit `tenantId` in WHERE for the same reason — catalog templates are admin-created. Visibility is enforced by SQL filter `(visibility = 'public' OR tenantId = ANY(allowed_tenants))`.
 
 ### 3. The "200ms" Rule (Async)
 *   **NEVER** run long logic (>200ms) in the `api-gateway`.

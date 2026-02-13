@@ -50,7 +50,7 @@ export class WorkflowTemplatesService {
 
   private static readonly VALID_TRANSITIONS: Record<WorkflowTemplateStatus, WorkflowTemplateStatus[]> = {
     [WorkflowTemplateStatus.DRAFT]: [WorkflowTemplateStatus.PUBLISHED],
-    [WorkflowTemplateStatus.PUBLISHED]: [WorkflowTemplateStatus.ARCHIVED],
+    [WorkflowTemplateStatus.PUBLISHED]: [WorkflowTemplateStatus.ARCHIVED, WorkflowTemplateStatus.DRAFT],
     [WorkflowTemplateStatus.ARCHIVED]: [WorkflowTemplateStatus.DRAFT],
   };
 
@@ -323,6 +323,50 @@ export class WorkflowTemplatesService {
     });
   }
 
+  /**
+   * Catalog endpoint: find a single published template by ID, with visibility check.
+   * This is a documented Rule 2c exception — no tenantId in WHERE because templates
+   * are created by bubble_admin and shared with tenants via catalog.
+   * Visibility is enforced in application code: PRIVATE templates check allowedTenants.
+   */
+  async findPublishedOne(
+    id: string,
+    requestingTenantId: string,
+  ): Promise<WorkflowTemplateResponseDto> {
+    return this.txManager.run(requestingTenantId, async (manager) => {
+      // Rule 2c exception: no tenantId in WHERE — admin-created templates are cross-tenant.
+      const template = await manager.findOne(WorkflowTemplateEntity, {
+        where: { id, status: WorkflowTemplateStatus.PUBLISHED },
+      });
+
+      if (!template || template.deletedAt) {
+        throw new NotFoundException(
+          `Published workflow template with id "${id}" not found`,
+        );
+      }
+
+      // Visibility check: PRIVATE templates restricted to allowedTenants
+      if (
+        template.visibility === WorkflowVisibility.PRIVATE &&
+        (!template.allowedTenants || !template.allowedTenants.includes(requestingTenantId))
+      ) {
+        throw new NotFoundException(
+          `Published workflow template with id "${id}" not found`,
+        );
+      }
+
+      // Load current version if exists
+      let currentVersion: WorkflowVersionEntity | null = null;
+      if (template.currentVersionId) {
+        currentVersion = await manager.findOne(WorkflowVersionEntity, {
+          where: { id: template.currentVersionId },
+        });
+      }
+
+      return this.toResponse(template, currentVersion ?? undefined);
+    });
+  }
+
   async findPublished(
     tenantId: string,
     query: Pick<ListWorkflowTemplatesQuery, 'limit' | 'offset'>,
@@ -337,6 +381,15 @@ export class WorkflowTemplatesService {
           status: WorkflowTemplateStatus.PUBLISHED,
         })
         .andWhere('template.deleted_at IS NULL')
+        // Visibility filter: public templates visible to all,
+        // private templates only visible if requesting tenant is in allowed_tenants.
+        .andWhere(
+          '(template.visibility = :publicVis OR :tenantId = ANY(template.allowed_tenants))',
+          {
+            publicVis: WorkflowVisibility.PUBLIC,
+            tenantId,
+          },
+        )
         .take(limit)
         .skip(offset)
         .orderBy('template.updated_at', 'DESC');
@@ -356,6 +409,14 @@ export class WorkflowTemplatesService {
           status: WorkflowTemplateStatus.PUBLISHED,
         })
         .andWhere('template.deleted_at IS NULL')
+        // Visibility filter: same as findPublished
+        .andWhere(
+          '(template.visibility = :publicVis OR :tenantId = ANY(template.allowed_tenants))',
+          {
+            publicVis: WorkflowVisibility.PUBLIC,
+            tenantId,
+          },
+        )
         .take(200)
         .orderBy('template.name', 'ASC');
 

@@ -531,7 +531,147 @@ describe('WorkflowTemplatesService [P0]', () => {
         status: WorkflowTemplateStatus.PUBLISHED,
       });
       expect(mockQb.andWhere).toHaveBeenCalledWith('template.deleted_at IS NULL');
+      // Visibility filter: public or tenant in allowed_tenants (Story 4-FIX-A2)
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        '(template.visibility = :publicVis OR :tenantId = ANY(template.allowed_tenants))',
+        {
+          publicVis: WorkflowVisibility.PUBLIC,
+          tenantId,
+        },
+      );
       expect(mockQb.orderBy).toHaveBeenCalledWith('template.name', 'ASC');
+    });
+  });
+
+  describe('findPublishedOne', () => {
+    it('[4-FIX-A2-UNIT-001] [P0] Given published public template, when findPublishedOne is called, then returns template with version', async () => {
+      // Given
+      const publishedTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+        visibility: WorkflowVisibility.PUBLIC,
+        currentVersionId: versionId,
+        deletedAt: null,
+      };
+      mockManager.findOne
+        .mockResolvedValueOnce(publishedTemplate)
+        .mockResolvedValueOnce(mockVersion);
+
+      // When
+      const result = await service.findPublishedOne(templateId, tenantId);
+
+      // Then
+      expect(result.id).toBe(templateId);
+      expect(result.status).toBe(WorkflowTemplateStatus.PUBLISHED);
+      expect(result.currentVersion).toBeDefined();
+      expect(result.currentVersion?.id).toBe(versionId);
+      expect(result.currentVersion?.versionNumber).toBe(1);
+      // Rule 2c exception: no tenantId in WHERE
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, status: WorkflowTemplateStatus.PUBLISHED },
+      });
+    });
+
+    it('[4-FIX-A2-UNIT-002] [P0] Given draft template, when findPublishedOne is called, then throws NotFoundException', async () => {
+      // Given — draft templates are not visible in catalog
+      mockManager.findOne.mockResolvedValue(null);
+
+      // When/Then
+      await expect(
+        service.findPublishedOne(templateId, tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('[4-FIX-A2-UNIT-003] [P0] Given private template where tenant is in allowedTenants, when findPublishedOne is called, then returns template', async () => {
+      // Given
+      const privateTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+        visibility: WorkflowVisibility.PRIVATE,
+        allowedTenants: [tenantId],
+        currentVersionId: null,
+        deletedAt: null,
+      };
+      mockManager.findOne.mockResolvedValueOnce(privateTemplate);
+
+      // When
+      const result = await service.findPublishedOne(templateId, tenantId);
+
+      // Then
+      expect(result.id).toBe(templateId);
+    });
+
+    it('[4-FIX-A2-UNIT-004] [P0] Given private template where tenant is NOT in allowedTenants, when findPublishedOne is called, then throws NotFoundException', async () => {
+      // Given
+      const otherTenantId = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
+      const privateTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+        visibility: WorkflowVisibility.PRIVATE,
+        allowedTenants: [otherTenantId],
+        currentVersionId: null,
+        deletedAt: null,
+      };
+      mockManager.findOne.mockResolvedValueOnce(privateTemplate);
+
+      // When/Then
+      await expect(
+        service.findPublishedOne(templateId, tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('[4-FIX-A2-UNIT-005] [P1] Given private template with null allowedTenants, when findPublishedOne is called, then throws NotFoundException', async () => {
+      // Given
+      const privateTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+        visibility: WorkflowVisibility.PRIVATE,
+        allowedTenants: null,
+        currentVersionId: null,
+        deletedAt: null,
+      };
+      mockManager.findOne.mockResolvedValueOnce(privateTemplate);
+
+      // When/Then
+      await expect(
+        service.findPublishedOne(templateId, tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('[4-FIX-A2-UNIT-016] [P0] Given published template with deletedAt set, when findPublishedOne is called, then throws NotFoundException', async () => {
+      // Given — soft-deleted template should not be visible in catalog
+      const deletedTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+        visibility: WorkflowVisibility.PUBLIC,
+        currentVersionId: versionId,
+        deletedAt: new Date('2026-02-10'),
+      };
+      mockManager.findOne.mockResolvedValueOnce(deletedTemplate);
+
+      // When/Then
+      await expect(
+        service.findPublishedOne(templateId, tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('findPublished - visibility filtering', () => {
+    it('[4-FIX-A2-UNIT-006] [P0] Given findPublished is called, when query is built, then includes visibility filter', async () => {
+      // Given
+      mockQb.getMany.mockResolvedValue([]);
+
+      // When
+      await service.findPublished(tenantId, {});
+
+      // Then — should have visibility filter in query
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        '(template.visibility = :publicVis OR :tenantId = ANY(template.allowed_tenants))',
+        {
+          publicVis: WorkflowVisibility.PUBLIC,
+          tenantId,
+        },
+      );
     });
   });
 
@@ -675,17 +815,23 @@ describe('WorkflowTemplatesService [P0]', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('[3.4-UNIT-013] [P0] Given published template, when status set to draft, then throws BadRequestException', async () => {
-      // Given
-      mockManager.findOne.mockResolvedValue({
+    it('[3.4-UNIT-013] [P0] Given published template, when status set to draft (unpublish), then transition allowed', async () => {
+      // Given — PUBLISHED → DRAFT is the "unpublish" transition (Story 4-FIX-A2)
+      const publishedTemplate = {
         ...mockTemplate,
         status: WorkflowTemplateStatus.PUBLISHED,
+      };
+      mockManager.findOne.mockResolvedValue({ ...publishedTemplate });
+      mockManager.save.mockResolvedValue({
+        ...publishedTemplate,
+        status: WorkflowTemplateStatus.DRAFT,
       });
 
-      // When/Then
-      await expect(
-        service.update(templateId, tenantId, { status: 'draft' }),
-      ).rejects.toThrow(BadRequestException);
+      // When
+      const result = await service.update(templateId, tenantId, { status: 'draft' });
+
+      // Then
+      expect(result.status).toBe(WorkflowTemplateStatus.DRAFT);
     });
 
     it('[3.4-UNIT-014] [P0] Given draft template without version, when status set to published via update, then throws BadRequestException', async () => {

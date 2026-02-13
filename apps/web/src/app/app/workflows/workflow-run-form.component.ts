@@ -699,7 +699,8 @@ export class WorkflowRunFormComponent {
 
   getAcceptString(def: WorkflowInput): string {
     if (!def.accept?.extensions?.length) return '';
-    return def.accept.extensions.map((ext) => `.${ext}`).join(',');
+    // Extensions from FILE_TYPE_PRESETS already include the dot prefix (e.g., '.pdf')
+    return def.accept.extensions.map((ext) => ext.startsWith('.') ? ext : `.${ext}`).join(',');
   }
 
   onSubmit(): void {
@@ -729,8 +730,7 @@ export class WorkflowRunFormComponent {
         next: (run: WorkflowRunResponseDto) => {
           this.submitting.set(false);
           this.successMessage.set(`Workflow run queued successfully (ID: ${run.id.slice(0, 8)}...)`);
-          const timerId = setTimeout(() => this.goBack(), 2000);
-          this.destroyRef.onDestroy(() => clearTimeout(timerId));
+          // No auto-redirect — user navigates manually via "Back to Workflows" button
         },
         error: (err) => {
           this.submitting.set(false);

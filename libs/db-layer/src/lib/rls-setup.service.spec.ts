@@ -29,10 +29,12 @@ describe('RlsSetupService [P0]', () => {
     // + 4 auth policies (auth_select_all, auth_accept_invitations, auth_insert_users, auth_update_invitations)
     // + 3 workflow_templates custom RLS (enable, force, policy)
     // + 3 workflow_chains custom RLS (enable, force, policy)
+    // + 1 catalog_read_published policy on workflow_templates
+    // + 1 catalog_read_published_versions policy on workflow_versions
     // + 1 provider_configs seed SELECT COUNT + 1 provider_configs seed INSERT (count=0 → inserts)
     // + 1 llm_models seed SELECT COUNT + 1 llm_models seed INSERT (count=0 → inserts)
-    // = 2 + 21 + 4 + 3 + 3 + 2 + 2 = 37
-    expect(dataSource.query).toHaveBeenCalledTimes(37);
+    // = 2 + 21 + 4 + 3 + 3 + 1 + 1 + 2 + 2 = 39
+    expect(dataSource.query).toHaveBeenCalledTimes(39);
     expect(dataSource.query).toHaveBeenCalledWith(
       'ALTER TABLE "users" ENABLE ROW LEVEL SECURITY',
     );
@@ -224,6 +226,33 @@ describe('RlsSetupService [P0]', () => {
       expect(sql).toContain("visibility = 'public'");
       expect(sql).toContain('ANY(allowed_tenants)');
       expect(sql).toContain('current_setting');
+    });
+
+    it('[4-FIX-A2-UNIT-014] [P0] Given development mode, when onModuleInit runs, then catalog_read_published policy is created on workflow_templates', async () => {
+      await service.onModuleInit();
+
+      const catalogPolicyCall = dataSource.query.mock.calls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes('catalog_read_published'),
+      );
+      expect(catalogPolicyCall).toBeDefined();
+      const sql = (catalogPolicyCall as string[])[0] as string;
+      expect(sql).toContain("tablename = 'workflow_templates'");
+      expect(sql).toContain("status = 'published'");
+      expect(sql).toContain('deleted_at IS NULL');
+      expect(sql).toContain('FOR SELECT');
+    });
+
+    it('[4-FIX-A2-UNIT-015] [P0] Given development mode, when onModuleInit runs, then catalog_read_published_versions policy is created on workflow_versions', async () => {
+      await service.onModuleInit();
+
+      const catalogVersionsCall = dataSource.query.mock.calls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes('catalog_read_published_versions'),
+      );
+      expect(catalogVersionsCall).toBeDefined();
+      const sql = (catalogVersionsCall as string[])[0] as string;
+      expect(sql).toContain("tablename = 'workflow_versions'");
+      expect(sql).toContain('FOR SELECT');
+      expect(sql).toContain("status = 'published'");
     });
 
     it('[3.1-UNIT-045] [P0] Given development mode, when onModuleInit runs, then workflow_chains gets custom visibility-based RLS', async () => {

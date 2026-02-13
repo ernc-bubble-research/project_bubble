@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -129,7 +128,7 @@ describe('AssetsService [P1]', () => {
       expect(result).toEqual(expectedDto);
       expect(mockTxManager.run).toHaveBeenCalledTimes(2);
       expect(mockManager.findOne).toHaveBeenCalledWith(AssetEntity, {
-        where: { sha256Hash: 'a'.repeat(64), status: AssetStatus.ACTIVE },
+        where: { sha256Hash: 'a'.repeat(64), tenantId, status: AssetStatus.ACTIVE },
       });
       expect(mockManager.create).toHaveBeenCalledWith(AssetEntity, expect.objectContaining({
         tenantId,
@@ -144,14 +143,13 @@ describe('AssetsService [P1]', () => {
       expect(mockManager.save).toHaveBeenCalledWith(AssetEntity, mockAsset);
     });
 
-    it('[2.1-UNIT-002] should reject duplicate file with same SHA-256 hash', async () => {
-      // Duplicate check returns existing asset
+    it('[2.1-UNIT-002] should return existing asset on duplicate SHA-256 hash (idempotent upload)', async () => {
+      // Duplicate check returns existing asset — return it instead of error
       mockManager.findOne.mockResolvedValue(mockAsset);
 
-      await expect(
-        service.upload(mockFile, mockDto as any, tenantId, userId),
-      ).rejects.toThrow(ConflictException);
+      const result = await service.upload(mockFile, mockDto as any, tenantId, userId);
 
+      expect(result).toEqual(expectedDto);
       expect(mockTxManager.run).toHaveBeenCalledTimes(1);
       expect(mockManager.create).not.toHaveBeenCalled();
     });
@@ -254,7 +252,7 @@ describe('AssetsService [P1]', () => {
 
       expect(result).toEqual(expectedDto);
       expect(mockManager.findOne).toHaveBeenCalledWith(AssetEntity, {
-        where: { id: mockAsset.id },
+        where: { id: mockAsset.id, tenantId },
       });
     });
 

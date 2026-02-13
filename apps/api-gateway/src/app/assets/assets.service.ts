@@ -1,7 +1,6 @@
 import {
   Injectable,
   BadRequestException,
-  ConflictException,
   NotFoundException,
   Logger,
 } from '@nestjs/common';
@@ -39,15 +38,21 @@ export class AssetsService {
 
     const sha256Hash = createHash('sha256').update(file.buffer).digest('hex');
 
-    // Check for duplicates within tenant
+    // Check for duplicates within tenant — return existing asset (idempotent upload)
     const existing = await this.txManager.run(tenantId, async (manager) => {
       return manager.findOne(AssetEntity, {
-        where: { sha256Hash, status: AssetStatus.ACTIVE },
+        where: { sha256Hash, tenantId, status: AssetStatus.ACTIVE },
       });
     });
 
     if (existing) {
-      throw new ConflictException('File already exists (duplicate SHA-256 hash detected)');
+      this.logger.log({
+        message: 'Duplicate file detected — returning existing asset',
+        id: existing.id,
+        hash: sha256Hash,
+        tenantId,
+      });
+      return this.toResponse(existing);
     }
 
     // Write file to disk
@@ -142,7 +147,7 @@ export class AssetsService {
 
   private async findEntity(id: string, tenantId: string): Promise<AssetEntity> {
     const asset = await this.txManager.run(tenantId, async (manager) => {
-      return manager.findOne(AssetEntity, { where: { id } });
+      return manager.findOne(AssetEntity, { where: { id, tenantId } });
     });
 
     if (!asset) {

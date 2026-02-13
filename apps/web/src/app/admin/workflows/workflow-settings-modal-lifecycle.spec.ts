@@ -4,7 +4,7 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { LucideIconProvider, LUCIDE_ICONS } from 'lucide-angular';
 import {
   Settings, X, Eye, Globe, Shield, Users, Archive, RefreshCw,
-  AlertCircle, Loader2, Link,
+  AlertCircle, Loader2, Link, Send, Undo2,
 } from 'lucide-angular';
 import { WorkflowSettingsModalComponent, type WorkflowSettingsTarget } from './workflow-settings-modal.component';
 import type { WorkflowTemplateResponseDto, WorkflowChainResponseDto, Tenant } from '@project-bubble/shared';
@@ -26,6 +26,7 @@ describe('[P0] WorkflowSettingsModalComponent — Lifecycle', () => {
     createdBy: 'user-1', createdAt: new Date(), updatedAt: new Date(),
   };
 
+  const draftTemplate: WorkflowTemplateResponseDto = { ...mockTemplate, status: 'draft' };
   const archivedTemplate: WorkflowTemplateResponseDto = { ...mockTemplate, status: 'archived' };
   const archivedChain: WorkflowChainResponseDto = { ...mockChain, status: 'archived' };
 
@@ -42,7 +43,7 @@ describe('[P0] WorkflowSettingsModalComponent — Lifecycle', () => {
         provideHttpClientTesting(),
         {
           provide: LUCIDE_ICONS, multi: true,
-          useValue: new LucideIconProvider({ Settings, X, Eye, Globe, Shield, Users, Archive, RefreshCw, AlertCircle, Loader2, Link }),
+          useValue: new LucideIconProvider({ Settings, X, Eye, Globe, Shield, Users, Archive, RefreshCw, AlertCircle, Loader2, Link, Send, Undo2 }),
         },
       ],
     }).compileComponents();
@@ -184,6 +185,49 @@ describe('[P0] WorkflowSettingsModalComponent — Lifecycle', () => {
       fixture.detectChanges();
       expect(component.error()).toContain('not found');
       expect(component.submitting()).toBe(false);
+    });
+  });
+
+  describe('publish template', () => {
+    it('[4-FIX-A2-UNIT-009] [P0] Given draft template, when publish clicked, then sends PATCH with status published', () => {
+      createComponent({ type: 'template', data: draftTemplate });
+      const savedSpy = jest.spyOn(component.saved, 'emit');
+      component.onPublish();
+      const req = httpMock.expectOne('/api/admin/workflow-templates/template-1');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ status: 'published' });
+      req.flush({ ...mockTemplate, status: 'published' });
+      expect(savedSpy).toHaveBeenCalled();
+    });
+
+    it('[4-FIX-A2-UNIT-010] [P1] Given draft template, when rendered, then shows publish button', () => {
+      createComponent({ type: 'template', data: draftTemplate });
+      expect(fixture.nativeElement.querySelector('[data-testid="settings-publish-btn"]')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('[data-testid="settings-unpublish-btn"]')).toBeFalsy();
+    });
+
+    it('[4-FIX-A2-UNIT-011] [P1] Given chain, when rendered, then does not show publish button', () => {
+      createComponent({ type: 'chain', data: mockChain });
+      expect(fixture.nativeElement.querySelector('[data-testid="settings-publish-btn"]')).toBeFalsy();
+    });
+  });
+
+  describe('unpublish template', () => {
+    it('[4-FIX-A2-UNIT-012] [P0] Given published template, when unpublish clicked, then sends PATCH with status draft', () => {
+      createComponent({ type: 'template', data: mockTemplate });
+      const savedSpy = jest.spyOn(component.saved, 'emit');
+      component.onUnpublish();
+      const req = httpMock.expectOne('/api/admin/workflow-templates/template-1');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ status: 'draft' });
+      req.flush({ ...mockTemplate, status: 'draft' });
+      expect(savedSpy).toHaveBeenCalled();
+    });
+
+    it('[4-FIX-A2-UNIT-013] [P1] Given published template, when rendered, then shows unpublish button', () => {
+      createComponent({ type: 'template', data: mockTemplate });
+      expect(fixture.nativeElement.querySelector('[data-testid="settings-unpublish-btn"]')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('[data-testid="settings-publish-btn"]')).toBeFalsy();
     });
   });
 
