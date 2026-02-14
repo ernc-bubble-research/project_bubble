@@ -70,4 +70,48 @@ describe('RolesGuard [P0]', () => {
 
     expect(guard.canActivate(context)).toBe(true);
   });
+
+  // --- Impersonator role mapping tests (Story 4-TESTFIX) ---
+
+  it('[4-TF-UNIT-001] should allow impersonator when CUSTOMER_ADMIN is in required roles', () => {
+    reflector.getAllAndOverride.mockReturnValue([UserRole.CUSTOMER_ADMIN]);
+    const context = createMockContext({ role: 'impersonator' });
+
+    expect(guard.canActivate(context)).toBe(true);
+  });
+
+  it('[4-TF-UNIT-002] should allow impersonator when multiple roles including CUSTOMER_ADMIN are required', () => {
+    reflector.getAllAndOverride.mockReturnValue([
+      UserRole.BUBBLE_ADMIN,
+      UserRole.CUSTOMER_ADMIN,
+      UserRole.CREATOR,
+    ]);
+    const context = createMockContext({ role: 'impersonator' });
+
+    expect(guard.canActivate(context)).toBe(true);
+  });
+
+  it('[4-TF-UNIT-003] should deny impersonator when only BUBBLE_ADMIN is required', () => {
+    reflector.getAllAndOverride.mockReturnValue([UserRole.BUBBLE_ADMIN]);
+    const context = createMockContext({ role: 'impersonator' });
+
+    expect(guard.canActivate(context)).toBe(false);
+  });
+
+  it('[4-TF-UNIT-004] should deny impersonator when only CREATOR is required', () => {
+    reflector.getAllAndOverride.mockReturnValue([UserRole.CREATOR]);
+    const context = createMockContext({ role: 'impersonator' });
+
+    expect(guard.canActivate(context)).toBe(false);
+  });
+
+  it('[4-TF-UNIT-005] should deny impersonator when required roles are BUBBLE_ADMIN+CREATOR (no CUSTOMER_ADMIN)', () => {
+    reflector.getAllAndOverride.mockReturnValue([
+      UserRole.BUBBLE_ADMIN,
+      UserRole.CREATOR,
+    ]);
+    const context = createMockContext({ role: 'impersonator' });
+
+    expect(guard.canActivate(context)).toBe(false);
+  });
 });

@@ -22,6 +22,12 @@ export class RolesGuard implements CanActivate {
       return false;
     }
 
-    return requiredRoles.includes(user.role as UserRole);
+    // Map impersonator sessions to CUSTOMER_ADMIN for role checks.
+    // JWT payload is NOT modified — only the local authorization comparison.
+    const effectiveRole =
+      user.role === 'impersonator'
+        ? UserRole.CUSTOMER_ADMIN
+        : (user.role as UserRole);
+    return requiredRoles.includes(effectiveRole);
   }
 }
