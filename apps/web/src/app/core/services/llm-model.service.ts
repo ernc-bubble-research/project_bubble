@@ -5,6 +5,7 @@ import type {
   LlmModelResponseDto,
   CreateLlmModelDto,
   UpdateLlmModelDto,
+  BulkUpdateModelStatusDto,
 } from '@project-bubble/shared';
 
 // H5: Re-export as LlmModel alias for backward compatibility within the app
@@ -32,5 +33,10 @@ export class LlmModelService {
   /** Update an existing LLM model (admin only) */
   updateModel(id: string, dto: UpdateLlmModelDto): Observable<LlmModel> {
     return this.http.patch<LlmModel>(`/api/admin/llm-models/${id}`, dto);
+  }
+
+  /** Bulk update active status for all models of a provider (admin only) */
+  bulkUpdateStatus(dto: BulkUpdateModelStatusDto): Observable<{ affected: number }> {
+    return this.http.patch<{ affected: number }>('/api/admin/llm-models/bulk-status', dto);
   }
 }

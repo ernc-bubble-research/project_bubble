@@ -52,7 +52,7 @@ export class LlmProviderFactory {
     }
     if (!model.isActive) {
       throw new BadRequestException(
-        `LLM model "${model.displayName}" (${model.modelId}) is inactive`,
+        `The configured model '${model.displayName}' is currently disabled by your administrator. Please contact your admin to re-enable it or select a different model.`,
       );
     }
 
@@ -67,7 +67,7 @@ export class LlmProviderFactory {
     }
     if (!providerConfig.isActive) {
       throw new BadRequestException(
-        `LLM provider "${providerConfig.displayName}" (${model.providerKey}) is inactive`,
+        `The configured model '${model.displayName}' is currently disabled by your administrator. Please contact your admin to re-enable it or select a different model.`,
       );
     }
 

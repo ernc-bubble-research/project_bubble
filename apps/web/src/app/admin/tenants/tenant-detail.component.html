@@ -23,7 +23,7 @@
         <span class="meta-separator">&bull;</span>
         <span>Tier: {{ t.planTier | titlecase }}</span>
         <span class="meta-separator">&bull;</span>
-        <span>Users: &mdash;</span>
+        <span>Users: {{ users().length === 0 ? '—' : users().length }}</span>
       </div>
     </div>
     <div class="header-actions">
@@ -257,6 +257,53 @@
     </div>
   } @else if (activeTab() === 'users') {
     <div class="tab-content">
+      <!-- Users Section -->
+      <div class="form-card users-section">
+        <h3 class="section-title">Users</h3>
+
+        @if (loadingUsers()) {
+          <div class="loading-state">Loading users...</div>
+        } @else if (users().length === 0) {
+          <div class="empty-state">
+            <p>No users in this tenant yet.</p>
+          </div>
+        } @else {
+          <div class="table-container">
+            <table class="data-table" data-testid="users-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (user of users(); track user.id) {
+                  <tr [attr.data-testid]="'user-row-' + user.id">
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.name ?? '—' }}</td>
+                    <td>{{ user.role }}</td>
+                    <td>
+                      <span
+                        class="status-badge"
+                        [class.status-accepted]="user.status === 'active'"
+                        [class.status-revoked]="user.status === 'deactivated'"
+                      >
+                        {{ user.status }}
+                      </span>
+                    </td>
+                    <td>{{ user.createdAt | date:'mediumDate' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <!-- Invitations Section -->
       <div class="form-card">
         <div class="users-header">
           <h3 class="section-title">Invitations</h3>

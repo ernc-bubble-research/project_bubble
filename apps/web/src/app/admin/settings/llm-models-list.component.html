@@ -46,9 +46,29 @@
       @for (group of providerGroups(); track group.providerKey) {
         <div class="provider-group" [attr.data-testid]="'provider-group-' + group.providerKey">
           <div class="provider-header">
-            <lucide-icon name="server" [size]="16"></lucide-icon>
-            <span>{{ group.displayName }}</span>
-            <span class="model-count">{{ group.models.length }} model{{ group.models.length === 1 ? '' : 's' }}</span>
+            <div class="provider-header-left">
+              <lucide-icon name="server" [size]="16"></lucide-icon>
+              <span>{{ group.displayName }}</span>
+              <span class="model-count">{{ group.models.length }} model{{ group.models.length === 1 ? '' : 's' }}</span>
+            </div>
+            <div class="provider-header-actions">
+              <button
+                class="btn btn-sm btn-outline"
+                [disabled]="bulkTogglingProvider() === group.providerKey"
+                [attr.data-testid]="'bulk-activate-' + group.providerKey"
+                (click)="onBulkToggle(group.providerKey, true)"
+              >
+                Activate All
+              </button>
+              <button
+                class="btn btn-sm btn-outline"
+                [disabled]="bulkTogglingProvider() === group.providerKey"
+                [attr.data-testid]="'bulk-deactivate-' + group.providerKey"
+                (click)="onBulkToggle(group.providerKey, false)"
+              >
+                Deactivate All
+              </button>
+            </div>
           </div>
 
           <div class="models-table">

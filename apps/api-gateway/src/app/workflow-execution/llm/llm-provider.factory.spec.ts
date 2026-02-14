@@ -92,15 +92,15 @@ describe('LlmProviderFactory', () => {
     );
   });
 
-  // [4.2-UNIT-024] Model inactive
-  it('should throw BadRequestException when model is inactive', async () => {
+  // [4.2-UNIT-024] Model inactive — user-friendly error referencing model displayName
+  it('should throw BadRequestException with user-friendly message when model is inactive', async () => {
     modelRepo.findOne.mockResolvedValue({ ...mockModel, isActive: false });
 
     await expect(factory.getProvider('model-uuid-1')).rejects.toThrow(
       BadRequestException,
     );
     await expect(factory.getProvider('model-uuid-1')).rejects.toThrow(
-      /inactive/,
+      /The configured model 'Gemini 1\.5 Pro' is currently disabled by your administrator/,
     );
   });
 
@@ -114,8 +114,8 @@ describe('LlmProviderFactory', () => {
     );
   });
 
-  // [4.2-UNIT-026] Provider config inactive
-  it('should throw BadRequestException when provider config is inactive', async () => {
+  // [4.2-UNIT-026] Provider config inactive — user-friendly error referencing MODEL displayName (not provider)
+  it('should throw BadRequestException with user-friendly message referencing model name when provider is inactive', async () => {
     modelRepo.findOne.mockResolvedValue(mockModel);
     providerConfigRepo.findOne.mockResolvedValue({ ...mockProviderConfig, isActive: false });
 
@@ -123,7 +123,7 @@ describe('LlmProviderFactory', () => {
       BadRequestException,
     );
     await expect(factory.getProvider('model-uuid-1')).rejects.toThrow(
-      /inactive/,
+      /The configured model 'Gemini 1\.5 Pro' is currently disabled by your administrator/,
     );
   });
 

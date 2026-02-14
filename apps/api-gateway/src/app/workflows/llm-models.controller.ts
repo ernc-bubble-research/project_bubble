@@ -14,6 +14,7 @@ import {
   CreateLlmModelDto,
   UpdateLlmModelDto,
   LlmModelResponseDto,
+  BulkUpdateModelStatusDto,
 } from '@project-bubble/shared';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -65,6 +66,16 @@ export class AdminLlmModelsController {
   @ApiResponse({ status: 409, description: 'Duplicate provider_key + model_id' })
   create(@Body() dto: CreateLlmModelDto) {
     return this.llmModelsService.create(dto);
+  }
+
+  @Patch('bulk-status')
+  @ApiOperation({ summary: 'Bulk update active status for all models of a provider' })
+  @ApiResponse({ status: 200, description: 'Models updated' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  bulkUpdateStatus(@Body() dto: BulkUpdateModelStatusDto) {
+    return this.llmModelsService.bulkUpdateStatus(dto);
   }
 
   @Patch(':id')

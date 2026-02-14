@@ -10,6 +10,7 @@ import { LlmModelEntity } from '@project-bubble/db-layer';
 import {
   CreateLlmModelDto,
   LlmModelResponseDto,
+  BulkUpdateModelStatusDto,
 } from '@project-bubble/shared';
 import { UpdateLlmModelDto } from '@project-bubble/shared';
 import { KNOWN_PROVIDER_KEYS } from '../common/provider-keys';
@@ -46,7 +47,7 @@ export class LlmModelsService {
         displayName: dto.displayName,
         contextWindow: dto.contextWindow,
         maxOutputTokens: dto.maxOutputTokens,
-        isActive: dto.isActive ?? true,
+        isActive: dto.isActive ?? false,
         costPer1kInput: dto.costPer1kInput ?? null,
         costPer1kOutput: dto.costPer1kOutput ?? null,
       });
@@ -96,6 +97,15 @@ export class LlmModelsService {
 
     const updated = await this.repo.save(model);
     return this.toResponse(updated);
+  }
+
+  async bulkUpdateStatus(dto: BulkUpdateModelStatusDto): Promise<{ affected: number }> {
+    this.validateProviderKey(dto.providerKey);
+    const result = await this.repo.update(
+      { providerKey: dto.providerKey },
+      { isActive: dto.isActive },
+    );
+    return { affected: result.affected ?? 0 };
   }
 
   private validateProviderKey(providerKey: string): void {

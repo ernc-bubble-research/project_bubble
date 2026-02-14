@@ -29,6 +29,7 @@ describe('LlmModelsControllers [P1]', () => {
       findAll: jest.fn().mockResolvedValue([mockModelResponse]),
       create: jest.fn().mockResolvedValue(mockModelResponse),
       update: jest.fn().mockResolvedValue(mockModelResponse),
+      bulkUpdateStatus: jest.fn().mockResolvedValue({ affected: 3 }),
     } as unknown as jest.Mocked<LlmModelsService>;
 
     appController = new AppLlmModelsController(service);
@@ -82,6 +83,18 @@ describe('LlmModelsControllers [P1]', () => {
 
       // Then
       expect(service.update).toHaveBeenCalledWith(modelId, dto);
+    });
+
+    it('[4-FIX-B-UNIT-010] PATCH /admin/llm-models/bulk-status — delegates to bulkUpdateStatus', async () => {
+      // Given
+      const dto = { providerKey: 'google-ai-studio', isActive: false };
+
+      // When
+      const result = await adminController.bulkUpdateStatus(dto);
+
+      // Then
+      expect(result).toEqual({ affected: 3 });
+      expect(service.bulkUpdateStatus).toHaveBeenCalledWith(dto);
     });
   });
 });

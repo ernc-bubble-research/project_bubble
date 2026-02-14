@@ -168,6 +168,32 @@ describe('UsersService [P1]', () => {
         order: { createdAt: 'DESC' },
       });
     });
+
+    // [4-FIX-B-UNIT-007] H4: directly-inserted users appear in findAllByTenant results
+    it('should return directly-inserted users (no status filter, tenantId match only)', async () => {
+      const directlyInsertedUser = createMockUser({
+        id: '22222222-2222-2222-2222-222222222222',
+        email: 'direct@acme.com',
+        passwordHash: 'bcrypt_hash_from_db',
+        role: UserRole.CREATOR,
+        name: 'Direct Insert',
+        tenantId,
+        status: UserStatus.ACTIVE,
+        createdAt: new Date('2026-02-01'),
+        updatedAt: new Date('2026-02-01'),
+      });
+      mockManager.find.mockResolvedValue([mockUser, directlyInsertedUser]);
+
+      const result = await service.findAllByTenant(tenantId);
+
+      expect(result).toHaveLength(2);
+      expect(result.find((u) => u.email === 'direct@acme.com')).toBeDefined();
+      // Confirm query uses tenantId in WHERE with no status filter
+      expect(mockManager.find).toHaveBeenCalledWith(UserEntity, {
+        where: { tenantId },
+        order: { createdAt: 'DESC' },
+      });
+    });
   });
 
   describe('findOne', () => {

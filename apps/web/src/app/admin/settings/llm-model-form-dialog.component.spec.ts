@@ -239,6 +239,14 @@ describe('LlmModelFormDialogComponent [P2]', () => {
     expect(providerSelect.options.length).toBeGreaterThan(1); // placeholder + providers
   });
 
+  it('[4-FIX-B-UNIT-016] should default isActive to false in add mode (configure first, then activate)', () => {
+    const fixture = TestBed.createComponent(TestHostComponent);
+    fixture.detectChanges();
+
+    const dialogComponent = fixture.debugElement.children[0].componentInstance as LlmModelFormDialogComponent;
+    expect(dialogComponent.form.value.isActive).toBe(false);
+  });
+
   it('[3.1-3-UNIT-026] should show read-only hint for providerKey in edit mode', async () => {
     const fixture = TestBed.createComponent(TestHostComponent);
     fixture.componentInstance.model.set(mockModel);

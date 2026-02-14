@@ -28,7 +28,7 @@ export class LlmModelEntity {
   @Column({ name: 'max_output_tokens', type: 'int' })
   maxOutputTokens!: number;
 
-  @Column({ name: 'is_active', type: 'boolean', default: true })
+  @Column({ name: 'is_active', type: 'boolean', default: false })
   isActive!: boolean;
 
   @Column({ name: 'cost_per_1k_input', type: 'decimal', precision: 10, scale: 6, nullable: true })

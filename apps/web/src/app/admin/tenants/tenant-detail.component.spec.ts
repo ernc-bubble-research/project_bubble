@@ -14,9 +14,14 @@ import {
   Info,
   Archive,
   Trash2,
+  UserPlus,
+  RefreshCw,
+  XCircle,
 } from 'lucide-angular';
 import { TenantDetailComponent } from './tenant-detail.component';
 import { TenantService } from '../../core/services/tenant.service';
+import { TenantUsersService } from '../../core/services/tenant-users.service';
+import { InvitationService } from '../../core/services/invitation.service';
 
 @Component({ standalone: true, template: '' })
 class DummyComponent {}
@@ -25,6 +30,8 @@ describe('TenantDetailComponent [P2]', () => {
   let component: TenantDetailComponent;
   let fixture: ComponentFixture<TenantDetailComponent>;
   let tenantServiceMock: Record<string, jest.Mock>;
+  let tenantUsersServiceMock: Record<string, jest.Mock>;
+  let invitationServiceMock: Record<string, jest.Mock>;
 
   const mockTenant = {
     id: '123e4567-e89b-12d3-a456-426614174000',
@@ -48,6 +55,17 @@ describe('TenantDetailComponent [P2]', () => {
       hardDelete: jest.fn().mockReturnValue(of(undefined)),
     };
 
+    tenantUsersServiceMock = {
+      getAll: jest.fn().mockReturnValue(of([])),
+    };
+
+    invitationServiceMock = {
+      getAll: jest.fn().mockReturnValue(of([])),
+      create: jest.fn(),
+      resend: jest.fn(),
+      revoke: jest.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [TenantDetailComponent],
       providers: [
@@ -61,6 +79,8 @@ describe('TenantDetailComponent [P2]', () => {
           },
         },
         { provide: TenantService, useValue: tenantServiceMock },
+        { provide: TenantUsersService, useValue: tenantUsersServiceMock },
+        { provide: InvitationService, useValue: invitationServiceMock },
         {
           provide: LUCIDE_ICONS,
           multi: true,
@@ -72,6 +92,9 @@ describe('TenantDetailComponent [P2]', () => {
             Info,
             Archive,
             Trash2,
+            UserPlus,
+            RefreshCw,
+            XCircle,
           }),
         },
       ],
@@ -314,6 +337,75 @@ describe('TenantDetailComponent [P2]', () => {
       component.confirmUnarchive();
 
       expect(tenantServiceMock['unarchive']).toHaveBeenCalledWith(archivedTenant.id);
+    });
+  });
+
+  // Story 4-FIX-B: H4 — Users tab shows actual users
+  describe('Users tab', () => {
+    const mockUsers = [
+      {
+        id: 'user-001',
+        email: 'alice@acme.com',
+        role: 'customer_admin',
+        name: 'Alice',
+        tenantId: mockTenant.id,
+        status: 'active',
+        createdAt: new Date('2026-01-20T00:00:00Z'),
+      },
+      {
+        id: 'user-002',
+        email: 'bob@acme.com',
+        role: 'creator',
+        name: null,
+        tenantId: mockTenant.id,
+        status: 'active',
+        createdAt: new Date('2026-01-22T00:00:00Z'),
+      },
+    ];
+
+    it('[4-FIX-B-UNIT-H4-001] should load users when switching to Users tab', () => {
+      tenantUsersServiceMock['getAll'].mockReturnValue(of(mockUsers));
+
+      component.setTab('users');
+
+      expect(tenantUsersServiceMock['getAll']).toHaveBeenCalledWith(mockTenant.id);
+      expect(component.users()).toEqual(mockUsers);
+    });
+
+    it('[4-FIX-B-UNIT-H4-002] should render users table with user rows', async () => {
+      tenantUsersServiceMock['getAll'].mockReturnValue(of(mockUsers));
+
+      component.setTab('users');
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const el: HTMLElement = fixture.nativeElement;
+      const usersTable = el.querySelector('[data-testid="users-table"]');
+      expect(usersTable).toBeTruthy();
+
+      const rows = el.querySelectorAll('[data-testid^="user-row-"]');
+      expect(rows.length).toBe(2);
+    });
+
+    it('[4-FIX-B-UNIT-H4-003] should show empty state when no users exist', async () => {
+      tenantUsersServiceMock['getAll'].mockReturnValue(of([]));
+
+      component.setTab('users');
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.textContent).toContain('No users in this tenant yet.');
+    });
+
+    it('[4-FIX-B-UNIT-H4-004] should also load invitations when switching to Users tab', () => {
+      tenantUsersServiceMock['getAll'].mockReturnValue(of([]));
+      invitationServiceMock['getAll'].mockReturnValue(of([]));
+
+      component.setTab('users');
+
+      expect(tenantUsersServiceMock['getAll']).toHaveBeenCalledWith(mockTenant.id);
+      expect(invitationServiceMock['getAll']).toHaveBeenCalledWith(mockTenant.id);
     });
   });
 });

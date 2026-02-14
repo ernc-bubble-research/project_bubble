@@ -50,7 +50,7 @@ export class LlmModelFormDialogComponent {
     displayName: ['', [Validators.required, Validators.maxLength(100)]],
     contextWindow: [1000000, [Validators.required, Validators.min(1)]],
     maxOutputTokens: [8192, [Validators.required, Validators.min(1)]],
-    isActive: [true],
+    isActive: [false],
     costPer1kInput: [''],
     costPer1kOutput: [''],
   });
@@ -80,7 +80,7 @@ export class LlmModelFormDialogComponent {
           displayName: '',
           contextWindow: 1000000,
           maxOutputTokens: 8192,
-          isActive: true,
+          isActive: false,
           costPer1kInput: '',
           costPer1kOutput: '',
         });

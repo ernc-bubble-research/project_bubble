@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, provideZonelessChangeDetection } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { of, NEVER } from 'rxjs';
 import { DataVaultComponent } from './data-vault.component';
@@ -81,6 +81,7 @@ describe('DataVaultComponent [P2]', () => {
     await TestBed.configureTestingModule({
       imports: [DataVaultComponent],
       providers: [
+        provideZonelessChangeDetection(),
         { provide: AssetService, useValue: mockAssetService },
         { provide: ActivatedRoute, useValue: mockRoute },
       ],
@@ -162,6 +163,30 @@ describe('DataVaultComponent [P2]', () => {
     component.toggleSelect('a1');
     expect(component.selectedIds().has('a1')).toBe(false);
     expect(component.selectedIds().size).toBe(1);
+  });
+
+  // [4-FIX-B-UNIT-005] Zoneless CD: filteredAssets reflects data after async load without manual trigger
+  it('should populate filteredAssets computed signal immediately after async load', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    // Assets should be populated from the mock observable
+    expect(component.assets().length).toBe(3);
+    expect(component.filteredAssets().length).toBe(3);
+    // loading should be false after load completes
+    expect(component.loading()).toBe(false);
+  });
+
+  // [4-FIX-B-UNIT-006] Zoneless CD: folders signal reflects data after async load
+  it('should populate folders signal immediately after async folder load', async () => {
+    const mockFolders = [{ id: 'f1', tenantId: 't1', name: 'Docs', createdAt: new Date(), updatedAt: new Date() }];
+    mockAssetService.findAllFolders.mockReturnValue(of(mockFolders));
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.folders().length).toBe(1);
+    expect(component.folders()[0].name).toBe('Docs');
   });
 
   it('[2.2-UNIT-007a] should track indexing state via indexingIds signal', () => {

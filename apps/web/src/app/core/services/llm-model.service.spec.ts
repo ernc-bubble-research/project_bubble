@@ -5,7 +5,7 @@ import {
 } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { LlmModelService, type LlmModel } from './llm-model.service';
-import type { CreateLlmModelDto, UpdateLlmModelDto } from '@project-bubble/shared';
+import type { CreateLlmModelDto, UpdateLlmModelDto, BulkUpdateModelStatusDto } from '@project-bubble/shared';
 
 const mockModel: LlmModel = {
   id: 'model-1',
@@ -103,6 +103,24 @@ describe('LlmModelService [P2]', () => {
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(updateDto);
       req.flush({ ...mockModel, ...updateDto });
+    });
+  });
+
+  describe('bulkUpdateStatus', () => {
+    it('[4-FIX-B-UNIT-011] should PATCH /api/admin/llm-models/bulk-status with DTO', () => {
+      const dto: BulkUpdateModelStatusDto = {
+        providerKey: 'google-ai-studio',
+        isActive: false,
+      };
+
+      service.bulkUpdateStatus(dto).subscribe((result) => {
+        expect(result).toEqual({ affected: 2 });
+      });
+
+      const req = httpMock.expectOne('/api/admin/llm-models/bulk-status');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual(dto);
+      req.flush({ affected: 2 });
     });
   });
 });

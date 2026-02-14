@@ -9,6 +9,7 @@ import {
 } from '@project-bubble/db-layer';
 import { WorkflowJobPayload, PerFileResult } from '@project-bubble/shared';
 import { EntityManager } from 'typeorm';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PromptAssemblyService } from './prompt-assembly.service';
 import { LlmProviderFactory } from './llm/llm-provider.factory';
 
@@ -323,6 +324,63 @@ describe('WorkflowExecutionProcessor', () => {
       await expect(processor.process(makeJob())).rejects.toThrow(
         'LLM API timeout',
       );
+    });
+  });
+
+  describe('process() — H1 runtime guard: inactive model/provider', () => {
+    // [4-FIX-B-UNIT-001] Model inactive → factory rejects, processor propagates error (active check lives in LlmProviderFactory — see 4.2-UNIT-024)
+    it('should propagate BadRequestException from factory when model is inactive', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun());
+      llmProviderFactory.getProvider.mockRejectedValue(
+        new BadRequestException(
+          "The configured model 'Test Model' is currently disabled by your administrator. Please contact your admin to re-enable it or select a different model.",
+        ),
+      );
+
+      await expect(processor.process(makeJob())).rejects.toThrow(
+        /currently disabled by your administrator/,
+      );
+      // LLM generate should NOT have been called
+      expect(mockLlmProvider.generate).not.toHaveBeenCalled();
+    });
+
+    // [4-FIX-B-UNIT-002] Provider inactive → factory rejects, processor propagates error (active check lives in LlmProviderFactory — see 4.2-UNIT-026)
+    it('should propagate BadRequestException from factory when provider is inactive', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun());
+      llmProviderFactory.getProvider.mockRejectedValue(
+        new BadRequestException(
+          "The LLM provider for model 'Test Model' is currently disabled. Please contact your admin to re-enable the provider.",
+        ),
+      );
+
+      await expect(processor.process(makeJob())).rejects.toThrow(
+        /currently disabled/,
+      );
+      expect(mockLlmProvider.generate).not.toHaveBeenCalled();
+    });
+
+    // [4-FIX-B-UNIT-003] Both active → proceeds normally (covered by existing tests, explicit assertion)
+    it('should proceed normally when both model and provider are active', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun());
+
+      await processor.process(makeJob());
+
+      expect(llmProviderFactory.getProvider).toHaveBeenCalledWith(modelUuid);
+      expect(mockLlmProvider.generate).toHaveBeenCalled();
+    });
+
+    // [4-FIX-B-UNIT-004] Provider config not found → NotFoundException (distinct from disabled message)
+    it('should throw NotFoundException when provider config does not exist', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun());
+      llmProviderFactory.getProvider.mockRejectedValue(
+        new NotFoundException('LLM provider config not found for key: nonexistent'),
+      );
+
+      await expect(processor.process(makeJob())).rejects.toThrow(NotFoundException);
+      await expect(processor.process(makeJob())).rejects.toThrow(
+        /not found/,
+      );
+      expect(mockLlmProvider.generate).not.toHaveBeenCalled();
     });
   });
 

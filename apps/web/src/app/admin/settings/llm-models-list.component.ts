@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   DestroyRef,
   computed,
@@ -27,11 +28,13 @@ export interface ProviderGroup {
 export class LlmModelsListComponent {
   private readonly llmModelService = inject(LlmModelService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly models = signal<LlmModel[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly togglingId = signal<string | null>(null);
+  readonly bulkTogglingProvider = signal<string | null>(null);
 
   readonly addModelClicked = output<void>();
   readonly editModelClicked = output<LlmModel>();
@@ -75,10 +78,12 @@ export class LlmModelsListComponent {
         next: (models) => {
           this.models.set(models);
           this.loading.set(false);
+          this.cdr.markForCheck();
         },
         error: () => {
           this.error.set('Failed to load LLM models. Please try again.');
           this.loading.set(false);
+          this.cdr.markForCheck();
         },
       });
   }
@@ -105,10 +110,40 @@ export class LlmModelsListComponent {
             list.map((m) => (m.id === updated.id ? updated : m))
           );
           this.togglingId.set(null);
+          this.cdr.markForCheck();
         },
         error: () => {
           this.error.set('Failed to update model status. Please try again.');
           this.togglingId.set(null);
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  onBulkToggle(providerKey: string, isActive: boolean): void {
+    if (this.bulkTogglingProvider()) return; // Prevent double-click
+
+    this.bulkTogglingProvider.set(providerKey);
+
+    this.llmModelService
+      .bulkUpdateStatus({ providerKey, isActive })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.models.update((list) =>
+            list.map((m) =>
+              m.providerKey === providerKey
+                ? { ...m, isActive, updatedAt: new Date() }
+                : m
+            )
+          );
+          this.bulkTogglingProvider.set(null);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.error.set('Failed to bulk update model status. Please try again.');
+          this.bulkTogglingProvider.set(null);
+          this.cdr.markForCheck();
         },
       });
   }

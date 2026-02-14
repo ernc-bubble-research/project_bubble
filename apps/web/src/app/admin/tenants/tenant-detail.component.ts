@@ -5,13 +5,14 @@ import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { TenantService, Tenant } from '../../core/services/tenant.service';
 import { InvitationService } from '../../core/services/invitation.service';
+import { TenantUsersService } from '../../core/services/tenant-users.service';
 import { ImpersonationService } from '../../core/services/impersonation.service';
 import { ToastService } from '../../core/services/toast.service';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { ImpersonateConfirmDialogComponent } from './impersonate-confirm-dialog.component';
 import { InviteUserDialogComponent } from './invite-user-dialog.component';
 import { DeleteConfirmDialogComponent } from './delete-confirm-dialog.component';
-import type { UpdateTenantPayload, InvitationResponseDto } from '@project-bubble/shared';
+import type { UpdateTenantPayload, InvitationResponseDto, UserResponseDto } from '@project-bubble/shared';
 
 @Component({
   standalone: true,
@@ -35,6 +36,7 @@ export class TenantDetailComponent implements OnInit {
   private readonly impersonationService = inject(ImpersonationService);
   private readonly toastService = inject(ToastService);
   private readonly invitationService = inject(InvitationService);
+  private readonly tenantUsersService = inject(TenantUsersService);
   private readonly destroyRef = inject(DestroyRef);
 
   tenant = signal<Tenant | null>(null);
@@ -54,6 +56,10 @@ export class TenantDetailComponent implements OnInit {
   // Entitlements tab form signals
   editMaxRuns = signal(50);
   editRetentionDays = signal(30);
+
+  // Users
+  users = signal<UserResponseDto[]>([]);
+  loadingUsers = signal(false);
 
   // Invitations
   showInviteDialog = signal(false);
@@ -149,8 +155,27 @@ export class TenantDetailComponent implements OnInit {
   setTab(tab: 'general' | 'entitlements' | 'users' | 'usage' | 'audit'): void {
     this.activeTab.set(tab);
     if (tab === 'users') {
+      this.loadUsers();
       this.loadInvitations();
     }
+  }
+
+  // User list
+  loadUsers(): void {
+    const t = this.tenant();
+    if (!t) return;
+
+    this.loadingUsers.set(true);
+    this.tenantUsersService.getAll(t.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (users) => {
+        this.users.set(users);
+        this.loadingUsers.set(false);
+      },
+      error: () => {
+        this.loadingUsers.set(false);
+        this.toastService.show('Failed to load users');
+      },
+    });
   }
 
   // Invitation actions

@@ -40,6 +40,7 @@ describe('LlmModelsService [P1]', () => {
       findOne: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
+      update: jest.fn(),
     } as unknown as jest.Mocked<Repository<LlmModelEntity>>;
 
     service = new LlmModelsService(repo);
@@ -121,6 +122,28 @@ describe('LlmModelsService [P1]', () => {
       ).rejects.toThrow(/Unknown provider key/);
     });
 
+    it('[4-FIX-B-UNIT-015] Given no isActive in DTO, when create is called, then defaults to inactive (false)', async () => {
+      // Given
+      const inactiveByDefault = { ...mockModel, isActive: false };
+      repo.create.mockReturnValue(inactiveByDefault);
+      repo.save.mockResolvedValue(inactiveByDefault);
+
+      // When
+      await service.create({
+        providerKey: 'google-ai-studio',
+        modelId: 'models/gemini-2.0-flash',
+        displayName: 'Gemini 2.0 Flash',
+        contextWindow: 1000000,
+        maxOutputTokens: 8192,
+        // isActive intentionally omitted
+      });
+
+      // Then — verify isActive: false was passed to repo.create
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ isActive: false }),
+      );
+    });
+
     it('[3.3-UNIT-023] [P0] Given duplicate provider_key+model_id, when create is called, then throws ConflictException', async () => {
       // Given
       repo.create.mockReturnValue(mockModel);
@@ -161,6 +184,57 @@ describe('LlmModelsService [P1]', () => {
       await expect(
         service.update('nonexistent-id', { isActive: false }),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('bulkUpdateStatus', () => {
+    it('[4-FIX-B-UNIT-008] Given models exist for provider, when bulkUpdateStatus is called, then updates all and returns affected count', async () => {
+      // Given
+      repo.update.mockResolvedValue({ affected: 3, raw: [], generatedMaps: [] });
+
+      // When
+      const result = await service.bulkUpdateStatus({
+        providerKey: 'google-ai-studio',
+        isActive: false,
+      });
+
+      // Then
+      expect(result).toEqual({ affected: 3 });
+      expect(repo.update).toHaveBeenCalledWith(
+        { providerKey: 'google-ai-studio' },
+        { isActive: false },
+      );
+    });
+
+    it('[4-FIX-B-UNIT-009] Given unknown providerKey, when bulkUpdateStatus is called, then throws BadRequestException', async () => {
+      // Given / When / Then
+      await expect(
+        service.bulkUpdateStatus({
+          providerKey: 'nonexistent-provider',
+          isActive: true,
+        }),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.bulkUpdateStatus({
+          providerKey: 'nonexistent-provider',
+          isActive: true,
+        }),
+      ).rejects.toThrow(/Unknown provider key/);
+      expect(repo.update).not.toHaveBeenCalled();
+    });
+
+    it('[4-FIX-B-UNIT-017] Given valid provider with no models, when bulkUpdateStatus is called, then returns affected 0', async () => {
+      // Given
+      repo.update.mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] });
+
+      // When
+      const result = await service.bulkUpdateStatus({
+        providerKey: 'mock',
+        isActive: true,
+      });
+
+      // Then
+      expect(result).toEqual({ affected: 0 });
     });
   });
 });

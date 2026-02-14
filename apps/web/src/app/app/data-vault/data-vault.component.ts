@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal, computed, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, inject, signal, computed, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { NgClass } from '@angular/common';
@@ -35,6 +35,7 @@ export class DataVaultComponent implements OnInit {
   private readonly assetService = inject(AssetService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
   private indexingPollTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
@@ -67,6 +68,7 @@ export class DataVaultComponent implements OnInit {
       const folderId = params.get('folderId');
       this.activeFolderId.set(folderId);
       this.loadAssets();
+      this.cdr.markForCheck();
     });
     this.loadFolders();
   }
@@ -79,14 +81,21 @@ export class DataVaultComponent implements OnInit {
         this.assets.set(assets);
         this.loading.set(false);
         this.reconcileIndexingState(assets);
+        this.cdr.markForCheck();
       },
-      error: () => this.loading.set(false),
+      error: () => {
+        this.loading.set(false);
+        this.cdr.markForCheck();
+      },
     });
   }
 
   loadFolders(): void {
     this.assetService.findAllFolders().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (folders) => this.folders.set(folders),
+      next: (folders) => {
+        this.folders.set(folders);
+        this.cdr.markForCheck();
+      },
     });
   }
 
@@ -216,6 +225,7 @@ export class DataVaultComponent implements OnInit {
         next: (assets) => {
           this.assets.set(assets);
           this.reconcileIndexingState(assets);
+          this.cdr.markForCheck();
         },
       });
     }, INDEXING_POLL_INTERVAL_MS);

@@ -59,12 +59,14 @@ describe('LlmModelsListComponent [P2]', () => {
   let mockLlmModelService: {
     getAllModels: jest.Mock;
     updateModel: jest.Mock;
+    bulkUpdateStatus: jest.Mock;
   };
 
   beforeEach(async () => {
     mockLlmModelService = {
       getAllModels: jest.fn().mockReturnValue(of(mockModels)),
       updateModel: jest.fn(),
+      bulkUpdateStatus: jest.fn(),
     };
 
     await TestBed.configureTestingModule({
@@ -231,5 +233,73 @@ describe('LlmModelsListComponent [P2]', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Google AI Studio');
     expect(el.textContent).toContain('Mock Provider');
+  });
+
+  it('[4-FIX-B-UNIT-012] should render bulk activate/deactivate buttons per provider group', async () => {
+    const fixture = TestBed.createComponent(LlmModelsListComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="bulk-activate-google-ai-studio"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="bulk-deactivate-google-ai-studio"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="bulk-activate-mock"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="bulk-deactivate-mock"]')).toBeTruthy();
+  });
+
+  it('[4-FIX-B-UNIT-013] should call bulkUpdateStatus and update local models on bulk deactivate', async () => {
+    mockLlmModelService.bulkUpdateStatus.mockReturnValue(of({ affected: 2 }));
+
+    const fixture = TestBed.createComponent(LlmModelsListComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const deactivateBtn = fixture.nativeElement.querySelector(
+      '[data-testid="bulk-deactivate-google-ai-studio"]'
+    );
+    deactivateBtn.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(mockLlmModelService.bulkUpdateStatus).toHaveBeenCalledWith({
+      providerKey: 'google-ai-studio',
+      isActive: false,
+    });
+
+    // Verify models for google-ai-studio are now inactive in local state
+    const googleModels = fixture.componentInstance.models().filter(
+      (m) => m.providerKey === 'google-ai-studio'
+    );
+    expect(googleModels.every((m) => !m.isActive)).toBe(true);
+
+    // Mock provider model should be unaffected
+    const mockProviderModel = fixture.componentInstance.models().find(
+      (m) => m.providerKey === 'mock'
+    );
+    expect(mockProviderModel!.isActive).toBe(true);
+  });
+
+  it('[4-FIX-B-UNIT-014] should show error banner on bulk update failure', async () => {
+    mockLlmModelService.bulkUpdateStatus.mockReturnValue(
+      throwError(() => new Error('Bulk update failed'))
+    );
+
+    const fixture = TestBed.createComponent(LlmModelsListComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const deactivateBtn = fixture.nativeElement.querySelector(
+      '[data-testid="bulk-deactivate-google-ai-studio"]'
+    );
+    deactivateBtn.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="error-banner"]')).toBeTruthy();
+    expect(el.textContent).toContain('Failed to bulk update model status');
   });
 });

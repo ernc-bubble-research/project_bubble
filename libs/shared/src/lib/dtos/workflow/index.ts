@@ -15,3 +15,4 @@ export { ListWorkflowChainsQueryDto } from './list-workflow-chains-query.dto';
 export { PublishWorkflowTemplateDto } from './publish-workflow-template.dto';
 export { InitiateWorkflowRunDto, WorkflowRunInputValueDto } from './initiate-workflow-run.dto';
 export { WorkflowRunResponseDto } from './workflow-run-response.dto';
+export { BulkUpdateModelStatusDto } from './bulk-update-model-status.dto';

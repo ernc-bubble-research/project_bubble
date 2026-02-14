@@ -39,7 +39,7 @@ export class CreateLlmModelDto {
   @Min(1)
   maxOutputTokens!: number;
 
-  @ApiPropertyOptional({ example: true, default: true })
+  @ApiPropertyOptional({ example: false, default: false })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
