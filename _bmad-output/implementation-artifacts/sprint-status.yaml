@@ -605,14 +605,18 @@ development_status:
   4-fix-a2-lifecycle-ui-api-fixes: done                     # Live test round 1 — CRITICAL: C2 publish button, C3 catalog findPublishedOne + RLS policy (Rule 2c exception), H2 duplicate hash 409→200, H5 double-dot accept, H6 remove auto-redirect. 3-pass code review complete (Amelia + Naz + Murat), 6 findings fixed. 1214 total tests.
   4-fix-b-admin-ui-settings-fixes: done                      # Live test round 1 findings — admin UI: H1 runtime guard (simple), H3 data vault zoneless CD, H4 admin users endpoint, M1 bulk activate/deactivate, M2 models default inactive. 3-pass code review complete (Amelia + Naz + Murat). 1237 total tests.
   4-testfix-live-test-round-2-fixes: done                    # Live test round 2 findings — 2 fixes: (1) impersonation role mapping in RolesGuard, (2) Lucide File+FileType icons. 3-pass code review: 0 findings. 1244 total tests.
-  4-rls-full-rls-enablement: backlog                       # Full RLS enablement: create bubble_app non-superuser role, dual DataSource (app vs migration), audit ALL RLS policies, test with real RLS enforcement. Absorbs 7P-6 scope.
-  4-testfix-rls-test-suite-fixes: backlog                  # Fix test suite breakages caused by RLS enablement in Story 4-RLS. Separate story to isolate RLS fix validation from test infrastructure changes.
+  4-rls-a-role-dual-datasource-admin-bypass: done             # RLS Part 1/3: bubble_app role + grants + DEFAULT PRIVILEGES, dual DataSource (MigrationDatabaseModule + app), admin bypass in TransactionManager, ALL policy updates (NULLIF + admin bypass + WITH CHECK). Absorbs 7P-6 scope.
+  4-rls-b-bullmq-validation: done                             # RLS Part 2/3: BullMQ tenantId defensive validation in process() + onFailed(). 3-pass code review: Pass 2 (10 findings, party mode), Pass 3 (10 findings, 4 fixed). 1181 total tests.
+  4-rls-c-test-infra-verification: backlog                  # RLS Part 3/3: Update test-db-helpers + global-setup (SHARED INFRA), new Tier 2 wiring tests for RLS + write isolation verification, browser smoke test. Depends on 4-RLS-B.
+  4-testfix-rls-test-suite-fixes: backlog                  # Fix test suite breakages caused by RLS enablement in Stories 4-RLS-A/B/C. Separate story to isolate RLS fix validation from test infrastructure changes.
   4-4-pre-flight-validation-credit-check: backlog
   4-5-output-validation-storage: backlog
   4-6-workflow-chain-orchestration: backlog
   4-7-workflow-test-run-preview: backlog              # FEATURE-1 from user testing feedback. Combines layout preview + functional test run. Party mode consensus 2026-02-08.
   4-pr-provider-registry-backend-driven: backlog            # M3 from live test: Replace hardcoded provider-constants.ts with backend-driven adapter registry. GET /api/admin/settings/llm-provider-types endpoint. Ops doc for adding new providers. Placed between Epic 4 and Epic 5.
   4e-e2e-test-coverage-epic-4: backlog                   # E2E tests for Epic 4 features (execution engine, test runs, output validation). Written AFTER Epic 4 development. Convention: XE = E2E for Epic X.
+  4-test-gaps-error-path-coverage: backlog                   # Tracked from 4-RLS-B Pass 2: onFailed catch block coverage, magic number extraction. Small cleanup story.
+  7p-5-reconcile-orphaned-runs: backlog                     # Tracked from 4-RLS-B Pass 2 MEDIUM-007: Cron-based reconciliation for workflow runs stuck in RUNNING state (BullMQ worker crash recovery). Scan RUNNING > 1hr, check BullMQ queue, mark FAILED if job missing, refund credits.
   4eh-e2e-error-path-hardening: backlog                  # E2E error path tests across ALL epics (1-4). Covers: duplicate name 409, invalid status transitions 400, file upload size limit, network errors, validation error displays. Convention: include 1-2 error paths per spec file in future XE stories.
   epic-4-retrospective: optional                               # MANDATORY AGENDA: Winston Architect Quality Gate violation (probation, quality self-check, retroactive review of 4-0/4-1/4-2, MVP word ban, probation evaluation). Voted 7-0 during Story 4-2 party mode.
 
@@ -669,7 +673,7 @@ development_status:
   # Story 7P-1 (deployment target) is a prerequisite for 7P-2, 7P-3, 7P-4.
   # ═══════════════════════════════════════════════════════
   epic-7p: backlog
-  7p-1-deployment-target-dockerfiles: backlog        # Choose cloud provider, create Dockerfiles for api-gateway + web + worker-engine, define infra (managed DB, Redis, compute)
+  7p-1-deployment-target-dockerfiles: backlog        # Choose cloud provider, create Dockerfiles for api-gateway + web + worker-engine, define infra (managed DB, Redis, compute). MUST include: SQL migration files (replace synchronize:true), bubble_app role provisioning (CREATE ROLE + GRANT), RLS policy creation scripts.
   7p-2-cloud-file-storage-migration: backlog         # Replace local fs with GCS/S3. Swap storage backend in AssetsService. Depends on 7P-1 (cloud choice).
   7p-3-secrets-management: backlog                   # Integrate cloud secrets manager. Replace .env with GCP SM / AWS SM / Vault. Key rotation for JWT. Depends on 7P-1.
   7p-4-database-backup-disaster-recovery: backlog    # Automated pg_dump or managed DB PITR. Redis persistence config. File storage versioning. Depends on 7P-1.

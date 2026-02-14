@@ -384,6 +384,134 @@ describe('WorkflowExecutionProcessor', () => {
     });
   });
 
+  describe('process() — tenantId validation (N4 BullMQ defensive check)', () => {
+    it('[4-RLS-B-UNIT-001] throws on null tenantId', async () => {
+      const job = makeJob({ data: { ...basePayload, tenantId: null as unknown as string } });
+
+      await expect(processor.process(job)).rejects.toThrow(/invalid tenantId/);
+      expect(txManager.run).not.toHaveBeenCalled();
+    });
+
+    it('[4-RLS-B-UNIT-002] throws on undefined tenantId', async () => {
+      const job = makeJob({ data: { ...basePayload, tenantId: undefined as unknown as string } });
+
+      await expect(processor.process(job)).rejects.toThrow(/invalid tenantId/);
+      expect(txManager.run).not.toHaveBeenCalled();
+    });
+
+    it('[4-RLS-B-UNIT-003] throws on empty string tenantId', async () => {
+      const job = makeJob({ data: { ...basePayload, tenantId: '' } });
+
+      await expect(processor.process(job)).rejects.toThrow(/invalid tenantId/);
+      expect(txManager.run).not.toHaveBeenCalled();
+    });
+
+    it('[4-RLS-B-UNIT-004] throws on whitespace-only tenantId', async () => {
+      const job = makeJob({ data: { ...basePayload, tenantId: '   ' } });
+
+      await expect(processor.process(job)).rejects.toThrow(/invalid tenantId/);
+      expect(txManager.run).not.toHaveBeenCalled();
+    });
+
+    it('[4-RLS-B-UNIT-005] error message includes jobId and runId for debugging', async () => {
+      const job = makeJob({ id: 'test-job-123', data: { ...basePayload, tenantId: '' } });
+
+      await expect(processor.process(job)).rejects.toThrow(/test-job-123/);
+      await expect(processor.process(job)).rejects.toThrow(new RegExp(runId));
+    });
+
+    it('[4-RLS-B-UNIT-011] rejects numeric tenantId (type coercion through Redis)', async () => {
+      const job = makeJob({ data: { ...basePayload, tenantId: 42 as unknown as string } });
+
+      await expect(processor.process(job)).rejects.toThrow(/invalid tenantId/);
+      expect(txManager.run).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onFailed() — tenantId validation (N4 BullMQ defensive check)', () => {
+    let loggerErrorSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      loggerErrorSpy = jest.spyOn(processor['logger'], 'error').mockImplementation();
+    });
+
+    afterEach(() => {
+      loggerErrorSpy.mockRestore();
+    });
+
+    it('[4-RLS-B-UNIT-006] returns early and logs error on null tenantId (no throw, no DB call)', async () => {
+      const error = new Error('some failure');
+      const job = makeJob({
+        data: { ...basePayload, tenantId: null as unknown as string },
+        attemptsMade: 3,
+      });
+
+      await expect(processor.onFailed(job, error)).resolves.toBeUndefined();
+      expect(txManager.run).not.toHaveBeenCalled();
+      expect(dlqQueue.add).not.toHaveBeenCalled();
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringContaining('missing tenantId') }),
+      );
+    });
+
+    it('[4-RLS-B-UNIT-007] returns early and logs error on undefined tenantId', async () => {
+      const error = new Error('some failure');
+      const job = makeJob({
+        data: { ...basePayload, tenantId: undefined as unknown as string },
+        attemptsMade: 3,
+      });
+
+      await expect(processor.onFailed(job, error)).resolves.toBeUndefined();
+      expect(txManager.run).not.toHaveBeenCalled();
+      expect(dlqQueue.add).not.toHaveBeenCalled();
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringContaining('missing tenantId') }),
+      );
+    });
+
+    it('[4-RLS-B-UNIT-008] returns early and logs error on empty string tenantId', async () => {
+      const error = new Error('some failure');
+      const job = makeJob({
+        data: { ...basePayload, tenantId: '' },
+        attemptsMade: 3,
+      });
+
+      await expect(processor.onFailed(job, error)).resolves.toBeUndefined();
+      expect(txManager.run).not.toHaveBeenCalled();
+      expect(dlqQueue.add).not.toHaveBeenCalled();
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringContaining('missing tenantId') }),
+      );
+    });
+
+    it('[4-RLS-B-UNIT-009] returns early and logs error on whitespace-only tenantId', async () => {
+      const error = new Error('some failure');
+      const job = makeJob({
+        data: { ...basePayload, tenantId: '   ' },
+        attemptsMade: 3,
+      });
+
+      await expect(processor.onFailed(job, error)).resolves.toBeUndefined();
+      expect(txManager.run).not.toHaveBeenCalled();
+      expect(dlqQueue.add).not.toHaveBeenCalled();
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringContaining('missing tenantId') }),
+      );
+    });
+
+    it('[4-RLS-B-UNIT-010] rejects numeric tenantId (type coercion through Redis)', async () => {
+      const error = new Error('some failure');
+      const job = makeJob({
+        data: { ...basePayload, tenantId: 42 as unknown as string },
+        attemptsMade: 3,
+      });
+
+      await expect(processor.onFailed(job, error)).resolves.toBeUndefined();
+      expect(txManager.run).not.toHaveBeenCalled();
+      expect(dlqQueue.add).not.toHaveBeenCalled();
+    });
+  });
+
   describe('onFailed() — DLQ handler', () => {
     it('[4.3-UNIT-009] moves job to DLQ queue after all retries exhausted', async () => {
       const error = new Error('LLM provider timeout');

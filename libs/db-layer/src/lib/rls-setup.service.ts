@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class RlsSetupService implements OnModuleInit {
   private static readonly TABLE_NAME_PATTERN = /^[a-z_]+$/;
 
   constructor(
+    @InjectDataSource('migration')
     private readonly dataSource: DataSource,
     private readonly config: ConfigService,
   ) {}
@@ -27,6 +29,11 @@ export class RlsSetupService implements OnModuleInit {
     // Enable pgvector extension before table creation/RLS setup
     await this.enablePgvectorExtension();
     await this.createVectorIndex();
+
+    // Create non-superuser bubble_app role + grants (must run AFTER synchronize has created tables)
+    await this.createAppRole();
+    await this.grantAppPermissions();
+    await this.setDefaultPrivileges();
 
     for (const table of this.tenantScopedTables) {
       await this.enableRls(table);
@@ -51,8 +58,7 @@ export class RlsSetupService implements OnModuleInit {
     await this.createWorkflowChainAccessPolicy();
 
     // Catalog RLS: tenant users can SELECT published templates and their versions.
-    // These are forward-looking for Story 4-RLS (non-superuser role).
-    // Currently bypassed by superuser — WHERE clauses are the active security layer.
+    // Enforced by bubble_app (non-superuser) — active security layer alongside WHERE clauses.
     await this.createCatalogReadPublishedPolicy();
     await this.createCatalogReadPublishedVersionsPolicy();
 
@@ -61,6 +67,71 @@ export class RlsSetupService implements OnModuleInit {
 
     // Seed LLM model registry (idempotent).
     await this.seedLlmModels();
+  }
+
+  /**
+   * Creates the bubble_app non-superuser role IF NOT EXISTS.
+   * Password from DB_APP_PASSWORD env var, fallback to 'bubble_password'.
+   */
+  async createAppRole(): Promise<void> {
+    const password = this.config.get<string>('DB_APP_PASSWORD', 'bubble_password');
+    // Escape single quotes for PL/pgSQL string literal ('' is the standard escape)
+    const escapedPassword = password.replace(/'/g, "''");
+    try {
+      // Use unique dollar-quote tag to prevent password containing '$$' from terminating the DO block
+      await this.dataSource.query(`
+        DO $role_setup$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'bubble_app') THEN
+            EXECUTE format('CREATE ROLE bubble_app LOGIN PASSWORD %L', '${escapedPassword}');
+          END IF;
+        END
+        $role_setup$;
+      `);
+      this.logger.log('bubble_app role ensured (LOGIN, non-superuser)');
+    } catch (error) {
+      this.logger.error('Failed to create bubble_app role:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Grants SELECT/INSERT/UPDATE/DELETE on ALL TABLES and USAGE/SELECT on ALL SEQUENCES
+   * in the public schema to bubble_app. Safe to re-run (GRANTs are idempotent).
+   */
+  async grantAppPermissions(): Promise<void> {
+    try {
+      await this.dataSource.query(
+        `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO bubble_app`,
+      );
+      await this.dataSource.query(
+        `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO bubble_app`,
+      );
+      this.logger.log('Granted table + sequence permissions to bubble_app');
+    } catch (error) {
+      this.logger.error('Failed to grant permissions to bubble_app:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ALTER DEFAULT PRIVILEGES ensures future tables/sequences created by bubble_user
+   * (via TypeORM synchronize) are automatically accessible to bubble_app.
+   * Without this, new tables from schema sync would be inaccessible.
+   */
+  async setDefaultPrivileges(): Promise<void> {
+    try {
+      await this.dataSource.query(
+        `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO bubble_app`,
+      );
+      await this.dataSource.query(
+        `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO bubble_app`,
+      );
+      this.logger.log('Default privileges set for bubble_app on future tables/sequences');
+    } catch (error) {
+      this.logger.error('Failed to set default privileges for bubble_app:', error);
+      throw error;
+    }
   }
 
   private async createAuthSelectPolicy(): Promise<void> {
@@ -167,25 +238,32 @@ export class RlsSetupService implements OnModuleInit {
       await this.dataSource.query(`ALTER TABLE "workflow_templates" ENABLE ROW LEVEL SECURITY`);
       await this.dataSource.query(`ALTER TABLE "workflow_templates" FORCE ROW LEVEL SECURITY`);
 
+      // Drop and recreate to ensure latest NULLIF + admin bypass clauses
       await this.dataSource.query(`
         DO $$
         BEGIN
-          IF NOT EXISTS (
+          IF EXISTS (
             SELECT 1 FROM pg_policies
             WHERE tablename = 'workflow_templates' AND policyname = 'template_access'
           ) THEN
-            CREATE POLICY template_access ON workflow_templates
-              USING (
-                tenant_id = current_setting('app.current_tenant', true)::uuid
-                OR visibility = 'public'
-                OR current_setting('app.current_tenant', true)::uuid = ANY(allowed_tenants)
-              );
+            DROP POLICY template_access ON workflow_templates;
           END IF;
+          CREATE POLICY template_access ON workflow_templates
+            USING (
+              tenant_id = NULLIF(current_setting('app.current_tenant', true), '')::uuid
+              OR visibility = 'public'
+              OR NULLIF(current_setting('app.current_tenant', true), '')::uuid = ANY(allowed_tenants)
+              OR current_setting('app.is_admin', true) = 'true'
+            )
+            WITH CHECK (
+              tenant_id = NULLIF(current_setting('app.current_tenant', true), '')::uuid
+              OR current_setting('app.is_admin', true) = 'true'
+            );
         END
         $$;
       `);
       this.logger.log(
-        'Custom RLS policy created on "workflow_templates" — visibility-based access',
+        'Custom RLS policy created on "workflow_templates" — visibility-based access with write protection',
       );
     } catch (error) {
       this.logger.error('Failed to create workflow template access policy:', error);
@@ -199,25 +277,32 @@ export class RlsSetupService implements OnModuleInit {
       await this.dataSource.query(`ALTER TABLE "workflow_chains" ENABLE ROW LEVEL SECURITY`);
       await this.dataSource.query(`ALTER TABLE "workflow_chains" FORCE ROW LEVEL SECURITY`);
 
+      // Drop and recreate to ensure latest NULLIF + admin bypass clauses
       await this.dataSource.query(`
         DO $$
         BEGIN
-          IF NOT EXISTS (
+          IF EXISTS (
             SELECT 1 FROM pg_policies
             WHERE tablename = 'workflow_chains' AND policyname = 'chain_access'
           ) THEN
-            CREATE POLICY chain_access ON workflow_chains
-              USING (
-                tenant_id = current_setting('app.current_tenant', true)::uuid
-                OR visibility = 'public'
-                OR current_setting('app.current_tenant', true)::uuid = ANY(allowed_tenants)
-              );
+            DROP POLICY chain_access ON workflow_chains;
           END IF;
+          CREATE POLICY chain_access ON workflow_chains
+            USING (
+              tenant_id = NULLIF(current_setting('app.current_tenant', true), '')::uuid
+              OR visibility = 'public'
+              OR NULLIF(current_setting('app.current_tenant', true), '')::uuid = ANY(allowed_tenants)
+              OR current_setting('app.is_admin', true) = 'true'
+            )
+            WITH CHECK (
+              tenant_id = NULLIF(current_setting('app.current_tenant', true), '')::uuid
+              OR current_setting('app.is_admin', true) = 'true'
+            );
         END
         $$;
       `);
       this.logger.log(
-        'Custom RLS policy created on "workflow_chains" — visibility-based access',
+        'Custom RLS policy created on "workflow_chains" — visibility-based access with write protection',
       );
     } catch (error) {
       this.logger.error('Failed to create workflow chain access policy:', error);
@@ -232,23 +317,28 @@ export class RlsSetupService implements OnModuleInit {
    */
   private async createCatalogReadPublishedPolicy(): Promise<void> {
     try {
+      // Drop and recreate to ensure latest NULLIF + admin bypass clauses
       await this.dataSource.query(`
         DO $$
         BEGIN
-          IF NOT EXISTS (
+          IF EXISTS (
             SELECT 1 FROM pg_policies
             WHERE tablename = 'workflow_templates' AND policyname = 'catalog_read_published'
           ) THEN
-            CREATE POLICY catalog_read_published ON workflow_templates
-              FOR SELECT USING (
+            DROP POLICY catalog_read_published ON workflow_templates;
+          END IF;
+          CREATE POLICY catalog_read_published ON workflow_templates
+            FOR SELECT USING (
+              (
                 status = 'published'
                 AND deleted_at IS NULL
                 AND (
                   visibility = 'public'
-                  OR current_setting('app.current_tenant', true)::uuid = ANY(allowed_tenants)
+                  OR NULLIF(current_setting('app.current_tenant', true), '')::uuid = ANY(allowed_tenants)
                 )
-              );
-          END IF;
+              )
+              OR current_setting('app.is_admin', true) = 'true'
+            );
         END
         $$;
       `);
@@ -267,27 +357,30 @@ export class RlsSetupService implements OnModuleInit {
    */
   private async createCatalogReadPublishedVersionsPolicy(): Promise<void> {
     try {
+      // Drop and recreate to ensure latest NULLIF + admin bypass clauses
       await this.dataSource.query(`
         DO $$
         BEGIN
-          IF NOT EXISTS (
+          IF EXISTS (
             SELECT 1 FROM pg_policies
             WHERE tablename = 'workflow_versions' AND policyname = 'catalog_read_published_versions'
           ) THEN
-            CREATE POLICY catalog_read_published_versions ON workflow_versions
-              FOR SELECT USING (
-                EXISTS (
-                  SELECT 1 FROM workflow_templates wt
-                  WHERE wt.id = template_id
-                    AND wt.status = 'published'
-                    AND wt.deleted_at IS NULL
-                    AND (
-                      wt.visibility = 'public'
-                      OR current_setting('app.current_tenant', true)::uuid = ANY(wt.allowed_tenants)
-                    )
-                )
-              );
+            DROP POLICY catalog_read_published_versions ON workflow_versions;
           END IF;
+          CREATE POLICY catalog_read_published_versions ON workflow_versions
+            FOR SELECT USING (
+              EXISTS (
+                SELECT 1 FROM workflow_templates wt
+                WHERE wt.id = template_id
+                  AND wt.status = 'published'
+                  AND wt.deleted_at IS NULL
+                  AND (
+                    wt.visibility = 'public'
+                    OR NULLIF(current_setting('app.current_tenant', true), '')::uuid = ANY(wt.allowed_tenants)
+                  )
+              )
+              OR current_setting('app.is_admin', true) = 'true'
+            );
         END
         $$;
       `);
@@ -435,20 +528,28 @@ export class RlsSetupService implements OnModuleInit {
         `ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY`,
       );
 
+      // Drop and recreate policy to ensure it has the latest NULLIF + admin bypass + WITH CHECK clauses.
       // Table name is validated by TABLE_NAME_PATTERN regex — safe for interpolation.
-      // PL/pgSQL DO blocks do not support parameterized queries from the outer call.
       await this.dataSource.query(`
         DO $$
         BEGIN
-          IF NOT EXISTS (
+          -- Drop existing policy (may have old definition without NULLIF/admin bypass/WITH CHECK)
+          IF EXISTS (
             SELECT 1 FROM pg_policies
             WHERE tablename = '${table}' AND policyname = '${policyName}'
           ) THEN
-            EXECUTE format(
-              'CREATE POLICY %I ON %I USING (tenant_id = current_setting(''app.current_tenant'', true)::uuid)',
-              '${policyName}', '${table}'
-            );
+            EXECUTE format('DROP POLICY %I ON %I', '${policyName}', '${table}');
           END IF;
+          EXECUTE format(
+            'CREATE POLICY %I ON %I USING (' ||
+              'tenant_id = NULLIF(current_setting(''app.current_tenant'', true), '''')::uuid ' ||
+              'OR current_setting(''app.is_admin'', true) = ''true''' ||
+            ') WITH CHECK (' ||
+              'tenant_id = NULLIF(current_setting(''app.current_tenant'', true), '''')::uuid ' ||
+              'OR current_setting(''app.is_admin'', true) = ''true''' ||
+            ')',
+            '${policyName}', '${table}'
+          );
         END
         $$;
       `);

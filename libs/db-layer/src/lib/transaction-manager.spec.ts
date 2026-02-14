@@ -40,6 +40,14 @@ describe('TransactionManager [P0]', () => {
         txManager.run("'; DROP TABLE users; --", callback),
       ).rejects.toThrow('Invalid tenant ID format');
     });
+
+    it('[4-RLS-A-UNIT-011] should reject empty string as tenant ID', async () => {
+      const callback = jest.fn().mockResolvedValue('result');
+
+      await expect(
+        txManager.run('', callback),
+      ).rejects.toThrow('Invalid tenant ID format');
+    });
   });
 
   describe('run(callback) — reads from AsyncLocalStorage', () => {
@@ -62,7 +70,7 @@ describe('TransactionManager [P0]', () => {
       );
     });
 
-    it('[1H.1-UNIT-003] should skip SET LOCAL when bypassRls is true (bubble_admin)', async () => {
+    it('[1H.1-UNIT-003] should SET LOCAL app.is_admin when bypassRls is true (bubble_admin)', async () => {
       const callback = jest.fn().mockResolvedValue('result');
 
       const ctx: TenantContext = {
@@ -75,7 +83,13 @@ describe('TransactionManager [P0]', () => {
       );
 
       expect(result).toBe('result');
-      expect(mockManager.query).not.toHaveBeenCalled();
+      expect(mockManager.query).toHaveBeenCalledWith(
+        `SET LOCAL app.is_admin = 'true'`,
+      );
+      // Must NOT set current_tenant when bypassing
+      expect(mockManager.query).not.toHaveBeenCalledWith(
+        expect.stringContaining('app.current_tenant'),
+      );
     });
 
     it('[1H.1-UNIT-004] should skip SET LOCAL when no AsyncLocalStorage context', async () => {
@@ -107,6 +121,31 @@ describe('TransactionManager [P0]', () => {
           throw new Error('DB failure');
         }),
       ).rejects.toThrow('DB failure');
+    });
+  });
+
+  describe('admin bypass — explicit tenantId takes precedence', () => {
+    it('[4-RLS-A-UNIT-001] explicit tenantId overrides bypassRls context', async () => {
+      const callback = jest.fn().mockResolvedValue('result');
+      const tenantId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+
+      const ctx: TenantContext = {
+        tenantId: 'admin-tenant',
+        bypassRls: true,
+      };
+
+      // Even with bypassRls context, explicit tenantId should take precedence
+      const result = await tenantContextStorage.run(ctx, () =>
+        txManager.run(tenantId, callback),
+      );
+
+      expect(result).toBe('result');
+      expect(mockManager.query).toHaveBeenCalledWith(
+        `SET LOCAL app.current_tenant = '${tenantId}'`,
+      );
+      expect(mockManager.query).not.toHaveBeenCalledWith(
+        expect.stringContaining('app.is_admin'),
+      );
     });
   });
 });

@@ -99,6 +99,15 @@ export class WorkflowExecutionProcessor extends WorkerHost {
 
   async process(job: Job<WorkflowJobPayload>): Promise<void> {
     const { runId, tenantId } = job.data;
+
+    // Defensive: fail fast on missing tenantId (N4 from party mode review)
+    if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+      throw new Error(
+        `Job ${job.id} has invalid tenantId (${JSON.stringify(tenantId)}) — ` +
+        `cannot process workflow run ${runId} without tenant context`,
+      );
+    }
+
     const fanOut = isFanOutJob(job.id);
 
     this.logger.log({
@@ -355,6 +364,21 @@ export class WorkflowExecutionProcessor extends WorkerHost {
   @OnWorkerEvent('failed')
   async onFailed(job: Job<WorkflowJobPayload>, error: Error): Promise<void> {
     const { runId, tenantId } = job.data;
+
+    // Defensive: skip DB update on missing tenantId.
+    // ASYMMETRY with process(): process() THROWS (BullMQ retries/DLQ the job),
+    // but onFailed() must RETURN EARLY — throwing in a failed handler crashes the
+    // entire worker process, taking down all concurrent jobs.
+    if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
+      this.logger.error({
+        message: 'Cannot record job failure — missing tenantId',
+        jobId: job.id,
+        runId,
+        originalError: error.message,
+      });
+      return;
+    }
+
     const attemptsMade = job.attemptsMade;
     const maxAttempts = job.opts?.attempts ?? 3;
     const fanOut = isFanOutJob(job.id);

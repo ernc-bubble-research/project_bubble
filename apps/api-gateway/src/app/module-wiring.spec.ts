@@ -16,7 +16,8 @@
  */
 import { Test } from '@nestjs/testing';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, getDataSourceToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
 import * as dotenv from 'dotenv';
@@ -345,6 +346,11 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     process.env['ADMIN_API_KEY'] = 'wiring-test-admin-key';
     process.env['SETTINGS_ENCRYPTION_KEY'] = 'dGVzdA==';
     process.env['EMBEDDING_PROVIDER'] = 'mock';
+    // Use superuser for default DS in tests — bubble_app role provisioned in 4-RLS-C
+    process.env['DB_APP_USER'] = process.env['POSTGRES_USER'] || 'bubble_user';
+    process.env['DB_APP_PASSWORD'] = process.env['POSTGRES_PASSWORD'] || 'bubble_password';
+    // Default DS reads POSTGRES_DB for database name — must point to wiring test DB
+    process.env['POSTGRES_DB'] = TEST_DB_NAME;
 
     // Import AppModule lazily to pick up the env overrides
     const { AppModule } = await import('./app.module');
@@ -371,6 +377,21 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module.get(PromptAssemblyService)).toBeDefined();
     expect(module.get(WorkflowRunsService)).toBeDefined();
 
-    await module.close();
+    // Dual DataSource teardown: @nestjs/typeorm's TypeOrmCoreModule.onApplicationShutdown
+    // throws when looking up the named DataSource ('migration') token via moduleRef.get().
+    // Manually destroy both DataSources before module.close() to prevent the error.
+    try {
+      const migrationDs = module.get<DataSource>(getDataSourceToken('migration'));
+      if (migrationDs?.isInitialized) await migrationDs.destroy();
+    } catch { /* already destroyed or not found */ }
+    try {
+      const defaultDs = module.get(DataSource);
+      if (defaultDs?.isInitialized) await defaultDs.destroy();
+    } catch { /* already destroyed */ }
+    try {
+      await module.close();
+    } catch {
+      // TypeOrmCoreModule shutdown race with pre-destroyed DataSources — benign
+    }
   }, 30_000);
 });

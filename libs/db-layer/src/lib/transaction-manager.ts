@@ -21,16 +21,24 @@ export class TransactionManager {
   ): Promise<T> {
     let tenantId: string | undefined;
     let callback: (manager: EntityManager) => Promise<T>;
+    let bypassRls = false;
 
     if (typeof tenantIdOrCallback === 'string') {
       tenantId = tenantIdOrCallback;
+      if (!tenantId) {
+        throw new Error('Invalid tenant ID format: empty string');
+      }
       callback =
         maybeCallback as (manager: EntityManager) => Promise<T>;
     } else {
       callback = tenantIdOrCallback;
       const ctx = getCurrentTenantContext();
-      if (ctx && !ctx.bypassRls) {
-        tenantId = ctx.tenantId;
+      if (ctx) {
+        if (ctx.bypassRls) {
+          bypassRls = true;
+        } else if (ctx.tenantId) {
+          tenantId = ctx.tenantId;
+        }
       }
     }
 
@@ -42,6 +50,9 @@ export class TransactionManager {
           throw new Error(`Invalid tenant ID format: ${tenantId}`);
         }
         await manager.query(`SET LOCAL app.current_tenant = '${tenantId}'`);
+      } else if (bypassRls) {
+        // Admin bypass: set is_admin flag so RLS policies allow through
+        await manager.query(`SET LOCAL app.is_admin = 'true'`);
       }
       return callback(manager);
     });

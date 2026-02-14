@@ -13,7 +13,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, getDataSourceToken } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
 import { DataSource, EntityManager } from 'typeorm';
@@ -121,13 +121,26 @@ function createRootImports() {
         }),
       ],
     }),
+    // Named 'migration' DataSource — used by RlsSetupService for DDL operations
     TypeOrmModule.forRootAsync({
+      name: 'migration',
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         type: 'postgres' as const,
         url: config.get<string>('DATABASE_URL'),
         entities: ALL_ENTITIES,
         synchronize: true,
+      }),
+      inject: [ConfigService],
+    }),
+    // Default (unnamed) DataSource — used by TransactionManager + all services
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres' as const,
+        url: config.get<string>('DATABASE_URL'),
+        entities: ALL_ENTITIES,
+        synchronize: false, // Schema synced by migration DS
       }),
       inject: [ConfigService],
     }),
@@ -170,7 +183,10 @@ describe('Integration Wiring — Tier 2 Runtime [P0]', () => {
         TenantsModule,
         EmailModule,
       ],
-      providers: [TenantStatusGuard],
+      // RlsSetupService moved from DbLayerModule to MigrationDatabaseModule in production,
+      // but in tests we provide it directly with the named 'migration' DataSource.
+      // TenantStatusGuard is not in any module (used via @UseGuards on controllers).
+      providers: [RlsSetupService, TenantStatusGuard],
     }).compile();
 
     // Initialize — triggers RlsSetupService.onModuleInit() + AuthService.onModuleInit()
@@ -181,7 +197,22 @@ describe('Integration Wiring — Tier 2 Runtime [P0]', () => {
 
   afterAll(async () => {
     if (module) {
-      await module.close();
+      // Dual DataSource teardown: @nestjs/typeorm's TypeOrmCoreModule.onApplicationShutdown
+      // throws when looking up the named DataSource ('migration') token via moduleRef.get().
+      // Manually destroy both DataSources before module.close() to prevent the error.
+      try {
+        const migrationDs = module.get<DataSource>(getDataSourceToken('migration'));
+        if (migrationDs?.isInitialized) await migrationDs.destroy();
+      } catch { /* already destroyed or not found */ }
+      try {
+        const defaultDs = module.get(DataSource);
+        if (defaultDs?.isInitialized) await defaultDs.destroy();
+      } catch { /* already destroyed */ }
+      try {
+        await module.close();
+      } catch {
+        // TypeOrmCoreModule shutdown race with pre-destroyed DataSources — benign
+      }
     }
     await dropTestDatabase(TEST_DB_NAME);
   }, 30_000);
@@ -370,7 +401,7 @@ describe('Integration Wiring — Tier 2 Runtime [P0]', () => {
     });
   });
 
-  it('[MW-1-INTEG-013] [P0] TransactionManager.run() with bypassRls=true does NOT set SET LOCAL', async () => {
+  it('[MW-1-INTEG-013] [P0] TransactionManager.run() with bypassRls=true sets app.is_admin instead of current_tenant', async () => {
     const txManager = module.get(TransactionManager);
 
     const tenantContext: TenantContext = {
@@ -380,11 +411,17 @@ describe('Integration Wiring — Tier 2 Runtime [P0]', () => {
 
     await tenantContextStorage.run(tenantContext, async () => {
       await txManager.run(async (manager: EntityManager) => {
-        const result = await manager.query(
+        // Admin bypass: app.is_admin should be 'true'
+        const adminResult = await manager.query(
+          `SELECT current_setting('app.is_admin', true) as is_admin`,
+        );
+        expect(adminResult[0].is_admin).toBe('true');
+
+        // current_tenant should NOT be set
+        const tenantResult = await manager.query(
           `SELECT current_setting('app.current_tenant', true) as tenant`,
         );
-        // When bypassRls=true, SET LOCAL is NOT called, so current_setting returns empty string or null
-        expect(result[0].tenant === null || result[0].tenant === '').toBe(true);
+        expect(tenantResult[0].tenant === null || tenantResult[0].tenant === '').toBe(true);
       });
     });
   });

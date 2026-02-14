@@ -19,6 +19,7 @@ import { WorkflowsModule } from './workflows/workflows.module';
 import { SettingsModule } from './settings/settings.module';
 import { WorkflowExecutionModule } from './workflow-execution/workflow-execution.module';
 import { WorkflowRunsModule } from './workflow-runs/workflow-runs.module';
+import { MigrationDatabaseModule, MIGRATION_DB_READY } from './migration-database.module';
 
 @Module({
   imports: [
@@ -26,15 +27,31 @@ import { WorkflowRunsModule } from './workflow-runs/workflow-runs.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    // Migration DataSource: bubble_user (superuser), synchronize: true, schema sync + RLS setup
+    MigrationDatabaseModule,
+    // Default (app) DataSource: bubble_app (non-superuser), synchronize: false
+    // Factory injects MIGRATION_DB_READY to guarantee migration DS finishes first
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        url: config.get<string>('DATABASE_URL'),
-        autoLoadEntities: true,
-        synchronize: true, // DEV ONLY — use migrations in production
-      }),
-      inject: [ConfigService],
+      imports: [ConfigModule, MigrationDatabaseModule],
+      useFactory: (config: ConfigService, _migrationReady: boolean /* injection guarantees boot order */) => {
+        const dbAppUser = config.get<string>('DB_APP_USER', 'bubble_app');
+        const dbAppPassword = config.get<string>('DB_APP_PASSWORD', 'bubble_password');
+        const host = config.get<string>('POSTGRES_HOST', 'localhost');
+        const port = config.get<number>('POSTGRES_PORT', 5432);
+        const db = config.get<string>('POSTGRES_DB', 'bubble_db');
+
+        return {
+          type: 'postgres',
+          host,
+          port,
+          username: dbAppUser,
+          password: dbAppPassword,
+          database: db,
+          autoLoadEntities: true,
+          synchronize: false, // Schema synced by migration DS — no sync needed here
+        };
+      },
+      inject: [ConfigService, MIGRATION_DB_READY],
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     BullModule.forRootAsync({
