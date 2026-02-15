@@ -62,7 +62,7 @@
             data-testid="input-providerKey"
           >
             <option value="">Select a provider</option>
-            @for (opt of providerOptions; track opt.value) {
+            @for (opt of providerOptions(); track opt.value) {
               <option [value]="opt.value">{{ opt.label }}</option>
             }
           </select>

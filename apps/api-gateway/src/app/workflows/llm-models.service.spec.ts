@@ -6,10 +6,12 @@ import {
 import { Repository } from 'typeorm';
 import { LlmModelEntity } from '@project-bubble/db-layer';
 import { LlmModelsService } from './llm-models.service';
+import { ProviderRegistry } from '../workflow-execution/llm/provider-registry.service';
 
 describe('LlmModelsService [P1]', () => {
   let service: LlmModelsService;
   let repo: jest.Mocked<Repository<LlmModelEntity>>;
+  let registry: ProviderRegistry;
 
   const modelId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
@@ -43,7 +45,10 @@ describe('LlmModelsService [P1]', () => {
       update: jest.fn(),
     } as unknown as jest.Mocked<Repository<LlmModelEntity>>;
 
-    service = new LlmModelsService(repo);
+    registry = new ProviderRegistry();
+    registry.onModuleInit();
+
+    service = new LlmModelsService(repo, registry);
   });
 
   describe('findAllActive', () => {

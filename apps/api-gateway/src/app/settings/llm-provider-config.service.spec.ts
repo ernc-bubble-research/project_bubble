@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { LlmProviderConfigEntity } from '@project-bubble/db-layer';
 import { LlmProviderConfigService } from './llm-provider-config.service';
+import { ProviderRegistry } from '../workflow-execution/llm/provider-registry.service';
 import { encrypt } from '../common/crypto.util';
 import { randomBytes } from 'crypto';
 
@@ -38,6 +39,7 @@ describe('LlmProviderConfigService [P0]', () => {
   let service: LlmProviderConfigService;
   let repo: jest.Mocked<Repository<LlmProviderConfigEntity>>;
   let configService: jest.Mocked<ConfigService>;
+  let providerRegistry: ProviderRegistry;
 
   beforeEach(() => {
     repo = {
@@ -56,7 +58,11 @@ describe('LlmProviderConfigService [P0]', () => {
       return undefined;
     });
 
-    service = new LlmProviderConfigService(repo, configService);
+    // Use real ProviderRegistry (has zero deps, populated via onModuleInit)
+    providerRegistry = new ProviderRegistry();
+    providerRegistry.onModuleInit();
+
+    service = new LlmProviderConfigService(repo, configService, providerRegistry);
   });
 
   describe('findAll', () => {
@@ -202,7 +208,7 @@ describe('LlmProviderConfigService [P0]', () => {
     it('[3.1-4-UNIT-025] [P0] should throw BadRequestException when encryption key is missing and credentials provided', async () => {
       // Given — service without encryption key
       configService.get.mockReturnValue(undefined);
-      const serviceNoKey = new LlmProviderConfigService(repo, configService);
+      const serviceNoKey = new LlmProviderConfigService(repo, configService, providerRegistry);
       const dto = {
         providerKey: 'google-ai-studio',
         displayName: 'Google AI Studio',
@@ -312,7 +318,7 @@ describe('LlmProviderConfigService [P0]', () => {
     it('[3.1-4-UNIT-031] [P0] should throw BadRequestException when updating credentials without encryption key', async () => {
       // Given
       configService.get.mockReturnValue(undefined);
-      const serviceNoKey = new LlmProviderConfigService(repo, configService);
+      const serviceNoKey = new LlmProviderConfigService(repo, configService, providerRegistry);
       repo.findOne.mockResolvedValue({ ...mockConfig });
 
       // When / Then
@@ -348,6 +354,7 @@ describe('LlmProviderConfigService [P0]', () => {
       const serviceWithEnv = new LlmProviderConfigService(
         repo,
         configService,
+        providerRegistry,
       );
 
       // When
@@ -367,7 +374,7 @@ describe('LlmProviderConfigService [P0]', () => {
         if (key === 'GEMINI_API_KEY') return 'env-fallback';
         return undefined;
       });
-      const serviceNoKey = new LlmProviderConfigService(repo, configService);
+      const serviceNoKey = new LlmProviderConfigService(repo, configService, providerRegistry);
 
       // When
       const result =
@@ -490,7 +497,7 @@ describe('LlmProviderConfigService [P0]', () => {
     it('[3.1-4-UNIT-037] [P1] should show status when encryption key is unavailable for masking', async () => {
       // Given
       configService.get.mockReturnValue(undefined);
-      const serviceNoKey = new LlmProviderConfigService(repo, configService);
+      const serviceNoKey = new LlmProviderConfigService(repo, configService, providerRegistry);
       const configWithCreds = buildConfigWithCredentials();
       repo.find.mockResolvedValue([configWithCreds]);
 

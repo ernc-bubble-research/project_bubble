@@ -1,5 +1,6 @@
 import { LlmProviderConfigController } from './llm-provider-config.controller';
 import { LlmProviderConfigService } from './llm-provider-config.service';
+import { ProviderRegistry } from '../workflow-execution/llm/provider-registry.service';
 import type { LlmProviderConfigResponseDto } from '@project-bubble/shared';
 
 const mockResponse: LlmProviderConfigResponseDto = {
@@ -16,6 +17,7 @@ const mockResponse: LlmProviderConfigResponseDto = {
 describe('LlmProviderConfigController [P1]', () => {
   let controller: LlmProviderConfigController;
   let service: jest.Mocked<LlmProviderConfigService>;
+  let providerRegistry: ProviderRegistry;
 
   beforeEach(() => {
     service = {
@@ -25,7 +27,10 @@ describe('LlmProviderConfigController [P1]', () => {
       getDecryptedCredentials: jest.fn(),
     } as unknown as jest.Mocked<LlmProviderConfigService>;
 
-    controller = new LlmProviderConfigController(service);
+    providerRegistry = new ProviderRegistry();
+    providerRegistry.onModuleInit();
+
+    controller = new LlmProviderConfigController(service, providerRegistry);
   });
 
   describe('findAll', () => {
@@ -69,6 +74,47 @@ describe('LlmProviderConfigController [P1]', () => {
       // Then
       expect(result).toEqual(mockResponse);
       expect(service.update).toHaveBeenCalledWith(id, dto);
+    });
+  });
+
+  describe('getProviderTypes', () => {
+    it('[4-PR-UNIT-CT01] should return all provider types sorted by displayName', () => {
+      // When
+      const result = controller.getProviderTypes();
+
+      // Then
+      expect(result).toHaveLength(4);
+      // Sorted alphabetically by displayName
+      expect(result[0].providerKey).toBe('google-ai-studio');
+      expect(result[0].displayName).toBe('Google AI Studio');
+      expect(result[0].isDevelopmentOnly).toBe(false);
+      expect(result[0].credentialFields).toHaveLength(1);
+      expect(result[0].credentialFields[0].key).toBe('apiKey');
+    });
+
+    it('[4-PR-UNIT-CT02] should include credentialFields for each provider type', () => {
+      // When
+      const result = controller.getProviderTypes();
+
+      // Then
+      const googleEntry = result.find((r) => r.providerKey === 'google-ai-studio');
+      expect(googleEntry!.credentialFields).toEqual([
+        { key: 'apiKey', label: 'API Key', type: 'password', required: true },
+      ]);
+
+      const mockEntry = result.find((r) => r.providerKey === 'mock');
+      expect(mockEntry!.credentialFields).toEqual([]);
+      expect(mockEntry!.isDevelopmentOnly).toBe(true);
+    });
+
+    it('[4-PR-UNIT-CT03] should return results sorted by displayName', () => {
+      // When
+      const result = controller.getProviderTypes();
+
+      // Then
+      const names = result.map((r) => r.displayName);
+      const sorted = [...names].sort();
+      expect(names).toEqual(sorted);
     });
   });
 });

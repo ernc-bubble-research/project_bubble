@@ -19,11 +19,13 @@ import {
   CreateLlmProviderConfigDto,
   UpdateLlmProviderConfigDto,
   LlmProviderConfigResponseDto,
+  ProviderTypeDto,
 } from '@project-bubble/shared';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { LlmProviderConfigService } from './llm-provider-config.service';
+import { ProviderRegistry } from '../workflow-execution/llm/provider-registry.service';
 
 @ApiTags('Admin - LLM Provider Config')
 @ApiBearerAuth()
@@ -33,6 +35,7 @@ import { LlmProviderConfigService } from './llm-provider-config.service';
 export class LlmProviderConfigController {
   constructor(
     private readonly providerConfigService: LlmProviderConfigService,
+    private readonly providerRegistry: ProviderRegistry,
   ) {}
 
   @Get()
@@ -42,6 +45,23 @@ export class LlmProviderConfigController {
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   findAll() {
     return this.providerConfigService.findAll();
+  }
+
+  @Get('types')
+  @ApiOperation({ summary: 'List all known LLM provider types with credential schemas' })
+  @ApiResponse({ status: 200, description: 'List of provider types', type: [ProviderTypeDto] })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  getProviderTypes(): ProviderTypeDto[] {
+    return this.providerRegistry
+      .getAll()
+      .map((entry) => ({
+        providerKey: entry.providerKey,
+        displayName: entry.displayName,
+        credentialFields: entry.credentialSchema,
+        isDevelopmentOnly: entry.isDevelopmentOnly,
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
   }
 
   @Post()

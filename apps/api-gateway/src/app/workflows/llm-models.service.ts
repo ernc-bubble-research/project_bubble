@@ -13,13 +13,14 @@ import {
   BulkUpdateModelStatusDto,
 } from '@project-bubble/shared';
 import { UpdateLlmModelDto } from '@project-bubble/shared';
-import { KNOWN_PROVIDER_KEYS } from '../common/provider-keys';
+import { ProviderRegistry } from '../workflow-execution/llm/provider-registry.service';
 
 @Injectable()
 export class LlmModelsService {
   constructor(
     @InjectRepository(LlmModelEntity)
     private readonly repo: Repository<LlmModelEntity>,
+    private readonly providerRegistry: ProviderRegistry,
   ) {}
 
   async findAllActive(): Promise<LlmModelResponseDto[]> {
@@ -113,13 +114,10 @@ export class LlmModelsService {
   }
 
   private validateProviderKey(providerKey: string): void {
-    if (
-      !KNOWN_PROVIDER_KEYS.includes(
-        providerKey as (typeof KNOWN_PROVIDER_KEYS)[number],
-      )
-    ) {
+    const knownKeys = this.providerRegistry.getKnownKeys();
+    if (!knownKeys.includes(providerKey)) {
       throw new BadRequestException(
-        `Unknown provider key "${providerKey}". Known providers: ${KNOWN_PROVIDER_KEYS.join(', ')}`,
+        `Unknown provider key "${providerKey}". Known providers: ${knownKeys.join(', ')}`,
       );
     }
   }

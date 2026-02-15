@@ -10,7 +10,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideAngularModule } from 'lucide-angular';
 import { LlmModelService, type LlmModel } from '../../core/services/llm-model.service';
-import { PROVIDER_DISPLAY_NAMES } from './provider-constants';
+import { ProviderTypeService } from '../../core/services/provider-type.service';
 
 export interface ProviderGroup {
   providerKey: string;
@@ -27,6 +27,7 @@ export interface ProviderGroup {
 })
 export class LlmModelsListComponent {
   private readonly llmModelService = inject(LlmModelService);
+  private readonly providerTypeService = inject(ProviderTypeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -54,7 +55,7 @@ export class LlmModelsListComponent {
 
     return sortedKeys.map((key) => ({
       providerKey: key,
-      displayName: PROVIDER_DISPLAY_NAMES[key] ?? key,
+      displayName: this.providerTypeService.getDisplayName(key),
       models: groupMap.get(key)!.sort((a, b) =>
         a.displayName.localeCompare(b.displayName)
       ),

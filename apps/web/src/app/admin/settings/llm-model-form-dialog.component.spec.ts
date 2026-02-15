@@ -11,6 +11,7 @@ import {
 } from 'lucide-angular';
 import { LlmModelFormDialogComponent } from './llm-model-form-dialog.component';
 import { LlmModelService, type LlmModel } from '../../core/services/llm-model.service';
+import { ProviderTypeService } from '../../core/services/provider-type.service';
 
 const mockModel: LlmModel = {
   id: 'model-1',
@@ -64,10 +65,22 @@ describe('LlmModelFormDialogComponent [P2]', () => {
       updateModel: jest.fn().mockReturnValue(of(mockModel)),
     };
 
+    const mockProviderTypeService = {
+      types: signal([
+        { providerKey: 'google-ai-studio', displayName: 'Google AI Studio', credentialFields: [], isDevelopmentOnly: false },
+        { providerKey: 'mock', displayName: 'Mock Provider', credentialFields: [], isDevelopmentOnly: true },
+        { providerKey: 'vertex', displayName: 'Vertex AI', credentialFields: [], isDevelopmentOnly: false },
+        { providerKey: 'openai', displayName: 'OpenAI', credentialFields: [], isDevelopmentOnly: false },
+      ]),
+      getProviderTypes: jest.fn().mockReturnValue(of([])),
+      getDisplayName: jest.fn((key: string) => key),
+    };
+
     await TestBed.configureTestingModule({
       imports: [TestHostComponent, LlmModelFormDialogComponent],
       providers: [
         { provide: LlmModelService, useValue: mockLlmModelService },
+        { provide: ProviderTypeService, useValue: mockProviderTypeService },
         {
           provide: LUCIDE_ICONS,
           multi: true,

@@ -1125,5 +1125,49 @@ describe('RLS Enforcement — Tier 2 [P0]', () => {
       expect(rows[0].url_path).toBe('/api/app/assets');
       expect(rows[0].status_code).toBe(201);
     });
+
+    // ── sal_tenant_read policy (Story 4-SA-B) ────────────────────
+
+    it('[4-SAB-INTEG-001] [P0] tenant A can read own access log entries via app.current_tenant', async () => {
+      const sessionId = uuidv4();
+      // Seed a row for tenant A via superuser
+      await seedDs.query(
+        `INSERT INTO support_access_log (id, admin_user_id, tenant_id, jwt_token_hash)
+         VALUES ($1, $2, $3, $4)`,
+        [sessionId, adminUserId, tenantAId, 'e'.repeat(64)],
+      );
+
+      // bubble_app with tenant A context should see the row
+      await appDs.transaction(async (manager) => {
+        await manager.query(`SET LOCAL app.current_tenant = '${tenantAId}'`);
+        const rows = await manager.query(
+          `SELECT id FROM support_access_log WHERE tenant_id = $1`,
+          [tenantAId],
+        );
+        // May see rows from other tests too — just verify our row is present
+        const found = rows.some((r: { id: string }) => r.id === sessionId);
+        expect(found).toBe(true);
+      });
+    });
+
+    it('[4-SAB-INTEG-002] [P0] tenant B cannot read tenant A access log entries', async () => {
+      const sessionId = uuidv4();
+      // Seed a row for tenant A via superuser
+      await seedDs.query(
+        `INSERT INTO support_access_log (id, admin_user_id, tenant_id, jwt_token_hash)
+         VALUES ($1, $2, $3, $4)`,
+        [sessionId, adminUserId, tenantAId, 'f'.repeat(64)],
+      );
+
+      // bubble_app with tenant B context should NOT see tenant A's rows
+      await appDs.transaction(async (manager) => {
+        await manager.query(`SET LOCAL app.current_tenant = '${tenantBId}'`);
+        const rows = await manager.query(
+          `SELECT id FROM support_access_log WHERE tenant_id = $1`,
+          [tenantAId],
+        );
+        expect(rows).toHaveLength(0);
+      });
+    });
   });
 });

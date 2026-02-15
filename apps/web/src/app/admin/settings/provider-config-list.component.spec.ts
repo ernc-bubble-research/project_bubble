@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import {
@@ -16,6 +17,7 @@ import {
   LlmProviderService,
   type LlmProviderConfig,
 } from '../../core/services/llm-provider.service';
+import { ProviderTypeService } from '../../core/services/provider-type.service';
 
 const mockConfig: LlmProviderConfig = {
   id: 'config-1',
@@ -23,6 +25,7 @@ const mockConfig: LlmProviderConfig = {
   displayName: 'Google AI Studio',
   maskedCredentials: { apiKey: '***********3456' },
   isActive: true,
+  rateLimitRpm: null,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
 };
@@ -33,6 +36,7 @@ const mockOpenAIConfig: LlmProviderConfig = {
   displayName: 'OpenAI',
   maskedCredentials: null,
   isActive: true,
+  rateLimitRpm: null,
   createdAt: new Date('2026-01-02'),
   updatedAt: new Date('2026-01-02'),
 };
@@ -49,10 +53,24 @@ describe('ProviderConfigListComponent [P1]', () => {
       updateConfig: jest.fn(),
     };
 
+    const mockProviderTypeService = {
+      types: signal([
+        { providerKey: 'google-ai-studio', displayName: 'Google AI Studio', credentialFields: [], isDevelopmentOnly: false },
+        { providerKey: 'openai', displayName: 'OpenAI', credentialFields: [], isDevelopmentOnly: false },
+        { providerKey: 'mock', displayName: 'Mock Provider', credentialFields: [], isDevelopmentOnly: true },
+      ]),
+      getProviderTypes: jest.fn().mockReturnValue(of([])),
+      getDisplayName: jest.fn((key: string) => {
+        const names: Record<string, string> = { 'google-ai-studio': 'Google AI Studio', openai: 'OpenAI', mock: 'Mock Provider' };
+        return names[key] ?? key;
+      }),
+    };
+
     await TestBed.configureTestingModule({
       imports: [ProviderConfigListComponent],
       providers: [
         { provide: LlmProviderService, useValue: mockProviderService },
+        { provide: ProviderTypeService, useValue: mockProviderTypeService },
         {
           provide: LUCIDE_ICONS,
           multi: true,

@@ -13,8 +13,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LucideAngularModule } from 'lucide-angular';
 import { LlmModelService, type LlmModel } from '../../core/services/llm-model.service';
+import { ProviderTypeService } from '../../core/services/provider-type.service';
 import type { CreateLlmModelDto, UpdateLlmModelDto } from '@project-bubble/shared';
-import { PROVIDER_OPTIONS } from './provider-constants';
 
 @Component({
   standalone: true,
@@ -26,6 +26,7 @@ import { PROVIDER_OPTIONS } from './provider-constants';
 export class LlmModelFormDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly llmModelService = inject(LlmModelService);
+  private readonly providerTypeService = inject(ProviderTypeService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Model to edit (null = add mode) */
@@ -37,7 +38,12 @@ export class LlmModelFormDialogComponent {
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
 
-  readonly providerOptions = PROVIDER_OPTIONS;
+  readonly providerOptions = computed(() =>
+    this.providerTypeService.types().map((t) => ({
+      value: t.providerKey,
+      label: t.displayName,
+    })),
+  );
 
   readonly isEditMode = computed(() => this.model() !== null);
   readonly dialogTitle = computed(() =>

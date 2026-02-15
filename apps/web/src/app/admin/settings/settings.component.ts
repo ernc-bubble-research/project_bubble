@@ -1,9 +1,11 @@
-import { Component, signal, ViewChild } from '@angular/core';
+import { Component, DestroyRef, inject, signal, ViewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideAngularModule } from 'lucide-angular';
 import { LlmModelsListComponent } from './llm-models-list.component';
 import { LlmModelFormDialogComponent } from './llm-model-form-dialog.component';
 import { ProviderConfigListComponent } from './provider-config-list.component';
 import { ProviderConfigFormDialogComponent } from './provider-config-form-dialog.component';
+import { ProviderTypeService } from '../../core/services/provider-type.service';
 import type { LlmModel } from '../../core/services/llm-model.service';
 import type { LlmProviderConfig } from '../../core/services/llm-provider.service';
 
@@ -23,8 +25,20 @@ type SettingsTab = 'llm-models' | 'providers' | 'system';
   styleUrl: './settings.component.scss',
 })
 export class SettingsComponent {
+  private readonly providerTypeService = inject(ProviderTypeService);
+  private readonly destroyRef = inject(DestroyRef);
+
   @ViewChild(LlmModelsListComponent) modelListComponent?: LlmModelsListComponent;
   @ViewChild(ProviderConfigListComponent) providerListComponent?: ProviderConfigListComponent;
+
+  constructor() {
+    // Eager-load provider types once in the parent — all child components
+    // (list + form dialogs) consume the cached types signal.
+    this.providerTypeService
+      .getProviderTypes()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
+  }
 
   activeTab = signal<SettingsTab>('llm-models');
 

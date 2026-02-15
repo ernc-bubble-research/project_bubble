@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError, Subject } from 'rxjs';
 import {
@@ -12,6 +13,7 @@ import {
 } from 'lucide-angular';
 import { LlmModelsListComponent } from './llm-models-list.component';
 import { LlmModelService, type LlmModel } from '../../core/services/llm-model.service';
+import { ProviderTypeService } from '../../core/services/provider-type.service';
 
 const mockModels: LlmModel[] = [
   {
@@ -69,10 +71,23 @@ describe('LlmModelsListComponent [P2]', () => {
       bulkUpdateStatus: jest.fn(),
     };
 
+    const mockProviderTypeService = {
+      types: signal([
+        { providerKey: 'google-ai-studio', displayName: 'Google AI Studio', credentialFields: [], isDevelopmentOnly: false },
+        { providerKey: 'mock', displayName: 'Mock Provider', credentialFields: [], isDevelopmentOnly: true },
+      ]),
+      getProviderTypes: jest.fn().mockReturnValue(of([])),
+      getDisplayName: jest.fn((key: string) => {
+        const names: Record<string, string> = { 'google-ai-studio': 'Google AI Studio', mock: 'Mock Provider' };
+        return names[key] ?? key;
+      }),
+    };
+
     await TestBed.configureTestingModule({
       imports: [LlmModelsListComponent],
       providers: [
         { provide: LlmModelService, useValue: mockLlmModelService },
+        { provide: ProviderTypeService, useValue: mockProviderTypeService },
         {
           provide: LUCIDE_ICONS,
           multi: true,

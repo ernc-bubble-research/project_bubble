@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
+import type { ProviderTypeDto } from '@project-bubble/shared';
 import {
   LUCIDE_ICONS,
   LucideIconProvider,
@@ -16,6 +17,7 @@ import {
   LlmProviderService,
   type LlmProviderConfig,
 } from '../../core/services/llm-provider.service';
+import { ProviderTypeService } from '../../core/services/provider-type.service';
 
 const mockConfig: LlmProviderConfig = {
   id: 'config-1',
@@ -23,6 +25,7 @@ const mockConfig: LlmProviderConfig = {
   displayName: 'Google AI Studio',
   maskedCredentials: { apiKey: '***********3456' },
   isActive: true,
+  rateLimitRpm: null,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
 };
@@ -66,10 +69,53 @@ describe('ProviderConfigFormDialogComponent [P1]', () => {
       getAllConfigs: jest.fn().mockReturnValue(of([])),
     };
 
+    const mockProviderTypeService = {
+      types: signal([
+        {
+          providerKey: 'google-ai-studio',
+          displayName: 'Google AI Studio',
+          credentialFields: [{ key: 'apiKey', label: 'API Key', type: 'password', required: true }],
+          isDevelopmentOnly: false,
+        },
+        {
+          providerKey: 'mock',
+          displayName: 'Mock Provider',
+          credentialFields: [],
+          isDevelopmentOnly: true,
+        },
+        {
+          providerKey: 'vertex',
+          displayName: 'Vertex AI',
+          credentialFields: [
+            { key: 'projectId', label: 'Project ID', type: 'text', required: true },
+            { key: 'location', label: 'Location', type: 'text', required: true },
+          ],
+          isDevelopmentOnly: false,
+        },
+        {
+          providerKey: 'openai',
+          displayName: 'OpenAI',
+          credentialFields: [{ key: 'apiKey', label: 'API Key', type: 'password', required: true }],
+          isDevelopmentOnly: false,
+        },
+      ]),
+      getProviderTypes: jest.fn().mockReturnValue(of([])),
+      getDisplayName: jest.fn((key: string) => {
+        const names: Record<string, string> = {
+          'google-ai-studio': 'Google AI Studio',
+          mock: 'Mock Provider',
+          vertex: 'Vertex AI',
+          openai: 'OpenAI',
+        };
+        return names[key] ?? key;
+      }),
+    };
+
     await TestBed.configureTestingModule({
       imports: [TestHostComponent],
       providers: [
         { provide: LlmProviderService, useValue: mockProviderService },
+        { provide: ProviderTypeService, useValue: mockProviderTypeService },
         {
           provide: LUCIDE_ICONS,
           multi: true,

@@ -9,8 +9,7 @@ import { Repository } from 'typeorm';
 import { LlmModelEntity, LlmProviderConfigEntity } from '@project-bubble/db-layer';
 import { LlmProviderConfigService } from '../../settings/llm-provider-config.service';
 import { LLMProvider } from './llm.provider';
-import { MockLlmProvider } from './mock-llm.provider';
-import { GoogleAIStudioLlmProvider } from './google-ai-studio-llm.provider';
+import { ProviderRegistry } from './provider-registry.service';
 
 interface CachedProvider {
   provider: LLMProvider;
@@ -22,6 +21,7 @@ interface CachedProvider {
  *
  * Flow: modelUuid → LlmModelEntity → providerKey → credentials → LLMProvider instance.
  * Provider instances are cached per providerKey:modelId. Cache is invalidated when config.updatedAt > cachedAt.
+ * Provider creation is delegated to ProviderRegistry (replaces switch statement).
  */
 @Injectable()
 export class LlmProviderFactory {
@@ -34,6 +34,7 @@ export class LlmProviderFactory {
     @InjectRepository(LlmProviderConfigEntity)
     private readonly providerConfigRepo: Repository<LlmProviderConfigEntity>,
     private readonly providerConfigService: LlmProviderConfigService,
+    private readonly providerRegistry: ProviderRegistry,
   ) {}
 
   /**
@@ -79,16 +80,18 @@ export class LlmProviderFactory {
       return { provider: cached.provider, model };
     }
 
-    // Step 4: Get credentials and build provider
+    // Step 4: Get credentials and build provider via registry
     const credentials = await this.providerConfigService.getDecryptedCredentials(
       model.providerKey,
     );
 
-    const provider = this.buildProvider(
-      model.providerKey,
-      model.modelId,
-      credentials,
-    );
+    const registryEntry = this.providerRegistry.get(model.providerKey);
+    if (!registryEntry) {
+      throw new BadRequestException(
+        `Unknown provider key: ${model.providerKey}`,
+      );
+    }
+    const provider = registryEntry.createProvider(model.modelId, credentials);
 
     // Step 5: Cache the provider (keyed by providerKey:modelId)
     this.cache.set(cacheKey, {
@@ -104,41 +107,5 @@ export class LlmProviderFactory {
     });
 
     return { provider, model };
-  }
-
-  private buildProvider(
-    providerKey: string,
-    modelId: string,
-    credentials: Record<string, string>,
-  ): LLMProvider {
-    switch (providerKey) {
-      case 'mock':
-        return new MockLlmProvider();
-
-      case 'google-ai-studio': {
-        const apiKey = credentials['apiKey'];
-        if (!apiKey) {
-          throw new BadRequestException(
-            'Google AI Studio provider requires an apiKey credential',
-          );
-        }
-        return new GoogleAIStudioLlmProvider(apiKey, modelId);
-      }
-
-      case 'vertex':
-        throw new BadRequestException(
-          'Vertex provider is not yet implemented',
-        );
-
-      case 'openai':
-        throw new BadRequestException(
-          'OpenAI provider is not yet implemented',
-        );
-
-      default:
-        throw new BadRequestException(
-          `Unknown provider key: ${providerKey}`,
-        );
-    }
   }
 }

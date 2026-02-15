@@ -69,6 +69,8 @@ import { WorkflowExecutionModule } from './workflow-execution/workflow-execution
 import { WorkflowExecutionProcessor } from './workflow-execution/workflow-execution.processor';
 import { WorkflowExecutionService } from './workflow-execution/workflow-execution.service';
 import { LlmProviderFactory } from './workflow-execution/llm/llm-provider.factory';
+import { ProviderRegistry } from './workflow-execution/llm/provider-registry.service';
+import { ProviderRegistryModule } from './workflow-execution/llm/provider-registry.module';
 import { PromptAssemblyService } from './workflow-execution/prompt-assembly.service';
 import { WorkflowRunsModule } from './workflow-runs/workflow-runs.module';
 import { WorkflowRunsService } from './workflow-runs/workflow-runs.service';
@@ -251,8 +253,27 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
 
     expect(module).toBeDefined();
     expect(module.get(LlmProviderConfigService)).toBeDefined();
+    expect(module.get(ProviderRegistry)).toBeDefined();
     await closeModule(module);
   }, 15_000);
+
+  it('[4-PR-MW-001] [P0] ProviderRegistryModule compiles standalone and resolves ProviderRegistry', async () => {
+    const module = await Test.createTestingModule({
+      imports: [ProviderRegistryModule],
+    }).compile();
+
+    expect(module).toBeDefined();
+    const registry = module.get(ProviderRegistry);
+    expect(registry).toBeDefined();
+    // Trigger onModuleInit manually (Test module doesn't auto-call lifecycle hooks)
+    registry.onModuleInit();
+    expect(registry.getKnownKeys()).toContain('google-ai-studio');
+    expect(registry.getKnownKeys()).toContain('mock');
+    expect(registry.getKnownKeys()).toContain('vertex');
+    expect(registry.getKnownKeys()).toContain('openai');
+    expect(registry.getAll()).toHaveLength(4);
+    await module.close();
+  });
 
   it('[MW-1-UNIT-005] [P0] WorkflowsModule compiles with real providers', async () => {
     const module = await Test.createTestingModule({
@@ -352,6 +373,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module.get(WorkflowExecutionProcessor)).toBeDefined();
     expect(module.get(WorkflowExecutionService)).toBeDefined();
     expect(module.get(LlmProviderFactory)).toBeDefined();
+    expect(module.get(ProviderRegistry)).toBeDefined();
     expect(module.get(PromptAssemblyService)).toBeDefined();
     await closeModule(module);
   }, 15_000);

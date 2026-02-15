@@ -6,3 +6,4 @@ export * from './asset';
 export * from './knowledge';
 export * from './workflow';
 export * from './settings';
+export * from './support-access';

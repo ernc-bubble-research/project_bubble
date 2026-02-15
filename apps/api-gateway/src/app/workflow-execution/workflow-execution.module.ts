@@ -10,6 +10,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { WorkflowExecutionProcessor } from './workflow-execution.processor';
 import { WorkflowExecutionService } from './workflow-execution.service';
 import { LlmProviderFactory } from './llm/llm-provider.factory';
+import { ProviderRegistryModule } from './llm/provider-registry.module';
 import { PromptAssemblyService } from './prompt-assembly.service';
 import { SettingsModule } from '../settings/settings.module';
 import { IngestionModule } from '../ingestion/ingestion.module';
@@ -39,6 +40,7 @@ import { IngestionModule } from '../ingestion/ingestion.module';
       },
     }),
     SettingsModule,
+    ProviderRegistryModule,
     IngestionModule,
   ],
   providers: [
@@ -47,6 +49,6 @@ import { IngestionModule } from '../ingestion/ingestion.module';
     LlmProviderFactory,
     PromptAssemblyService,
   ],
-  exports: [WorkflowExecutionService],
+  exports: [WorkflowExecutionService, ProviderRegistryModule],
 })
 export class WorkflowExecutionModule {}

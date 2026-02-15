@@ -63,7 +63,7 @@
             (change)="onProviderKeyChange($event)"
           >
             <option value="">Select a provider</option>
-            @for (opt of providerOptions; track opt.value) {
+            @for (opt of providerOptions(); track opt.value) {
               <option [value]="opt.value">{{ opt.label }}</option>
             }
           </select>
@@ -111,25 +111,14 @@
                   <span class="required">*</span>
                 }
               </label>
-              @if (field.key === 'serviceAccountJson') {
-                <textarea
-                  [id]="'cred-' + field.key"
-                  [placeholder]="field.placeholder"
-                  class="form-input form-textarea"
-                  [attr.data-testid]="'input-cred-' + field.key"
-                  rows="3"
-                  (input)="onCredentialChange(field.key, $event)"
-                ></textarea>
-              } @else {
-                <input
-                  type="password"
-                  [id]="'cred-' + field.key"
-                  [placeholder]="field.placeholder"
-                  class="form-input"
-                  [attr.data-testid]="'input-cred-' + field.key"
-                  (input)="onCredentialChange(field.key, $event)"
-                />
-              }
+              <input
+                [type]="field.type"
+                [id]="'cred-' + field.key"
+                class="form-input"
+                [attr.data-testid]="'input-cred-' + field.key"
+                [value]="credentialValues()[field.key] || ''"
+                (input)="onCredentialChange(field.key, $event)"
+              />
             </div>
           }
         </div>

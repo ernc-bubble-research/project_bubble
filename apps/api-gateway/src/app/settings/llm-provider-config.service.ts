@@ -15,18 +15,7 @@ import {
   LlmProviderConfigResponseDto,
 } from '@project-bubble/shared';
 import { encrypt, decrypt, maskSecret } from '../common/crypto.util';
-import { KNOWN_PROVIDER_KEYS } from '../common/provider-keys';
-
-const REQUIRED_CREDENTIAL_FIELDS: Record<string, string[]> = {
-  'google-ai-studio': ['apiKey'],
-  vertex: ['projectId', 'location'],
-  openai: ['apiKey'],
-  mock: [],
-};
-
-const ENV_VAR_FALLBACKS: Record<string, Record<string, string>> = {
-  'google-ai-studio': { apiKey: 'GEMINI_API_KEY' },
-};
+import { ProviderRegistry } from '../workflow-execution/llm/provider-registry.service';
 
 @Injectable()
 export class LlmProviderConfigService {
@@ -37,6 +26,7 @@ export class LlmProviderConfigService {
     @InjectRepository(LlmProviderConfigEntity)
     private readonly repo: Repository<LlmProviderConfigEntity>,
     private readonly configService: ConfigService,
+    private readonly providerRegistry: ProviderRegistry,
   ) {
     this.encryptionKey = this.configService.get<string>(
       'SETTINGS_ENCRYPTION_KEY',
@@ -160,9 +150,10 @@ export class LlmProviderConfigService {
   }
 
   private validateProviderKey(providerKey: string): void {
-    if (!KNOWN_PROVIDER_KEYS.includes(providerKey as (typeof KNOWN_PROVIDER_KEYS)[number])) {
+    const knownKeys = this.providerRegistry.getKnownKeys();
+    if (!knownKeys.includes(providerKey)) {
       throw new BadRequestException(
-        `Unknown provider key "${providerKey}". Known providers: ${KNOWN_PROVIDER_KEYS.join(', ')}`,
+        `Unknown provider key "${providerKey}". Known providers: ${knownKeys.join(', ')}`,
       );
     }
   }
@@ -181,7 +172,10 @@ export class LlmProviderConfigService {
       }
     }
 
-    const requiredFields = REQUIRED_CREDENTIAL_FIELDS[providerKey] || [];
+    const schema = this.providerRegistry.getCredentialSchema(providerKey);
+    const requiredFields = schema
+      .filter((f) => f.required)
+      .map((f) => f.key);
     const missingFields = requiredFields.filter(
       (field) => !credentials[field] || credentials[field].trim() === '',
     );
@@ -205,8 +199,8 @@ export class LlmProviderConfigService {
   }
 
   private getEnvVarFallback(providerKey: string): Record<string, string> {
-    const fallbackMap = ENV_VAR_FALLBACKS[providerKey];
-    if (!fallbackMap) {
+    const fallbackMap = this.providerRegistry.getEnvVarFallbacks(providerKey);
+    if (!fallbackMap || Object.keys(fallbackMap).length === 0) {
       return {};
     }
 

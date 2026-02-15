@@ -12,7 +12,7 @@ import {
   LlmProviderService,
   type LlmProviderConfig,
 } from '../../core/services/llm-provider.service';
-import { PROVIDER_DISPLAY_NAMES } from './provider-constants';
+import { ProviderTypeService } from '../../core/services/provider-type.service';
 
 @Component({
   standalone: true,
@@ -23,6 +23,7 @@ import { PROVIDER_DISPLAY_NAMES } from './provider-constants';
 })
 export class ProviderConfigListComponent {
   private readonly providerService = inject(LlmProviderService);
+  private readonly providerTypeService = inject(ProviderTypeService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly configs = signal<LlmProviderConfig[]>([]);
@@ -95,7 +96,7 @@ export class ProviderConfigListComponent {
   }
 
   getProviderDisplayName(providerKey: string): string {
-    return PROVIDER_DISPLAY_NAMES[providerKey] ?? providerKey;
+    return this.providerTypeService.getDisplayName(providerKey);
   }
 
   getCredentialSummary(

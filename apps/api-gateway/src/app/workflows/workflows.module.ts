@@ -19,6 +19,7 @@ import {
   AdminLlmModelsController,
 } from './llm-models.controller';
 import { WorkflowCatalogController } from './workflow-catalog.controller';
+import { ProviderRegistryModule } from '../workflow-execution/llm/provider-registry.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { WorkflowCatalogController } from './workflow-catalog.controller';
       WorkflowChainEntity,
       LlmModelEntity,
     ]),
+    ProviderRegistryModule,
   ],
   controllers: [
     WorkflowTemplatesController,

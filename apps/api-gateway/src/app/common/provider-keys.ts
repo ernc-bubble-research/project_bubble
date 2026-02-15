@@ -1,9 +1,10 @@
 /**
  * Canonical list of known LLM provider keys.
- * Used by LlmModelsService (AC 9 validation) and LlmProviderConfigService.
- * Rationale: providerKey is a type discriminator, not a FK reference.
- * Provider configs are optional (env var fallback) and models are seeded
- * before configs in the boot sequence, so we validate against a static enum.
+ * Retained as a static artifact validated by the registry completeness test
+ * (`provider-registry.service.spec.ts` [4-PR-UNIT-002]). The ProviderRegistry
+ * is the runtime source of truth; this array ensures static analysis and DTO
+ * validation pipelines (which run before DI container init) have access to
+ * the valid key set.
  */
 export const KNOWN_PROVIDER_KEYS = [
   'google-ai-studio',

@@ -387,11 +387,19 @@
 #   21. ✅ Live Test Round 3 — zero issues found (2026-02-15)
 #   22. ✅ Story 4-SA-A — Production Support Access (backend audit trail — JWT fix, audit tables, mutation logging) (done — 1267 tests, 3-pass review: 10 fixes)
 #   23. ✅ Story 4-4 — Credit Management (pre-flight validation + credit check) (done — 1344 tests, 3-pass review: 17 fixes)
-#   24. Story 4-SA-B — Production Support Access (frontend — countdown timer, customer-visible log page, after 4-4)
-#   25. Story 4-PR — Provider Registry (backend-driven, replaces hardcoded constants) — between Epic 4 and Epic 5
-#   26. Live Test Round 4 (Real LLM) — erinc end-to-end test with real Google AI Studio provider + real workflow
-#   27. Epic 4 Retrospective (mandatory — 4 agenda items queued)
-#   28. Epic 5 — Interactive Reporting & Feedback Loop
+#   24. ✅ Story 4-SA-B — Production Support Access (frontend — JWT 2h, graceful 401, inactivity pre-warning, customer access log page) (done — 1372 tests, 3-pass review: 21 findings)
+#   25. ✅ Story 4-PR — Provider Registry (backend-driven, replaces hardcoded constants) (done — 1400 tests, 3-pass review: 18 findings all fixed)
+#   26. Story 4-GP — LLM Generation Parameters (two-tier config: model defaults + per-workflow overrides)
+#   27. Story 4-H1 — Model Reassignment UX (warning dialog + per-workflow dropdown when provider deactivated)
+#   28. Story 4-5 — Output Validation & Storage
+#   29. Story 4-6 — Workflow Chain Orchestration
+#   30. Story 4-7 — Workflow Test Run Preview (layout preview + functional test run)
+#   31. Story 4-test-gaps — Error Path Coverage (onFailed catch, magic numbers)
+#   32. Story 4E — E2E Test Coverage for Epic 4
+#   33. Story 4EH — E2E Error Path Hardening (cross-epic)
+#   34. Live Test Round 4 (Real LLM) — erinc end-to-end test with real Google AI Studio provider + real workflow
+#   35. Epic 4 Retrospective (mandatory — 6 agenda items queued)
+#   36. Epic 5 — Interactive Reporting & Feedback Loop
 #   Convention: XE = E2E tests for Epic X. Tests written after epic features are built.
 #
 # LIVE TEST ROUND 1 FINDINGS (2026-02-12 — party mode triage):
@@ -614,17 +622,18 @@ development_status:
   4-rls-c-test-infra-verification: done                     # RLS Part 3/3: test-db-helpers + global-setup (SHARED INFRA), 7 new Tier 2 wiring tests for RLS enforcement, write isolation, auth_insert_users role restriction. 3-pass code review + post-review auth policy tightening. 1275 total tests.
   4-testfix-rls-test-suite-fixes: skipped                  # Not needed — all tests (unit + wiring + E2E 46/46) pass after RLS enablement. Live Test Round 3 found zero issues.
   4-sa-a-production-support-access-backend: done              # Backend audit trail: JWT attribution fix (real admin UUID), support_access_log + support_mutation_log entities, SupportAccessService (migration DS), mutation interceptor, session end endpoint, 30m token expiry, magic string extraction. 3-pass code review: 10 fixes (6 P1 + 2 P2 + 2 P3). 1267 total tests.
-  4-sa-b-production-support-access-frontend: backlog        # Frontend: countdown timer on impersonation banner, customer-visible access log page. Depends on 4-SA-A. After 4-4.
+  4-sa-b-production-support-access-frontend: done              # Frontend: JWT 30m→2h, graceful 401 handling, inactivity pre-warning, customer access log page, error state UI. 3-pass code review: 21 findings (13 fixed, 6 tracked, 2 rejected). 1372 total tests.
   4-4-pre-flight-validation-credit-check: done               # Two-pool credit model (monthly+purchased), monthly-first deduction, SELECT FOR UPDATE atomicity, model/provider pre-flight, refund on FAILED, test run bypass. 3-pass review: 6+13+4 findings (17 fixed, 2 tracked, 4 rejected). 1344 total tests.
   4-5-output-validation-storage: backlog
   4-6-workflow-chain-orchestration: backlog
   4-7-workflow-test-run-preview: backlog              # FEATURE-1 from user testing feedback. Combines layout preview + functional test run. Party mode consensus 2026-02-08.
-  4-pr-provider-registry-backend-driven: backlog            # M3 from live test: Replace hardcoded provider-constants.ts with backend-driven adapter registry. GET /api/admin/settings/llm-provider-types endpoint. Ops doc for adding new providers. Placed between Epic 4 and Epic 5.
+  4-pr-provider-registry-backend-driven: done               # M3 from live test: Self-describing adapter registry replaces 4 hardcoded locations. ProviderRegistry service, factory refactor, service refactor, new endpoint, frontend dynamic form. 3-pass code review: Pass 1 (8 fixes), Pass 2 (6 fixes), Pass 3 (4 fixes). 1400 total tests.
   4e-e2e-test-coverage-epic-4: backlog                   # E2E tests for Epic 4 features (execution engine, test runs, output validation). Written AFTER Epic 4 development. Convention: XE = E2E for Epic X.
   4-test-gaps-error-path-coverage: backlog                   # Tracked from 4-RLS-B Pass 2: onFailed catch block coverage, magic number extraction. Small cleanup story.
-  7p-5-reconcile-orphaned-runs: backlog                     # Tracked from 4-RLS-B Pass 2 MEDIUM-007: Cron-based reconciliation for workflow runs stuck in RUNNING state (BullMQ worker crash recovery). Scan RUNNING > 1hr, check BullMQ queue, mark FAILED if job missing, refund credits.
   4eh-e2e-error-path-hardening: backlog                  # E2E error path tests across ALL epics (1-4). Covers: duplicate name 409, invalid status transitions 400, file upload size limit, network errors, validation error displays. Convention: include 1-2 error paths per spec file in future XE stories.
-  epic-4-retrospective: optional                               # MANDATORY AGENDA: Winston Architect Quality Gate violation (probation, quality self-check, retroactive review of 4-0/4-1/4-2, MVP word ban, probation evaluation). Voted 7-0 during Story 4-2 party mode.
+  4-gp-llm-generation-parameters: backlog                  # Two-tier config: Tier 1 model defaults (JSONB on LlmModelEntity), Tier 2 per-workflow overrides (JSONB on WorkflowTemplateEntity). Provider-aware parameter UI. Merge logic at execution time. Depends on 4-PR (adapter interface). Origin: user request 2026-02-14.
+  4-h1-model-reassignment-ux: backlog                       # Full Model Reassignment UX: warning dialog when provider deactivated showing affected workflows, per-workflow model dropdown for reassignment. Origin: Live Test Round 1 H1 — split from 4-FIX-B (simple runtime guard done there, full UX deferred).
+  epic-4-retrospective: optional                               # MANDATORY AGENDA: 6 items queued — Winston quality gate, Rule 36 violation, Rule 11 violation, V7 unilateral rejection (3x in 4-4), bulk task-checking without verification (4-SA-B), systemic procedure-skipping (structural fix needed).
 
   # ═══════════════════════════════════════════════════════
   # Epic 5: Interactive Reporting & Feedback Loop
@@ -686,6 +695,7 @@ development_status:
   7p-5-bullmq-hardening: backlog                     # Circuit breaker for LLM providers, alerting on failures, advanced monitoring. Pre-production only (safety-critical subset moved to Epic 4 Story 4.0).
   7p-5b-worker-extraction: backlog                    # Extract BullMQ workflow execution processor to separate worker process for horizontal scaling. In-process is sufficient until scaling needed. Added from Epic 4 planning (2026-02-09).
   7p-6-rls-auth-bypass-security-review: done          # ABSORBED INTO Story 4-RLS (full RLS enablement moved to Epic 4). Non-superuser role + dual DataSource + policy audit. No longer a separate 7P story.
+  7p-5c-reconcile-orphaned-runs: backlog                # Cron-based reconciliation for workflow runs stuck in RUNNING state (BullMQ worker crash recovery). Scan RUNNING > 1hr, check BullMQ queue, mark FAILED if job missing, refund credits. Moved from Epic 4 (tracked from 4-RLS-B Pass 2 MEDIUM-007).
   7p-7-load-testing-capacity-planning: backlog       # Define Year 1 targets (tenants, users, runs/day, storage). Set up k6/Artillery. Validate PRD performance NFRs. Run against staging.
   epic-7p-retrospective: optional
 

@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import {
@@ -19,6 +20,7 @@ import {
 import { SettingsComponent } from './settings.component';
 import { LlmModelService, type LlmModel } from '../../core/services/llm-model.service';
 import { LlmProviderService } from '../../core/services/llm-provider.service';
+import { ProviderTypeService } from '../../core/services/provider-type.service';
 
 const mockModel: LlmModel = {
   id: 'model-1',
@@ -56,6 +58,17 @@ describe('SettingsComponent [P2]', () => {
       providers: [
         { provide: LlmModelService, useValue: mockLlmModelService },
         { provide: LlmProviderService, useValue: mockLlmProviderService },
+        {
+          provide: ProviderTypeService,
+          useValue: {
+            types: signal([
+              { providerKey: 'google-ai-studio', displayName: 'Google AI Studio', credentialFields: [], isDevelopmentOnly: false },
+              { providerKey: 'mock', displayName: 'Mock Provider', credentialFields: [], isDevelopmentOnly: true },
+            ]),
+            getProviderTypes: jest.fn().mockReturnValue(of([])),
+            getDisplayName: jest.fn((key: string) => key),
+          },
+        },
         {
           provide: LUCIDE_ICONS,
           multi: true,

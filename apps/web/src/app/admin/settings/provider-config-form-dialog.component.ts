@@ -16,61 +16,11 @@ import {
   LlmProviderService,
   type LlmProviderConfig,
 } from '../../core/services/llm-provider.service';
+import { ProviderTypeService } from '../../core/services/provider-type.service';
 import type {
   CreateLlmProviderConfigDto,
   UpdateLlmProviderConfigDto,
 } from '@project-bubble/shared';
-import { PROVIDER_OPTIONS } from './provider-constants';
-
-/** Credential field definitions per provider */
-const CREDENTIAL_FIELDS: Record<
-  string,
-  { key: string; label: string; placeholder: string; required: boolean }[]
-> = {
-  'google-ai-studio': [
-    {
-      key: 'apiKey',
-      label: 'API Key',
-      placeholder: 'AIza...',
-      required: true,
-    },
-  ],
-  vertex: [
-    {
-      key: 'projectId',
-      label: 'Project ID',
-      placeholder: 'my-gcp-project',
-      required: true,
-    },
-    {
-      key: 'location',
-      label: 'Location',
-      placeholder: 'us-central1',
-      required: true,
-    },
-    {
-      key: 'serviceAccountJson',
-      label: 'Service Account JSON',
-      placeholder: '{"type":"service_account",...}',
-      required: false,
-    },
-  ],
-  openai: [
-    {
-      key: 'apiKey',
-      label: 'API Key',
-      placeholder: 'sk-...',
-      required: true,
-    },
-    {
-      key: 'organizationId',
-      label: 'Organization ID',
-      placeholder: 'org-...',
-      required: false,
-    },
-  ],
-  mock: [],
-};
 
 @Component({
   standalone: true,
@@ -82,6 +32,7 @@ const CREDENTIAL_FIELDS: Record<
 export class ProviderConfigFormDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly providerService = inject(LlmProviderService);
+  private readonly providerTypeService = inject(ProviderTypeService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Config to edit (null = add mode) */
@@ -93,7 +44,16 @@ export class ProviderConfigFormDialogComponent {
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
 
-  readonly providerOptions = PROVIDER_OPTIONS;
+  /** Provider types from API (cached in service) */
+  readonly providerTypes = this.providerTypeService.types;
+
+  /** Provider options for dropdown — derived from API data */
+  readonly providerOptions = computed(() =>
+    this.providerTypes().map((t) => ({
+      value: t.providerKey,
+      label: t.displayName,
+    })),
+  );
 
   readonly isEditMode = computed(() => this.config() !== null);
   readonly dialogTitle = computed(() =>
@@ -109,10 +69,13 @@ export class ProviderConfigFormDialogComponent {
   /** Currently selected provider key for dynamic credential fields */
   readonly selectedProviderKey = signal<string>('');
 
-  /** Dynamic credential fields based on selected provider */
+  /** Dynamic credential fields based on selected provider (from API) */
   readonly credentialFields = computed(() => {
     const key = this.selectedProviderKey();
-    return CREDENTIAL_FIELDS[key] ?? [];
+    const providerType = this.providerTypes().find(
+      (t) => t.providerKey === key,
+    );
+    return providerType?.credentialFields ?? [];
   });
 
   /** Credential values tracked separately (not in the reactive form) */

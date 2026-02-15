@@ -4,9 +4,13 @@ import { ConfigService } from '@nestjs/config';
 import { LlmProviderConfigEntity } from '@project-bubble/db-layer';
 import { LlmProviderConfigService } from './llm-provider-config.service';
 import { LlmProviderConfigController } from './llm-provider-config.controller';
+import { ProviderRegistryModule } from '../workflow-execution/llm/provider-registry.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([LlmProviderConfigEntity])],
+  imports: [
+    TypeOrmModule.forFeature([LlmProviderConfigEntity]),
+    ProviderRegistryModule,
+  ],
   controllers: [LlmProviderConfigController],
   providers: [LlmProviderConfigService],
   exports: [LlmProviderConfigService],
