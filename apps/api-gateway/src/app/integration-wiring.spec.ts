@@ -20,7 +20,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
-import { createTestDatabase, dropTestDatabase, buildTestDbUrl } from './test-db-helpers';
+import { createTestDatabase, dropTestDatabase, buildTestDbUrl, buildAppTestDbUrl } from './test-db-helpers';
 
 import {
   DbLayerModule,
@@ -97,10 +97,8 @@ function createRootImports() {
           POSTGRES_DB: TEST_DB_NAME,
           REDIS_HOST: process.env['REDIS_HOST'] || 'localhost',
           REDIS_PORT: process.env['REDIS_PORT'] || '6379',
-          // IMPORTANT: NODE_ENV must be 'development' (not 'test') to trigger
-          // RlsSetupService.onModuleInit() seed logic (RLS policies, admin user,
-          // LLM models, provider configs). If this guard condition changes in
-          // rls-setup.service.ts, these seed tests will silently stop working.
+          // RlsSetupService.onModuleInit() runs in both 'development' and 'test' modes.
+          // Using 'development' here for consistency with existing seed behavior.
           NODE_ENV: 'development',
           JWT_SECRET: 'wiring-test-secret',
           ADMIN_API_KEY: 'wiring-test-admin-key',
@@ -373,10 +371,9 @@ describe('Integration Wiring — Tier 2 Runtime [P0]', () => {
     // Outside the transaction, the setting should be empty/null
     expect(afterTx[0].tenant === null || afterTx[0].tenant === '').toBe(true);
 
-    // Note: RLS policy enforcement (tenant isolation) cannot be tested with superuser
-    // DB role (bubble_user is superuser — superusers bypass ALL RLS policies).
-    // Policy existence is verified in INTEG-001. Enforcement requires a non-superuser
-    // role, which is an Epic 7P concern (Story 7P-6: RLS Security Review).
+    // Note: This test uses the superuser DataSource (bubble_user) which bypasses RLS.
+    // RLS enforcement is verified in the dedicated 'RLS Enforcement' describe block below,
+    // which uses a separate bubble_app (non-superuser) DataSource.
   });
 
   it('[MW-1-INTEG-012] [P0] TransactionManager.run() with AsyncLocalStorage context uses implicit tenantId', async () => {
@@ -520,5 +517,244 @@ describe('Integration Wiring — Tier 2 Runtime [P0]', () => {
 
     const result = await guard.canActivate(mockContext as unknown as ExecutionContext);
     expect(result).toBe(true);
+  });
+});
+
+/**
+ * RLS Enforcement Tests — Tier 2
+ *
+ * These tests use a SEPARATE bubble_app DataSource (non-superuser) to verify that
+ * RLS policies actually enforce tenant isolation at the database layer.
+ * The superuser DataSource (bubble_user) is used ONLY for seed data setup.
+ *
+ * Without the non-superuser role, all RLS tests are meaningless — superusers bypass all policies.
+ */
+describe('RLS Enforcement — Tier 2 [P0]', () => {
+  let module: TestingModule;
+  let seedDs: DataSource;     // bubble_user (superuser) — seed data only
+  let appDs: DataSource;      // bubble_app (non-superuser) — RLS tests
+
+  const tenantAId = uuidv4();
+  const tenantBId = uuidv4();
+  const systemTenantId = '00000000-0000-0000-0000-000000000000';
+
+  beforeAll(async () => {
+    await createTestDatabase(TEST_DB_NAME);
+
+    module = await Test.createTestingModule({
+      imports: [
+        ...createRootImports(),
+        AuthModule,
+        UsersModule,
+        InvitationsModule,
+        AssetsModule,
+        IngestionModule,
+        KnowledgeModule,
+        WorkflowsModule,
+        SettingsModule,
+        TenantsModule,
+        EmailModule,
+      ],
+      providers: [RlsSetupService, TenantStatusGuard],
+    }).compile();
+
+    await module.init();
+
+    // Superuser DS for seed data (bypasses RLS)
+    seedDs = module.get(DataSource);
+
+    // Create separate bubble_app DataSource for RLS enforcement tests
+    appDs = new DataSource({
+      type: 'postgres',
+      url: buildAppTestDbUrl(TEST_DB_NAME),
+      entities: ALL_ENTITIES,
+      synchronize: false,
+    });
+    await appDs.initialize();
+
+    // Seed tenants
+    await seedDs.query(
+      `INSERT INTO tenants (id, name, status) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING`,
+      [systemTenantId, 'System', TenantStatus.ACTIVE],
+    );
+    await seedDs.query(
+      `INSERT INTO tenants (id, name, status) VALUES ($1, $2, $3)`,
+      [tenantAId, 'RLS Tenant A', TenantStatus.ACTIVE],
+    );
+    await seedDs.query(
+      `INSERT INTO tenants (id, name, status) VALUES ($1, $2, $3)`,
+      [tenantBId, 'RLS Tenant B', TenantStatus.ACTIVE],
+    );
+
+    // Seed folders (one per tenant)
+    await seedDs.query(
+      `INSERT INTO folders (id, tenant_id, name) VALUES ($1, $2, $3)`,
+      [uuidv4(), tenantAId, 'Folder A'],
+    );
+    await seedDs.query(
+      `INSERT INTO folders (id, tenant_id, name) VALUES ($1, $2, $3)`,
+      [uuidv4(), tenantBId, 'Folder B'],
+    );
+
+    // Seed a published template in system tenant for catalog tests
+    await seedDs.query(
+      `INSERT INTO workflow_templates (id, tenant_id, name, description, visibility, status, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [uuidv4(), systemTenantId, 'Catalog Template', 'For RLS catalog test', 'public', 'published', uuidv4()],
+    );
+  }, 60_000);
+
+  afterAll(async () => {
+    if (appDs?.isInitialized) await appDs.destroy();
+    if (module) {
+      try {
+        const migrationDs = module.get<DataSource>(getDataSourceToken('migration'));
+        if (migrationDs?.isInitialized) await migrationDs.destroy();
+      } catch { /* already destroyed or not found */ }
+      try {
+        const defaultDs = module.get(DataSource);
+        if (defaultDs?.isInitialized) await defaultDs.destroy();
+      } catch { /* already destroyed */ }
+      try {
+        await module.close();
+      } catch { /* benign */ }
+    }
+    await dropTestDatabase(TEST_DB_NAME);
+  }, 30_000);
+
+  // ── AC4: Tenant Isolation ─────────────────────────────────────────
+
+  it('[4-RLS-C-INTEG-001] [P0] tenant_A context cannot read tenant_B folders', async () => {
+    await appDs.transaction(async (manager) => {
+      await manager.query(`SET LOCAL app.current_tenant = '${tenantAId}'`);
+      const rows = await manager.query(`SELECT * FROM folders WHERE tenant_id = $1`, [tenantBId]);
+      expect(rows).toHaveLength(0);
+    });
+
+    // Verify tenant_A CAN read their own folder
+    await appDs.transaction(async (manager) => {
+      await manager.query(`SET LOCAL app.current_tenant = '${tenantAId}'`);
+      const rows = await manager.query(`SELECT * FROM folders WHERE tenant_id = $1`, [tenantAId]);
+      expect(rows).toHaveLength(1);
+    });
+  });
+
+  // ── AC5: Admin Bypass (Read + Write) ──────────────────────────────
+
+  it('[4-RLS-C-INTEG-002] [P0] admin bypass reads ALL tenants folders', async () => {
+    await appDs.transaction(async (manager) => {
+      await manager.query(`SET LOCAL app.is_admin = 'true'`);
+      const rows = await manager.query(`SELECT * FROM folders`);
+      // Should see folders from both tenants (at least 2)
+      expect(rows.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  it('[4-RLS-C-INTEG-003] [P0] admin bypass can INSERT row with any tenant_id', async () => {
+    const folderId = uuidv4();
+    await appDs.transaction(async (manager) => {
+      await manager.query(`SET LOCAL app.is_admin = 'true'`);
+      await manager.query(
+        `INSERT INTO folders (id, tenant_id, name) VALUES ($1, $2, $3)`,
+        [folderId, tenantBId, 'Admin-created Folder'],
+      );
+      const rows = await manager.query(`SELECT * FROM folders WHERE id = $1`, [folderId]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].tenant_id).toBe(tenantBId);
+    });
+  });
+
+  // ── AC6: Catalog Access ───────────────────────────────────────────
+
+  it('[4-RLS-C-INTEG-004] [P0] tenant_A can read published catalog templates from system tenant', async () => {
+    await appDs.transaction(async (manager) => {
+      await manager.query(`SET LOCAL app.current_tenant = '${tenantAId}'`);
+      const rows = await manager.query(
+        `SELECT * FROM workflow_templates WHERE status = 'published' AND visibility = 'public'`,
+      );
+      expect(rows.length).toBeGreaterThanOrEqual(1);
+      // Verify the system tenant template is visible
+      const catalogTemplate = rows.find((r: { name: string }) => r.name === 'Catalog Template');
+      expect(catalogTemplate).toBeDefined();
+    });
+  });
+
+  // ── AC7: Fail-Closed ─────────────────────────────────────────────
+
+  it('[4-RLS-C-INTEG-005] [P0] no SET LOCAL reads zero tenant-scoped rows', async () => {
+    await appDs.transaction(async (manager) => {
+      // No SET LOCAL at all — app.current_tenant defaults to '' → NULLIF returns NULL → no match
+      const rows = await manager.query(`SELECT * FROM folders`);
+      expect(rows).toHaveLength(0);
+    });
+  });
+
+  it('[4-RLS-C-INTEG-006] [P0] empty string current_tenant reads zero rows (NULLIF safety)', async () => {
+    await appDs.transaction(async (manager) => {
+      await manager.query(`SET LOCAL app.current_tenant = ''`);
+      const rows = await manager.query(`SELECT * FROM folders`);
+      expect(rows).toHaveLength(0);
+    });
+  });
+
+  // ── AC8: Write Isolation (WITH CHECK) ─────────────────────────────
+
+  it('[4-RLS-C-INTEG-007] [P0] tenant_A cannot INSERT folder with tenant_B tenant_id', async () => {
+    await expect(
+      appDs.transaction(async (manager) => {
+        await manager.query(`SET LOCAL app.current_tenant = '${tenantAId}'`);
+        await manager.query(
+          `INSERT INTO folders (id, tenant_id, name) VALUES ($1, $2, $3)`,
+          [uuidv4(), tenantBId, 'Cross-tenant folder'],
+        );
+      }),
+    ).rejects.toThrow();
+  });
+
+  // ── AC9: Auth INSERT Role Restriction ──────────────────────────────
+
+  it('[4-RLS-C-INTEG-008] [P0] auth_insert_users blocks bubble_admin role creation', async () => {
+    await expect(
+      appDs.transaction(async (manager) => {
+        // No SET LOCAL — simulates pre-auth context (seed, invitation accept)
+        await manager.query(
+          `INSERT INTO users (id, email, password_hash, role, tenant_id, status)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [uuidv4(), `rogue-admin-${Date.now()}@test.io`, 'hash', 'bubble_admin', tenantAId, 'active'],
+        );
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('[4-RLS-C-INTEG-009] [P0] auth_insert_users allows customer_admin role creation', async () => {
+    const userId = uuidv4();
+    await appDs.transaction(async (manager) => {
+      await manager.query(
+        `INSERT INTO users (id, email, password_hash, role, tenant_id, status)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, `legit-admin-${Date.now()}@test.io`, 'hash', 'customer_admin', tenantAId, 'active'],
+      );
+    });
+
+    // Verify via superuser that the row was created
+    const rows = await seedDs.query(`SELECT role FROM users WHERE id = $1`, [userId]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].role).toBe('customer_admin');
+  });
+
+  it('[4-RLS-C-INTEG-010] [P0] auth_insert_users allows creator role creation', async () => {
+    const userId = uuidv4();
+    await appDs.transaction(async (manager) => {
+      await manager.query(
+        `INSERT INTO users (id, email, password_hash, role, tenant_id, status)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, `legit-creator-${Date.now()}@test.io`, 'hash', 'creator', tenantAId, 'active'],
+      );
+    });
+
+    // Verify via superuser that the row was created
+    const rows = await seedDs.query(`SELECT role FROM users WHERE id = $1`, [userId]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].role).toBe('creator');
   });
 });

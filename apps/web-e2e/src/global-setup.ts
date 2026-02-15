@@ -137,8 +137,8 @@ async function globalSetup(): Promise<void> {
     console.log(`[E2E] Tenant B user seeded — ${tenantBEmail}`);
 
     // ── Step 4: Seed one root folder per tenant ─────────────────────
-    // Use unique names because bubble_user is a superuser that bypasses RLS,
-    // so tenant-A's data-vault API returns ALL tenants' folders.
+    // Unique names retained for clarity in test assertions.
+    // RLS is now enforced via bubble_app (non-superuser) — tenant isolation is real.
     await folderRepo.save({
       tenantId: tenantAId,
       name: 'Folder Alpha',

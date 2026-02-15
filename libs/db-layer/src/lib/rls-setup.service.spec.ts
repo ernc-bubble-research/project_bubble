@@ -44,8 +44,18 @@ describe('RlsSetupService [P0]', () => {
     expect(dataSource.query).not.toHaveBeenCalled();
   });
 
-  it('[1H.1-UNIT-003] should skip RLS setup in test environment', async () => {
+  it('[1H.1-UNIT-003] should execute RLS setup in test environment', async () => {
     configService.get.mockReturnValue('test');
+
+    await service.onModuleInit();
+
+    expect(dataSource.query).toHaveBeenCalledWith(
+      'ALTER TABLE "users" ENABLE ROW LEVEL SECURITY',
+    );
+  });
+
+  it('[4-RLS-C-UNIT-001] should skip RLS setup in staging environment', async () => {
+    configService.get.mockReturnValue('staging');
 
     await service.onModuleInit();
 
@@ -189,7 +199,7 @@ describe('RlsSetupService [P0]', () => {
       expect(sql).not.toContain('FOR DELETE');
     });
 
-    it('[1H.1-UNIT-007] auth_insert_users targets users table with FOR INSERT only', async () => {
+    it('[1H.1-UNIT-007] auth_insert_users targets users table with FOR INSERT and role restriction', async () => {
       await service.onModuleInit();
 
       const authInsertCall = dataSource.query.mock.calls.find(
@@ -201,6 +211,9 @@ describe('RlsSetupService [P0]', () => {
       expect(sql).toContain('FOR INSERT');
       expect(sql).not.toContain('FOR SELECT');
       expect(sql).not.toContain('FOR DELETE');
+      // WITH CHECK restricts to non-admin roles only (prevents bubble_admin creation via DB)
+      expect(sql).toContain("role IN ('customer_admin', 'creator')");
+      expect(sql).not.toContain('WITH CHECK (true)');
     });
 
     it('[1H.1-UNIT-008] auth_update_invitations targets invitations table with FOR UPDATE only', async () => {
@@ -253,22 +266,31 @@ describe('RlsSetupService [P0]', () => {
     it('[4-RLS-A-UNIT-008] auth policies use USING (true) without NULLIF or admin bypass', async () => {
       await service.onModuleInit();
 
-      // Auth policies should NOT have NULLIF or is_admin — they use USING (true)
-      const authPolicyCalls = dataSource.query.mock.calls.filter(
+      // Auth SELECT/UPDATE policies should NOT have NULLIF or is_admin — they use USING (true) / WITH CHECK (true)
+      const readOnlyAuthPolicyCalls = dataSource.query.mock.calls.filter(
         (call) => typeof call[0] === 'string' && (
           call[0].includes('auth_select_all') ||
           call[0].includes('auth_accept_invitations') ||
-          call[0].includes('auth_insert_users') ||
           call[0].includes('auth_update_invitations')
         ),
       );
-      expect(authPolicyCalls).toHaveLength(4);
+      expect(readOnlyAuthPolicyCalls).toHaveLength(3);
 
-      for (const call of authPolicyCalls) {
+      for (const call of readOnlyAuthPolicyCalls) {
         const sql = call[0] as string;
         expect(sql).not.toContain('NULLIF');
         expect(sql).not.toContain('app.is_admin');
       }
+
+      // auth_insert_users has role restriction but still no NULLIF or is_admin
+      const authInsertCall = dataSource.query.mock.calls.find(
+        (call) => typeof call[0] === 'string' && call[0].includes('auth_insert_users'),
+      );
+      expect(authInsertCall).toBeDefined();
+      const insertSql = (authInsertCall as string[])[0] as string;
+      expect(insertSql).not.toContain('NULLIF');
+      expect(insertSql).not.toContain('app.is_admin');
+      expect(insertSql).toContain("role IN ('customer_admin', 'creator')");
     });
   });
 

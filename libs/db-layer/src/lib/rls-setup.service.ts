@@ -19,7 +19,8 @@ export class RlsSetupService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    if (this.config.get<string>('NODE_ENV') !== 'development') {
+    const env = this.config.get<string>('NODE_ENV');
+    if (env !== 'development' && env !== 'test') {
       this.logger.log(
         'Skipping RLS setup — use migrations in non-development environments',
       );
@@ -192,13 +193,13 @@ export class RlsSetupService implements OnModuleInit {
             SELECT 1 FROM pg_policies
             WHERE tablename = 'users' AND policyname = 'auth_insert_users'
           ) THEN
-            CREATE POLICY auth_insert_users ON "users" FOR INSERT WITH CHECK (true);
+            CREATE POLICY auth_insert_users ON "users" FOR INSERT WITH CHECK (role IN ('customer_admin', 'creator'));
           END IF;
         END
         $$;
       `);
       this.logger.log(
-        'Auth INSERT policy created on "users" — allows pre-auth user creation (seed, invitation accept)',
+        'Auth INSERT policy created on "users" — restricts to customer_admin/creator roles only',
       );
     } catch (error) {
       this.logger.error('Failed to create auth INSERT policy on users:', error);

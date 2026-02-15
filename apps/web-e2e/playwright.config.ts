@@ -46,6 +46,8 @@ export default defineConfig({
       env: {
         ...process.env,
         NODE_ENV: 'test',
+        DB_APP_USER: process.env['DB_APP_USER'] || 'bubble_app',
+        DB_APP_PASSWORD: process.env['DB_APP_PASSWORD'] || 'bubble_password',
       },
     },
     {

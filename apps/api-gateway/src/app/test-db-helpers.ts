@@ -51,5 +51,17 @@ export async function dropTestDatabase(dbName: string): Promise<void> {
 }
 
 export function buildTestDbUrl(dbName: string): string {
-  return `postgresql://${process.env['POSTGRES_USER'] || 'bubble_user'}:${process.env['POSTGRES_PASSWORD'] || 'bubble_password'}@${process.env['POSTGRES_HOST'] || 'localhost'}:${process.env['POSTGRES_PORT'] || 5432}/${dbName}`;
+  const user = process.env['POSTGRES_USER'] || 'bubble_user';
+  const password = process.env['POSTGRES_PASSWORD'] || 'bubble_password';
+  const host = process.env['POSTGRES_HOST'] || 'localhost';
+  const port = process.env['POSTGRES_PORT'] || 5432;
+  return `postgresql://${user}:${password}@${host}:${port}/${dbName}`;
+}
+
+export function buildAppTestDbUrl(dbName: string): string {
+  const user = process.env['DB_APP_USER'] || 'bubble_app';
+  const password = process.env['DB_APP_PASSWORD'] || 'bubble_password';
+  const host = process.env['POSTGRES_HOST'] || 'localhost';
+  const port = process.env['POSTGRES_PORT'] || 5432;
+  return `postgresql://${user}:${password}@${host}:${port}/${dbName}`;
 }

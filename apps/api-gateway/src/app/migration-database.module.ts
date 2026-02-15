@@ -43,10 +43,11 @@ export const MIGRATION_DB_READY = Symbol('MIGRATION_DB_READY');
     {
       provide: MIGRATION_DB_READY,
       useFactory: async (rlsSetup: RlsSetupService, config: ConfigService) => {
-        // In development, create bubble_app role + grants BEFORE default DS connects.
+        // In development/test, create bubble_app role + grants BEFORE default DS connects.
         // synchronize has already run (DataSource.initialize), so tables exist.
         // These methods are idempotent — safe to re-run in onModuleInit later.
-        if (config.get<string>('NODE_ENV') === 'development') {
+        const env = config.get<string>('NODE_ENV');
+        if (env === 'development' || env === 'test') {
           await rlsSetup.createAppRole();
           await rlsSetup.grantAppPermissions();
           await rlsSetup.setDefaultPrivileges();
