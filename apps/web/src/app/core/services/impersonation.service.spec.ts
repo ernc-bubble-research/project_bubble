@@ -41,6 +41,7 @@ describe('ImpersonationService [P1]', () => {
     httpMock.verify();
     localStorage.clear();
     service.stopInactivityTimer();
+    jest.useRealTimers();
   });
 
   it('[1H.1-UNIT-001] should be created', () => {
@@ -124,5 +125,110 @@ describe('ImpersonationService [P1]', () => {
 
     service.dismissToast();
     expect(service.toastMessage()).toBeNull();
+  });
+
+  describe('duplicate exit guard', () => {
+    it('[4-SAB-UNIT-020] should ignore second exitImpersonation call (duplicate guard)', () => {
+      service.storeImpersonation('jwt-token', { id: 'tenant-123', name: 'Acme Corp' }, 'session-abc');
+      const navigateSpy = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+      // First call
+      service.exitImpersonation();
+      // Second call — should be no-op
+      service.exitImpersonation();
+
+      expect(navigateSpy).toHaveBeenCalledTimes(1);
+
+      // Only one session-end POST
+      const reqs = httpMock.match('/api/admin/tenants/impersonation/end');
+      expect(reqs).toHaveLength(1);
+      reqs[0].flush({ ok: true });
+    });
+
+    it('[4-SAB-UNIT-021] should expose isExiting flag', () => {
+      expect(service.isExiting).toBe(false);
+
+      service.storeImpersonation('jwt-token', { id: 'tenant-123', name: 'Acme Corp' }, 'session-abc');
+      jest.spyOn(router, 'navigate').mockResolvedValue(true);
+
+      service.exitImpersonation();
+      // isExiting should be true until navigation resolves
+      expect(service.isExiting).toBe(true);
+
+      const req = httpMock.expectOne('/api/admin/tenants/impersonation/end');
+      req.flush({ ok: true });
+    });
+
+    it('[4-SAB-UNIT-022] should reset _exiting flag after storeImpersonation', () => {
+      service.storeImpersonation('jwt-token', { id: 'tenant-123', name: 'Acme Corp' }, 'session-abc');
+      jest.spyOn(router, 'navigate').mockResolvedValue(true);
+      service.exitImpersonation();
+
+      expect(service.isExiting).toBe(true);
+
+      // New impersonation should reset the flag
+      service.storeImpersonation('jwt-token-2', { id: 'tenant-456', name: 'Beta Corp' }, 'session-def');
+      expect(service.isExiting).toBe(false);
+
+      const req = httpMock.expectOne('/api/admin/tenants/impersonation/end');
+      req.flush({ ok: true });
+    });
+  });
+
+  describe('inactivity pre-warning toast', () => {
+    it('[4-SAB-UNIT-023] should show warning toast at T-60s (29 min)', () => {
+      jest.useFakeTimers();
+
+      service.storeImpersonation('jwt-token', { id: 't1', name: 'Test' }, 'session-1');
+      service.startInactivityTimer();
+
+      const toastSpy = jest.spyOn(service, 'showToast');
+
+      // Advance to 29 minutes (just past warning threshold)
+      jest.advanceTimersByTime(29 * 60 * 1000 + 10);
+
+      expect(toastSpy).toHaveBeenCalledWith('Session will expire in 1 minute due to inactivity.');
+
+      service.stopInactivityTimer();
+    });
+
+    it('[4-SAB-UNIT-024] should NOT show warning before 29 minutes', () => {
+      jest.useFakeTimers();
+
+      service.storeImpersonation('jwt-token', { id: 't1', name: 'Test' }, 'session-1');
+      service.startInactivityTimer();
+
+      const toastSpy = jest.spyOn(service, 'showToast');
+
+      // Advance to 28 minutes — not enough
+      jest.advanceTimersByTime(28 * 60 * 1000);
+
+      expect(toastSpy).not.toHaveBeenCalled();
+
+      service.stopInactivityTimer();
+    });
+
+    it('[4-SAB-UNIT-025] should reset warning timer on user activity', () => {
+      jest.useFakeTimers();
+
+      service.storeImpersonation('jwt-token', { id: 't1', name: 'Test' }, 'session-1');
+      service.startInactivityTimer();
+
+      const toastSpy = jest.spyOn(service, 'showToast');
+
+      // Advance 20 minutes
+      jest.advanceTimersByTime(20 * 60 * 1000);
+
+      // Simulate activity (resets timer)
+      document.dispatchEvent(new Event('mousemove'));
+
+      // Advance another 20 minutes from reset (total 40 from start, 20 from activity)
+      jest.advanceTimersByTime(20 * 60 * 1000);
+
+      // Should NOT have shown warning yet (only 20 min since activity, need 29)
+      expect(toastSpy).not.toHaveBeenCalled();
+
+      service.stopInactivityTimer();
+    });
   });
 });

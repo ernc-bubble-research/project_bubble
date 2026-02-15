@@ -147,6 +147,13 @@ export const appRoutes: Route[] = [
             (m) => m.WorkflowRunFormComponent
           ),
       },
+      {
+        path: 'access-log',
+        loadComponent: () =>
+          import('./tenant/access-log/access-log.component').then(
+            (m) => m.AccessLogComponent
+          ),
+      },
       { path: '', redirectTo: 'data-vault', pathMatch: 'full' },
     ],
   },

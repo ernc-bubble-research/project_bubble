@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronDown,
   Settings,
+  Shield,
 } from 'lucide-angular';
 
 @Component({ standalone: true, template: '' })
@@ -61,6 +62,7 @@ describe('AppLayoutComponent [P2]', () => {
             LogOut,
             ChevronDown,
             Settings,
+            Shield,
           }),
         },
       ],
@@ -72,12 +74,12 @@ describe('AppLayoutComponent [P2]', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('[3.1-2-UNIT-023] should render 2 nav items', () => {
+  it('[3.1-2-UNIT-023] should render 3 nav items', () => {
     const fixture = TestBed.createComponent(AppLayoutComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const navItems = compiled.querySelectorAll('.nav-item');
-    expect(navItems.length).toBe(2);
+    expect(navItems.length).toBe(3);
   });
 
   it('[3.1-2-UNIT-024] should render avatar dropdown when user is loaded', () => {

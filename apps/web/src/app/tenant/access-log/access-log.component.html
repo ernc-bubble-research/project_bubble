@@ -1,0 +1,53 @@
+<div class="access-log-page">
+  <div class="page-header">
+    <lucide-icon name="shield" [size]="24"></lucide-icon>
+    <h1>Access Log</h1>
+  </div>
+  <p class="page-description">
+    Review when platform support accessed your organization's environment.
+  </p>
+
+  @if (loading()) {
+    <div class="loading-state" data-testid="access-log-loading">
+      <lucide-icon name="loader-2" [size]="24" class="spinner"></lucide-icon>
+      <span>Loading access log...</span>
+    </div>
+  } @else if (error()) {
+    <div class="empty-state" data-testid="access-log-error">
+      <lucide-icon name="shield" [size]="48" class="empty-icon"></lucide-icon>
+      <p>Failed to load access log. Please try again later.</p>
+    </div>
+  } @else if (entries().length === 0) {
+    <div class="empty-state" data-testid="access-log-empty">
+      <lucide-icon name="shield" [size]="48" class="empty-icon"></lucide-icon>
+      <p>No support access sessions recorded for your organization.</p>
+    </div>
+  } @else {
+    <div class="table-container" data-testid="access-log-table">
+      <table class="access-log-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Duration</th>
+            <th>Actions</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of entries(); track entry.id) {
+            <tr data-testid="access-log-row">
+              <td>{{ formatDate(entry.startedAt) }}</td>
+              <td>{{ formatDuration(entry.startedAt, entry.endedAt) }}</td>
+              <td>{{ entry.actionCount }}</td>
+              <td>
+                <span class="badge" [class.badge-active]="entry.status === 'active'" [class.badge-completed]="entry.status === 'completed'" data-testid="access-log-badge">
+                  {{ entry.status === 'active' ? 'Active' : 'Completed' }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

@@ -22,7 +22,7 @@ import { LucideAngularModule } from 'lucide-angular';
           <p class="warning-text">
             You are about to impersonate <strong>{{ tenantName }}</strong>.
             This action is audit-logged. You will see their workspace as if
-            you were their admin. Session auto-reverts after 30 minutes.
+            you were their admin. Session auto-reverts after 30 minutes of inactivity.
           </p>
         </div>
         <div class="modal-footer">

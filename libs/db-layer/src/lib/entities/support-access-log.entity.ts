@@ -8,6 +8,9 @@ import {
 /**
  * Audit log for support/impersonation sessions.
  *
+ * RETENTION: Permanent — no TTL, no cleanup jobs. Audit data for compliance.
+ * Do not add purge/cleanup/expiry logic without compliance review.
+ *
  * NOTE: No @ManyToOne relations to UserEntity or TenantEntity because this entity
  * lives on the 'migration' DataSource while User/Tenant are on the default DataSource.
  * Cross-DataSource ORM relations are not supported by TypeORM.

@@ -190,7 +190,7 @@ describe('TenantsService [P1]', () => {
           impersonated_by: adminUserId,
           sessionId: expect.any(String),
         },
-        { expiresIn: '30m' },
+        { expiresIn: '2h' },
       );
     });
 

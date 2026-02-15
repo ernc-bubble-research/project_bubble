@@ -8,6 +8,12 @@ import {
 } from 'typeorm';
 import { SupportAccessLogEntity } from './support-access-log.entity';
 
+/**
+ * Audit log for individual mutations performed during support/impersonation sessions.
+ *
+ * RETENTION: Permanent — no TTL, no cleanup jobs. Audit data for compliance.
+ * Do not add purge/cleanup/expiry logic without compliance review.
+ */
 @Entity('support_mutation_log')
 export class SupportMutationLogEntity {
   @PrimaryGeneratedColumn('uuid')

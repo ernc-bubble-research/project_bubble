@@ -67,6 +67,9 @@ export class RlsSetupService implements OnModuleInit {
     await this.createSupportAccessLogPolicy();
     await this.createSupportMutationLogPolicy();
 
+    // Additional SELECT policy: tenants can read their own access log entries (customer-facing audit page).
+    await this.createSupportAccessLogTenantReadPolicy();
+
     // Seed provider configs BEFORE models (idempotent).
     await this.seedProviderConfigs();
 
@@ -534,6 +537,41 @@ export class RlsSetupService implements OnModuleInit {
         return;
       }
       this.logger.error('Failed to create support_mutation_log RLS policy:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ADDITIONAL SELECT policy on support_access_log: tenants can read their own sessions.
+   * Coexists with admin_only_support_access_log — PostgreSQL evaluates multiple policies
+   * with OR logic (any policy granting access = allowed).
+   */
+  private async createSupportAccessLogTenantReadPolicy(): Promise<void> {
+    try {
+      await this.dataSource.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM pg_policies
+            WHERE tablename = 'support_access_log' AND policyname = 'sal_tenant_read'
+          ) THEN
+            DROP POLICY sal_tenant_read ON support_access_log;
+          END IF;
+          CREATE POLICY sal_tenant_read ON support_access_log
+            FOR SELECT USING (
+              tenant_id = NULLIF(current_setting('app.current_tenant', true), '')::uuid
+              OR current_setting('app.is_admin', true) = 'true'
+            );
+        END
+        $$;
+      `);
+      this.logger.log('Tenant read SELECT policy created on "support_access_log"');
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && (error as { code: string }).code === '42P01') {
+        this.logger.warn('support_access_log table does not exist yet — will create tenant read policy after synchronize');
+        return;
+      }
+      this.logger.error('Failed to create support_access_log tenant read policy:', error);
       throw error;
     }
   }

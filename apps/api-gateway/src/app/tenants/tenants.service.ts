@@ -134,7 +134,7 @@ export class TenantsService {
         impersonated_by: adminId,
         sessionId,
       },
-      { expiresIn: '30m' },
+      { expiresIn: '2h' },
     );
 
     // Log session start with token hash for audit correlation
