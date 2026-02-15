@@ -1,5 +1,5 @@
 export { TenantEntity, TenantStatus, PlanTier } from './tenant.entity';
-export { UserEntity, UserRole, UserStatus } from './user.entity';
+export { UserEntity, UserRole, UserStatus, IMPERSONATOR_ROLE } from './user.entity';
 export { InvitationEntity, InvitationStatus } from './invitation.entity';
 export { AssetEntity, AssetStatus } from './asset.entity';
 export { FolderEntity } from './folder.entity';
@@ -10,3 +10,5 @@ export { WorkflowChainEntity, WorkflowChainStatus } from './workflow-chain.entit
 export { WorkflowRunEntity, WorkflowRunStatus } from './workflow-run.entity';
 export { LlmModelEntity } from './llm-model.entity';
 export { LlmProviderConfigEntity } from './llm-provider-config.entity';
+export { SupportAccessLogEntity } from './support-access-log.entity';
+export { SupportMutationLogEntity } from './support-mutation-log.entity';

@@ -40,7 +40,7 @@ describe('ImpersonationBannerComponent [P2]', () => {
     impersonationService.storeImpersonation('token', {
       id: 'tenant-1',
       name: 'Test Tenant',
-    });
+    }, 'session-1');
 
     fixture = TestBed.createComponent(ImpersonationBannerComponent);
     component = fixture.componentInstance;

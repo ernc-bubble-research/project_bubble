@@ -39,6 +39,8 @@ import {
   WorkflowRunEntity,
   LlmModelEntity,
   LlmProviderConfigEntity,
+  SupportAccessLogEntity,
+  SupportMutationLogEntity,
   RlsSetupService,
   tenantContextStorage,
   TenantContext,
@@ -60,6 +62,8 @@ import { WorkflowTemplatesService } from './workflows/workflow-templates.service
 import { SettingsModule } from './settings/settings.module';
 import { EmailModule } from './email/email.module';
 import { TenantStatusGuard } from './guards/tenant-status.guard';
+import { SupportAccessModule } from './support-access/support-access.module';
+import { SupportAccessService } from './support-access/support-access.service';
 
 // Load test env vars
 dotenv.config({ path: path.resolve(__dirname, '../../../../.env.test') });
@@ -77,6 +81,8 @@ const ALL_ENTITIES = [
   WorkflowRunEntity,
   LlmModelEntity,
   LlmProviderConfigEntity,
+  SupportAccessLogEntity,
+  SupportMutationLogEntity,
 ];
 
 const TEST_DB_NAME = 'project_bubble_wiring_integ_test';
@@ -180,6 +186,7 @@ describe('Integration Wiring — Tier 2 Runtime [P0]', () => {
         SettingsModule,
         TenantsModule,
         EmailModule,
+        SupportAccessModule,
       ],
       // RlsSetupService moved from DbLayerModule to MigrationDatabaseModule in production,
       // but in tests we provide it directly with the named 'migration' DataSource.
@@ -554,6 +561,7 @@ describe('RLS Enforcement — Tier 2 [P0]', () => {
         SettingsModule,
         TenantsModule,
         EmailModule,
+        SupportAccessModule,
       ],
       providers: [RlsSetupService, TenantStatusGuard],
     }).compile();
@@ -756,5 +764,94 @@ describe('RLS Enforcement — Tier 2 [P0]', () => {
     const rows = await seedDs.query(`SELECT role FROM users WHERE id = $1`, [userId]);
     expect(rows).toHaveLength(1);
     expect(rows[0].role).toBe('creator');
+  });
+
+  // ── Support Access Log RLS (Story 4-SA-A) ──────────────────────
+
+  describe('Support Access Log', () => {
+    let adminUserId: string;
+
+    beforeAll(async () => {
+      // Get seeded admin user ID for FK constraint
+      const rows = await seedDs.query(
+        `SELECT id FROM users WHERE email = 'admin@wiring-test.io'`,
+      );
+      adminUserId = rows[0].id;
+    });
+
+    it('[4-SA-INTEG-001] [P0] bubble_app cannot SELECT from support_access_log (admin-only RLS)', async () => {
+      // Seed a row via superuser
+      const sessionId = uuidv4();
+      await seedDs.query(
+        `INSERT INTO support_access_log (id, admin_user_id, tenant_id, jwt_token_hash)
+         VALUES ($1, $2, $3, $4)`,
+        [sessionId, adminUserId, tenantAId, 'a'.repeat(64)],
+      );
+
+      // bubble_app without admin bypass should see 0 rows
+      await appDs.transaction(async (manager) => {
+        const rows = await manager.query(`SELECT * FROM support_access_log`);
+        expect(rows).toHaveLength(0);
+      });
+    });
+
+    it('[4-SA-INTEG-002] [P0] admin bypass can INSERT and read support_access_log', async () => {
+      const sessionId = uuidv4();
+      await appDs.transaction(async (manager) => {
+        await manager.query(`SET LOCAL app.is_admin = 'true'`);
+        await manager.query(
+          `INSERT INTO support_access_log (id, admin_user_id, tenant_id, jwt_token_hash)
+           VALUES ($1, $2, $3, $4)`,
+          [sessionId, adminUserId, tenantAId, 'b'.repeat(64)],
+        );
+        const rows = await manager.query(
+          `SELECT * FROM support_access_log WHERE id = $1`,
+          [sessionId],
+        );
+        expect(rows).toHaveLength(1);
+        expect(rows[0].admin_user_id).toBe(adminUserId);
+      });
+    });
+
+    it('[4-SA-INTEG-003] [P0] logSessionEnd updates ended_at', async () => {
+      const supportService = module.get(SupportAccessService);
+      const sessionId = uuidv4();
+
+      await supportService.logSessionStart(sessionId, adminUserId, tenantAId, 'c'.repeat(64));
+
+      // Verify ended_at is initially null
+      const before = await seedDs.query(
+        `SELECT ended_at FROM support_access_log WHERE id = $1`,
+        [sessionId],
+      );
+      expect(before[0].ended_at).toBeNull();
+
+      await supportService.logSessionEnd(sessionId, adminUserId);
+
+      const after = await seedDs.query(
+        `SELECT ended_at FROM support_access_log WHERE id = $1`,
+        [sessionId],
+      );
+      expect(after[0].ended_at).not.toBeNull();
+    });
+
+    it('[4-SA-INTEG-004] [P0] mutation log row created with FK to session', async () => {
+      const supportService = module.get(SupportAccessService);
+      const sessionId = uuidv4();
+
+      await supportService.logSessionStart(sessionId, adminUserId, tenantAId, 'd'.repeat(64));
+      await supportService.logMutation(sessionId, 'POST', '/api/app/assets', 201);
+
+      const rows = await seedDs.query(
+        `SELECT session_id, http_method, url_path, status_code
+         FROM support_mutation_log WHERE session_id = $1`,
+        [sessionId],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].session_id).toBe(sessionId);
+      expect(rows[0].http_method).toBe('POST');
+      expect(rows[0].url_path).toBe('/api/app/assets');
+      expect(rows[0].status_code).toBe(201);
+    });
   });
 });

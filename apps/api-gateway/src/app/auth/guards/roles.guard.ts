@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UserRole } from '@project-bubble/db-layer';
+import { UserRole, IMPERSONATOR_ROLE } from '@project-bubble/db-layer';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 
 @Injectable()
@@ -25,7 +25,7 @@ export class RolesGuard implements CanActivate {
     // Map impersonator sessions to CUSTOMER_ADMIN for role checks.
     // JWT payload is NOT modified — only the local authorization comparison.
     const effectiveRole =
-      user.role === 'impersonator'
+      user.role === IMPERSONATOR_ROLE
         ? UserRole.CUSTOMER_ADMIN
         : (user.role as UserRole);
     return requiredRoles.includes(effectiveRole);

@@ -7,9 +7,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource, QueryFailedError, Repository } from 'typeorm';
-import { TenantEntity, TenantStatus, PlanTier } from '@project-bubble/db-layer';
+import { TenantEntity, TenantStatus, PlanTier, IMPERSONATOR_ROLE } from '@project-bubble/db-layer';
 import { createMockTenant } from '@project-bubble/db-layer/testing';
 import { TenantsService } from './tenants.service';
+import { SupportAccessService } from '../support-access/support-access.service';
 
 // Mock fs/promises at module level
 jest.mock('fs/promises', () => ({
@@ -73,6 +74,12 @@ describe('TenantsService [P1]', () => {
         {
           provide: DataSource,
           useValue: mockDataSource,
+        },
+        {
+          provide: SupportAccessService,
+          useValue: {
+            logSessionStart: jest.fn().mockResolvedValue(undefined),
+          },
         },
       ],
     }).compile();
@@ -165,22 +172,39 @@ describe('TenantsService [P1]', () => {
   });
 
   describe('impersonate', () => {
-    it('[1H.1-UNIT-008] should return a token for an active tenant', async () => {
+    it('[1H.1-UNIT-008] should return a token for an active tenant with real admin UUID', async () => {
+      const adminUserId = 'aaa11111-bbbb-cccc-dddd-eeeeeeee0001';
       repo.findOne.mockResolvedValue(mockTenant);
 
-      const result = await service.impersonate(mockTenant.id);
+      const result = await service.impersonate(mockTenant.id, adminUserId);
 
       expect(result.token).toBe('mock-jwt-token');
       expect(result.tenant).toEqual({ id: mockTenant.id, name: mockTenant.name });
+      expect(result.sessionId).toBeDefined();
       expect(mockJwtService.sign).toHaveBeenCalledWith(
         {
-          sub: 'admin',
+          sub: adminUserId,
           tenant_id: mockTenant.id,
-          role: 'impersonator',
+          role: IMPERSONATOR_ROLE,
           impersonating: true,
+          impersonated_by: adminUserId,
+          sessionId: expect.any(String),
         },
-        { expiresIn: '60m' },
+        { expiresIn: '30m' },
       );
+    });
+
+    it('[4-SA-UNIT-001] should set sub to real admin UUID, not literal "admin"', async () => {
+      const adminUserId = 'aaa11111-bbbb-cccc-dddd-eeeeeeee0001';
+      repo.findOne.mockResolvedValue(mockTenant);
+
+      await service.impersonate(mockTenant.id, adminUserId);
+
+      const signCall = mockJwtService.sign.mock.calls[0];
+      expect(signCall[0].sub).toBe(adminUserId);
+      expect(signCall[0].sub).not.toBe('admin');
+      expect(signCall[0].impersonated_by).toBe(adminUserId);
+      expect(signCall[0].sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/i);
     });
 
     it('[1H.1-UNIT-009] should log a warning with admin ID when impersonating', async () => {
@@ -215,6 +239,30 @@ describe('TenantsService [P1]', () => {
       await expect(service.impersonate(mockTenant.id)).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    it('[4-SA-UNIT-017] should return sessionId that matches the sessionId in JWT payload', async () => {
+      const adminUserId = 'aaa11111-bbbb-cccc-dddd-eeeeeeee0001';
+      repo.findOne.mockResolvedValue(mockTenant);
+      mockJwtService.sign.mockClear().mockReturnValue('mock-jwt-token');
+
+      const result = await service.impersonate(mockTenant.id, adminUserId);
+
+      const signCall = mockJwtService.sign.mock.calls[0];
+      expect(result.sessionId).toBe(signCall[0].sessionId);
+    });
+
+    it('[4-SA-UNIT-018] should pass a 64-char hex SHA-256 hash to logSessionStart', async () => {
+      const adminUserId = 'aaa11111-bbbb-cccc-dddd-eeeeeeee0001';
+      repo.findOne.mockResolvedValue(mockTenant);
+      const mockSupportService = service['supportAccessService'] as unknown as { logSessionStart: jest.Mock };
+
+      await service.impersonate(mockTenant.id, adminUserId);
+
+      const hashArg = mockSupportService.logSessionStart.mock.calls[0][3];
+      expect(hashArg).toMatch(/^[0-9a-f]{64}$/);
+      // Deterministic: same mock token always produces same hash
+      expect(hashArg).toBe('6e21b2d686605222c514d90f82d9d27e633025ddbdd0b061686e8c70c92c2721');
     });
 
     it('[1-13-UNIT-001a] should throw BadRequestException for archived tenant', async () => {

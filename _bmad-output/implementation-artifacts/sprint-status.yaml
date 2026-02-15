@@ -382,12 +382,14 @@
 #   17. Story 4-FIX-B — Admin UI & settings fixes (H1 provider cascade, H3 data vault render, H4 users endpoint, M1 bulk activate, M2 default private)
 #   18. ✅ Live Test Round 2 — agent + erinc validation of all fixes (done — 5/5 verified, 2 new findings, 1 build fix)
 #   18b. Story 4-TESTFIX-LT2 — Live Test Round 2 fixes (impersonation role mapping + Lucide icons)
-#   19. Story 4-RLS — Full RLS enablement (non-superuser role, dual DataSource, policy audit — absorbs 7P-6)
-#   20. Story 4-TESTFIX-RLS — Fix test suite breakages from RLS enablement
-#   21. Live Test Round 3 — validation after RLS enablement
-#   22. Story 4-4 — Credit Management (pre-flight validation + credit check)
-#   23. Story 4-PR — Provider Registry (backend-driven, replaces hardcoded constants) — between Epic 4 and Epic 5
-#   24. Epic 5 — Interactive Reporting & Feedback Loop
+#   19. ✅ Story 4-RLS-A/B/C — Full RLS enablement trilogy (done — 1275 total tests, auth policy tightened)
+#   20. ✅ Story 4-TESTFIX-RLS — SKIPPED (all tests pass after RLS, not needed)
+#   21. ✅ Live Test Round 3 — zero issues found (2026-02-15)
+#   22. Story 4-SA-A — Production Support Access (backend audit trail — JWT fix, audit tables, mutation logging)
+#   23. Story 4-4 — Credit Management (pre-flight validation + credit check)
+#   24. Story 4-SA-B — Production Support Access (frontend — countdown timer, customer-visible log page, after 4-4)
+#   25. Story 4-PR — Provider Registry (backend-driven, replaces hardcoded constants) — between Epic 4 and Epic 5
+#   26. Epic 5 — Interactive Reporting & Feedback Loop
 #   Convention: XE = E2E tests for Epic X. Tests written after epic features are built.
 #
 # LIVE TEST ROUND 1 FINDINGS (2026-02-12 — party mode triage):
@@ -607,8 +609,10 @@ development_status:
   4-testfix-live-test-round-2-fixes: done                    # Live test round 2 findings — 2 fixes: (1) impersonation role mapping in RolesGuard, (2) Lucide File+FileType icons. 3-pass code review: 0 findings. 1244 total tests.
   4-rls-a-role-dual-datasource-admin-bypass: done             # RLS Part 1/3: bubble_app role + grants + DEFAULT PRIVILEGES, dual DataSource (MigrationDatabaseModule + app), admin bypass in TransactionManager, ALL policy updates (NULLIF + admin bypass + WITH CHECK). Absorbs 7P-6 scope.
   4-rls-b-bullmq-validation: done                             # RLS Part 2/3: BullMQ tenantId defensive validation in process() + onFailed(). 3-pass code review: Pass 2 (10 findings, party mode), Pass 3 (10 findings, 4 fixed). 1181 total tests.
-  4-rls-c-test-infra-verification: backlog                  # RLS Part 3/3: Update test-db-helpers + global-setup (SHARED INFRA), new Tier 2 wiring tests for RLS + write isolation verification, browser smoke test. Depends on 4-RLS-B.
-  4-testfix-rls-test-suite-fixes: backlog                  # Fix test suite breakages caused by RLS enablement in Stories 4-RLS-A/B/C. Separate story to isolate RLS fix validation from test infrastructure changes.
+  4-rls-c-test-infra-verification: done                     # RLS Part 3/3: test-db-helpers + global-setup (SHARED INFRA), 7 new Tier 2 wiring tests for RLS enforcement, write isolation, auth_insert_users role restriction. 3-pass code review + post-review auth policy tightening. 1275 total tests.
+  4-testfix-rls-test-suite-fixes: skipped                  # Not needed — all tests (unit + wiring + E2E 46/46) pass after RLS enablement. Live Test Round 3 found zero issues.
+  4-sa-a-production-support-access-backend: done              # Backend audit trail: JWT attribution fix (real admin UUID), support_access_log + support_mutation_log entities, SupportAccessService (migration DS), mutation interceptor, session end endpoint, 30m token expiry, magic string extraction. 3-pass code review: 10 fixes (6 P1 + 2 P2 + 2 P3). 1267 total tests.
+  4-sa-b-production-support-access-frontend: backlog        # Frontend: countdown timer on impersonation banner, customer-visible access log page. Depends on 4-SA-A. After 4-4.
   4-4-pre-flight-validation-credit-check: backlog
   4-5-output-validation-storage: backlog
   4-6-workflow-chain-orchestration: backlog

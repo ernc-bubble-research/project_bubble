@@ -20,12 +20,15 @@ import {
   WorkflowRunEntity,
   KnowledgeChunkEntity,
   InvitationEntity,
+  IMPERSONATOR_ROLE,
 } from '@project-bubble/db-layer';
 import {
   CreateTenantDto,
   ImpersonateResponseDto,
   UpdateTenantDto,
 } from '@project-bubble/shared';
+import { SupportAccessService } from '../support-access/support-access.service';
+import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -38,6 +41,7 @@ export class TenantsService {
     private readonly tenantRepo: Repository<TenantEntity>,
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
+    private readonly supportAccessService: SupportAccessService,
   ) {}
 
   async create(dto: CreateTenantDto): Promise<TenantEntity> {
@@ -108,17 +112,31 @@ export class TenantsService {
       `IMPERSONATION: Admin ${adminId || 'unknown'} impersonated tenant ${tenantId} at ${new Date().toISOString()}`,
     );
 
+    // Pre-generate session ID so it can be included in both JWT and session log
+    const sessionId = crypto.randomUUID();
+
     const token = this.jwtService.sign(
       {
-        sub: 'admin',
+        sub: adminId,
         tenant_id: tenantId,
-        role: 'impersonator',
+        role: IMPERSONATOR_ROLE,
         impersonating: true,
+        impersonated_by: adminId,
+        sessionId,
       },
-      { expiresIn: '60m' },
+      { expiresIn: '30m' },
     );
 
-    return { token, tenant: { id: tenant.id, name: tenant.name } };
+    // Log session start with token hash for audit correlation
+    const jwtTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    await this.supportAccessService.logSessionStart(
+      sessionId,
+      adminId || 'unknown',
+      tenantId,
+      jwtTokenHash,
+    );
+
+    return { token, tenant: { id: tenant.id, name: tenant.name }, sessionId };
   }
 
   async archive(id: string): Promise<TenantEntity> {

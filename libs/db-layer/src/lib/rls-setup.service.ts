@@ -63,6 +63,10 @@ export class RlsSetupService implements OnModuleInit {
     await this.createCatalogReadPublishedPolicy();
     await this.createCatalogReadPublishedVersionsPolicy();
 
+    // Support access audit tables: admin-only RLS (Rule 2c exception — system audit, not tenant-scoped).
+    await this.createSupportAccessLogPolicy();
+    await this.createSupportMutationLogPolicy();
+
     // Seed provider configs BEFORE models (idempotent).
     await this.seedProviderConfigs();
 
@@ -460,6 +464,76 @@ export class RlsSetupService implements OnModuleInit {
         return;
       }
       this.logger.error('Failed to seed LLM models:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Admin-only RLS on support_access_log — only admin bypass can read/write.
+   * Rule 2c exception: system audit table, not tenant-scoped.
+   */
+  private async createSupportAccessLogPolicy(): Promise<void> {
+    try {
+      await this.dataSource.query(`ALTER TABLE "support_access_log" ENABLE ROW LEVEL SECURITY`);
+      await this.dataSource.query(`ALTER TABLE "support_access_log" FORCE ROW LEVEL SECURITY`);
+
+      await this.dataSource.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM pg_policies
+            WHERE tablename = 'support_access_log' AND policyname = 'admin_only_support_access_log'
+          ) THEN
+            DROP POLICY admin_only_support_access_log ON support_access_log;
+          END IF;
+          CREATE POLICY admin_only_support_access_log ON support_access_log
+            USING (current_setting('app.is_admin', true) = 'true')
+            WITH CHECK (current_setting('app.is_admin', true) = 'true');
+        END
+        $$;
+      `);
+      this.logger.log('Admin-only RLS policy created on "support_access_log"');
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && (error as { code: string }).code === '42P01') {
+        this.logger.warn('support_access_log table does not exist yet — will create policy after synchronize');
+        return;
+      }
+      this.logger.error('Failed to create support_access_log RLS policy:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Admin-only RLS on support_mutation_log — only admin bypass can read/write.
+   * Rule 2c exception: system audit table, not tenant-scoped.
+   */
+  private async createSupportMutationLogPolicy(): Promise<void> {
+    try {
+      await this.dataSource.query(`ALTER TABLE "support_mutation_log" ENABLE ROW LEVEL SECURITY`);
+      await this.dataSource.query(`ALTER TABLE "support_mutation_log" FORCE ROW LEVEL SECURITY`);
+
+      await this.dataSource.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM pg_policies
+            WHERE tablename = 'support_mutation_log' AND policyname = 'admin_only_support_mutation_log'
+          ) THEN
+            DROP POLICY admin_only_support_mutation_log ON support_mutation_log;
+          END IF;
+          CREATE POLICY admin_only_support_mutation_log ON support_mutation_log
+            USING (current_setting('app.is_admin', true) = 'true')
+            WITH CHECK (current_setting('app.is_admin', true) = 'true');
+        END
+        $$;
+      `);
+      this.logger.log('Admin-only RLS policy created on "support_mutation_log"');
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && (error as { code: string }).code === '42P01') {
+        this.logger.warn('support_mutation_log table does not exist yet — will create policy after synchronize');
+        return;
+      }
+      this.logger.error('Failed to create support_mutation_log RLS policy:', error);
       throw error;
     }
   }

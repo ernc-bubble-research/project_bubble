@@ -6,7 +6,8 @@ import type { ImpersonateResponseDto } from '@project-bubble/shared';
 
 const IMPERSONATION_TOKEN_KEY = 'impersonation_token';
 const IMPERSONATION_TENANT_KEY = 'impersonation_tenant';
-const TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes
+const IMPERSONATION_SESSION_KEY = 'impersonation_session_id';
+const TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes — aligned with JWT expiry
 
 @Injectable({ providedIn: 'root' })
 export class ImpersonationService {
@@ -32,16 +33,35 @@ export class ImpersonationService {
     );
   }
 
-  storeImpersonation(token: string, tenant: { id: string; name: string }): void {
+  storeImpersonation(token: string, tenant: { id: string; name: string }, sessionId: string): void {
     localStorage.setItem(IMPERSONATION_TOKEN_KEY, token);
     localStorage.setItem(IMPERSONATION_TENANT_KEY, JSON.stringify(tenant));
+    localStorage.setItem(IMPERSONATION_SESSION_KEY, sessionId);
     this._isImpersonating.set(true);
     this._tenant.set(tenant);
   }
 
   exitImpersonation(): void {
     this.stopInactivityTimer();
+
+    // Read sessionId BEFORE clearing impersonation token
+    const sessionId = localStorage.getItem(IMPERSONATION_SESSION_KEY);
+
+    // Clear impersonation token FIRST — HTTP interceptor falls back to admin JWT
     localStorage.removeItem(IMPERSONATION_TOKEN_KEY);
+    localStorage.removeItem(IMPERSONATION_SESSION_KEY);
+
+    // Call session-end API with admin JWT (fire-and-forget)
+    if (sessionId) {
+      this.http.post('/api/admin/tenants/impersonation/end', { sessionId }).subscribe({
+        error: (err: unknown) => {
+          // Fire-and-forget — failure does not block exit, but log for debugging
+          console.warn('Failed to close impersonation session on server:', err);
+        },
+      });
+    }
+
+    // Clear remaining state and navigate
     localStorage.removeItem(IMPERSONATION_TENANT_KEY);
     this._isImpersonating.set(false);
     this._tenant.set(null);

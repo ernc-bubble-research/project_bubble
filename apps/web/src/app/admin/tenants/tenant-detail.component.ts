@@ -372,7 +372,7 @@ export class TenantDetailComponent implements OnInit {
 
     this.impersonationService.impersonate(t.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
-        this.impersonationService.storeImpersonation(response.token, response.tenant);
+        this.impersonationService.storeImpersonation(response.token, response.tenant, response.sessionId);
         this.impersonationService.startInactivityTimer();
         this.router.navigate(['/app/workflows']);
       },

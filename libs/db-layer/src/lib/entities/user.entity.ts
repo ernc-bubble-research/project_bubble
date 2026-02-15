@@ -12,6 +12,12 @@ export enum UserRole {
   CREATOR = 'creator',
 }
 
+/**
+ * JWT session type for admin impersonation — NOT a real user role.
+ * Stored in JWT `role` field, mapped to CUSTOMER_ADMIN by RolesGuard.
+ */
+export const IMPERSONATOR_ROLE = 'impersonator' as const;
+
 export enum UserStatus {
   ACTIVE = 'active',
   INACTIVE = 'inactive',

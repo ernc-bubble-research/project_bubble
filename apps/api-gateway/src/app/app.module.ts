@@ -19,6 +19,8 @@ import { WorkflowsModule } from './workflows/workflows.module';
 import { SettingsModule } from './settings/settings.module';
 import { WorkflowExecutionModule } from './workflow-execution/workflow-execution.module';
 import { WorkflowRunsModule } from './workflow-runs/workflow-runs.module';
+import { SupportAccessModule } from './support-access/support-access.module';
+import { SupportMutationInterceptor } from './interceptors/support-mutation.interceptor';
 import { MigrationDatabaseModule, MIGRATION_DB_READY } from './migration-database.module';
 
 @Module({
@@ -76,11 +78,13 @@ import { MigrationDatabaseModule, MIGRATION_DB_READY } from './migration-databas
     SettingsModule,
     WorkflowExecutionModule,
     WorkflowRunsModule,
+    SupportAccessModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: SupportMutationInterceptor },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })

@@ -7,6 +7,8 @@ export interface JwtPayload {
   sub: string;
   tenant_id: string;
   role: string;
+  impersonated_by?: string;
+  sessionId?: string;
   iat?: number;
   exp?: number;
 }
@@ -29,6 +31,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       userId: payload.sub,
       tenantId: payload.tenant_id,
       role: payload.role,
+      ...(payload.impersonated_by && { impersonatedBy: payload.impersonated_by }),
+      ...(payload.sessionId && { sessionId: payload.sessionId }),
     };
   }
 }

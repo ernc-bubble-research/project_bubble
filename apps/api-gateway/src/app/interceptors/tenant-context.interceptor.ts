@@ -24,6 +24,8 @@ export class TenantContextInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    // IMPERSONATOR_ROLE users do NOT bypass RLS — they see data as tenant users would.
+    // Only BUBBLE_ADMIN (direct admin access, not impersonation) bypasses RLS.
     const tenantContext: TenantContext = {
       tenantId: user.tenantId,
       bypassRls: user.role === UserRole.BUBBLE_ADMIN,

@@ -39,6 +39,8 @@ import {
   WorkflowRunEntity,
   LlmModelEntity,
   LlmProviderConfigEntity,
+  SupportAccessLogEntity,
+  SupportMutationLogEntity,
 } from '@project-bubble/db-layer';
 
 // Feature modules
@@ -72,6 +74,8 @@ import { WorkflowRunsModule } from './workflow-runs/workflow-runs.module';
 import { WorkflowRunsService } from './workflow-runs/workflow-runs.service';
 import { EmailModule } from './email/email.module';
 import { EmailService } from './email/email.service';
+import { SupportAccessModule } from './support-access/support-access.module';
+import { SupportAccessService } from './support-access/support-access.service';
 
 // Load test env vars
 dotenv.config({ path: path.resolve(__dirname, '../../../../.env.test') });
@@ -89,6 +93,8 @@ const ALL_ENTITIES = [
   WorkflowRunEntity,
   LlmModelEntity,
   LlmProviderConfigEntity,
+  SupportAccessLogEntity,
+  SupportMutationLogEntity,
 ];
 
 const TEST_DB_NAME = 'project_bubble_wiring_test';
@@ -130,13 +136,26 @@ function createRootImports() {
         }),
       ],
     }),
+    // Named 'migration' DataSource — required by SupportAccessModule's forFeature(..., 'migration')
     TypeOrmModule.forRootAsync({
+      name: 'migration',
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         type: 'postgres' as const,
         url: config.get<string>('DATABASE_URL'),
         entities: ALL_ENTITIES,
         synchronize: true,
+      }),
+      inject: [ConfigService],
+    }),
+    // Default (unnamed) DataSource — used by all other modules
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres' as const,
+        url: config.get<string>('DATABASE_URL'),
+        entities: ALL_ENTITIES,
+        synchronize: false, // Schema synced by migration DS
       }),
       inject: [ConfigService],
     }),
@@ -153,6 +172,21 @@ function createRootImports() {
     }),
     DbLayerModule,
   ];
+}
+
+/** Safe teardown for dual DataSource modules — prevents TypeOrmCoreModule shutdown errors */
+async function closeModule(mod: { get: (token: unknown) => unknown; close: () => Promise<void> }) {
+  try {
+    const migrationDs = mod.get(getDataSourceToken('migration')) as DataSource;
+    if (migrationDs?.isInitialized) await migrationDs.destroy();
+  } catch { /* not found */ }
+  try {
+    const defaultDs = mod.get(DataSource) as DataSource;
+    if (defaultDs?.isInitialized) await defaultDs.destroy();
+  } catch { /* not found */ }
+  try {
+    await mod.close();
+  } catch { /* benign TypeOrmCoreModule shutdown race */ }
 }
 
 describe('Module Wiring — Tier 1 Compilation [P0]', () => {
@@ -190,7 +224,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module).toBeDefined();
     expect(module.get(UsersService)).toBeDefined();
     expect(module.get(TransactionManager)).toBeDefined();
-    await module.close();
+    await closeModule(module);
   }, 15_000);
 
   it('[MW-1-UNIT-003] [P0] AssetsModule compiles with real providers', async () => {
@@ -204,7 +238,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module).toBeDefined();
     expect(module.get(AssetsService)).toBeDefined();
     expect(module.get(FoldersService)).toBeDefined();
-    await module.close();
+    await closeModule(module);
   }, 15_000);
 
   it('[MW-1-UNIT-004] [P0] SettingsModule compiles with real providers', async () => {
@@ -217,7 +251,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
 
     expect(module).toBeDefined();
     expect(module.get(LlmProviderConfigService)).toBeDefined();
-    await module.close();
+    await closeModule(module);
   }, 15_000);
 
   it('[MW-1-UNIT-005] [P0] WorkflowsModule compiles with real providers', async () => {
@@ -232,7 +266,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module.get(WorkflowTemplatesService)).toBeDefined();
     expect(module.get(WorkflowChainsService)).toBeDefined();
     expect(module.get(LlmModelsService)).toBeDefined();
-    await module.close();
+    await closeModule(module);
   }, 15_000);
 
   it('[MW-1-UNIT-006] [P0] AuthModule compiles with real providers (including forwardRef to InvitationsModule)', async () => {
@@ -245,7 +279,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
 
     expect(module).toBeDefined();
     expect(module.get(AuthService)).toBeDefined();
-    await module.close();
+    await closeModule(module);
   }, 15_000);
 
   it('[MW-1-UNIT-007] [P0] InvitationsModule compiles with real providers', async () => {
@@ -259,7 +293,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module).toBeDefined();
     expect(module.get(InvitationsService)).toBeDefined();
     expect(module.get(EmailService)).toBeDefined();
-    await module.close();
+    await closeModule(module);
   }, 15_000);
 
   it('[MW-1-UNIT-008] [P0] IngestionModule compiles with real providers (including BullMQ queue)', async () => {
@@ -272,7 +306,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
 
     expect(module).toBeDefined();
     expect(module.get(IngestionService)).toBeDefined();
-    await module.close();
+    await closeModule(module);
   }, 15_000);
 
   it('[MW-1-UNIT-009] [P0] KnowledgeModule compiles with real providers (imports IngestionModule)', async () => {
@@ -286,10 +320,10 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
 
     expect(module).toBeDefined();
     expect(module.get(KnowledgeSearchService)).toBeDefined();
-    await module.close();
+    await closeModule(module);
   }, 15_000);
 
-  it('[MW-1-UNIT-010] [P0] TenantsModule compiles with real providers (heaviest cross-deps: AuthModule + WorkflowsModule)', async () => {
+  it('[MW-1-UNIT-010] [P0] TenantsModule compiles with real providers (heaviest cross-deps: AuthModule + WorkflowsModule + SupportAccessModule)', async () => {
     const module = await Test.createTestingModule({
       imports: [
         ...createRootImports(),
@@ -302,7 +336,8 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     // Verify cross-module deps resolved
     expect(module.get(AuthService)).toBeDefined();
     expect(module.get(WorkflowTemplatesService)).toBeDefined();
-    await module.close();
+    expect(module.get(SupportAccessService)).toBeDefined();
+    await closeModule(module);
   }, 15_000);
 
   it('[MW-1-UNIT-012] [P0] WorkflowExecutionModule compiles with real providers (BullMQ queues + TypeORM + LLM providers)', async () => {
@@ -318,7 +353,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module.get(WorkflowExecutionService)).toBeDefined();
     expect(module.get(LlmProviderFactory)).toBeDefined();
     expect(module.get(PromptAssemblyService)).toBeDefined();
-    await module.close();
+    await closeModule(module);
   }, 15_000);
 
   it('[4.1-MW-001] [P0] WorkflowRunsModule compiles with real providers (imports WorkflowsModule + AssetsModule + WorkflowExecutionModule)', async () => {
@@ -334,7 +369,7 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     // Cross-module dependencies resolved
     expect(module.get(AssetsService)).toBeDefined();
     expect(module.get(WorkflowExecutionService)).toBeDefined();
-    await module.close();
+    await closeModule(module);
   }, 15_000);
 
   it('[MW-1-UNIT-013] [P0] Full AppModule compiles with all feature modules', async () => {
@@ -377,21 +412,6 @@ describe('Module Wiring — Tier 1 Compilation [P0]', () => {
     expect(module.get(PromptAssemblyService)).toBeDefined();
     expect(module.get(WorkflowRunsService)).toBeDefined();
 
-    // Dual DataSource teardown: @nestjs/typeorm's TypeOrmCoreModule.onApplicationShutdown
-    // throws when looking up the named DataSource ('migration') token via moduleRef.get().
-    // Manually destroy both DataSources before module.close() to prevent the error.
-    try {
-      const migrationDs = module.get<DataSource>(getDataSourceToken('migration'));
-      if (migrationDs?.isInitialized) await migrationDs.destroy();
-    } catch { /* already destroyed or not found */ }
-    try {
-      const defaultDs = module.get(DataSource);
-      if (defaultDs?.isInitialized) await defaultDs.destroy();
-    } catch { /* already destroyed */ }
-    try {
-      await module.close();
-    } catch {
-      // TypeOrmCoreModule shutdown race with pre-destroyed DataSources — benign
-    }
+    await closeModule(module);
   }, 30_000);
 });

@@ -8,14 +8,23 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
+  // Prefer impersonation token when active (stored by ImpersonationService).
+  // Cannot inject ImpersonationService here — it uses HttpClient, which would
+  // create a circular dependency with this HTTP interceptor.
+  const impersonationToken = localStorage.getItem('impersonation_token');
+  if (impersonationToken) {
+    return next(
+      req.clone({ setHeaders: { Authorization: `Bearer ${impersonationToken}` } }),
+    );
+  }
+
   const authService = inject(AuthService);
   const token = authService.getToken();
 
   if (token) {
-    const cloned = req.clone({
-      setHeaders: { Authorization: `Bearer ${token}` },
-    });
-    return next(cloned);
+    return next(
+      req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }),
+    );
   }
 
   return next(req);

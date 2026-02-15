@@ -52,4 +52,27 @@ describe('jwtInterceptor [P0]', () => {
     expect(req.request.headers.has('Authorization')).toBe(false);
     req.flush({});
   });
+
+  it('[4-SA-UNIT-001] should prefer impersonation token over admin token', () => {
+    localStorage.setItem('bubble_access_token', 'admin-jwt');
+    localStorage.setItem('impersonation_token', 'impersonation-jwt');
+
+    http.get('/api/data').subscribe();
+
+    const req = httpTesting.expectOne('/api/data');
+    expect(req.request.headers.get('Authorization')).toBe(
+      'Bearer impersonation-jwt',
+    );
+    req.flush({});
+  });
+
+  it('[4-SA-UNIT-002] should fall back to admin token when impersonation token is absent', () => {
+    localStorage.setItem('bubble_access_token', 'admin-jwt');
+
+    http.get('/api/data').subscribe();
+
+    const req = httpTesting.expectOne('/api/data');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer admin-jwt');
+    req.flush({});
+  });
 });

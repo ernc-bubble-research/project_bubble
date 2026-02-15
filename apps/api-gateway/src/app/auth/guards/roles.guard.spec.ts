@@ -1,6 +1,6 @@
 import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UserRole } from '@project-bubble/db-layer';
+import { UserRole, IMPERSONATOR_ROLE } from '@project-bubble/db-layer';
 import { RolesGuard } from './roles.guard';
 
 describe('RolesGuard [P0]', () => {
@@ -75,7 +75,7 @@ describe('RolesGuard [P0]', () => {
 
   it('[4-TF-UNIT-001] should allow impersonator when CUSTOMER_ADMIN is in required roles', () => {
     reflector.getAllAndOverride.mockReturnValue([UserRole.CUSTOMER_ADMIN]);
-    const context = createMockContext({ role: 'impersonator' });
+    const context = createMockContext({ role: IMPERSONATOR_ROLE });
 
     expect(guard.canActivate(context)).toBe(true);
   });
@@ -86,21 +86,21 @@ describe('RolesGuard [P0]', () => {
       UserRole.CUSTOMER_ADMIN,
       UserRole.CREATOR,
     ]);
-    const context = createMockContext({ role: 'impersonator' });
+    const context = createMockContext({ role: IMPERSONATOR_ROLE });
 
     expect(guard.canActivate(context)).toBe(true);
   });
 
   it('[4-TF-UNIT-003] should deny impersonator when only BUBBLE_ADMIN is required', () => {
     reflector.getAllAndOverride.mockReturnValue([UserRole.BUBBLE_ADMIN]);
-    const context = createMockContext({ role: 'impersonator' });
+    const context = createMockContext({ role: IMPERSONATOR_ROLE });
 
     expect(guard.canActivate(context)).toBe(false);
   });
 
   it('[4-TF-UNIT-004] should deny impersonator when only CREATOR is required', () => {
     reflector.getAllAndOverride.mockReturnValue([UserRole.CREATOR]);
-    const context = createMockContext({ role: 'impersonator' });
+    const context = createMockContext({ role: IMPERSONATOR_ROLE });
 
     expect(guard.canActivate(context)).toBe(false);
   });
@@ -110,7 +110,7 @@ describe('RolesGuard [P0]', () => {
       UserRole.BUBBLE_ADMIN,
       UserRole.CREATOR,
     ]);
-    const context = createMockContext({ role: 'impersonator' });
+    const context = createMockContext({ role: IMPERSONATOR_ROLE });
 
     expect(guard.canActivate(context)).toBe(false);
   });
