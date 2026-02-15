@@ -43,4 +43,22 @@ export class UpdateTenantDto {
   @Min(1)
   @Max(365)
   assetRetentionDays?: number;
+
+  @ApiPropertyOptional({ example: 0, minimum: 0, description: 'Purchased credit balance (persistent, never resets)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  purchasedCredits?: number;
+
+  @ApiPropertyOptional({ example: 1000, minimum: 1, description: 'Hard ceiling for per-run credit cost (Bubble Admin only)' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxCreditsPerRunLimit?: number;
+
+  @ApiPropertyOptional({ example: 1000, minimum: 1, description: 'Adjustable per-run credit limit (must be <= maxCreditsPerRunLimit)' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxCreditsPerRun?: number;
 }

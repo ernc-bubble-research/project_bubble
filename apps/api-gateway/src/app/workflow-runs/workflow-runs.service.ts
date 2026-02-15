@@ -12,6 +12,8 @@ import {
   WorkflowRunStatus,
   AssetEntity,
   TransactionManager,
+  UserRole,
+  IMPERSONATOR_ROLE,
 } from '@project-bubble/db-layer';
 import {
   InitiateWorkflowRunDto,
@@ -24,6 +26,7 @@ import { WorkflowDefinition, WorkflowInput, WorkflowProcessingMode } from '@proj
 import { In } from 'typeorm';
 import { AssetsService } from '../assets/assets.service';
 import { WorkflowExecutionService } from '../workflow-execution/workflow-execution.service';
+import { PreFlightValidationService } from './pre-flight-validation.service';
 
 @Injectable()
 export class WorkflowRunsService {
@@ -33,14 +36,20 @@ export class WorkflowRunsService {
     private readonly txManager: TransactionManager,
     private readonly assetsService: AssetsService,
     private readonly executionService: WorkflowExecutionService,
+    private readonly preFlightService: PreFlightValidationService,
   ) {}
 
   async initiateRun(
     dto: InitiateWorkflowRunDto,
     tenantId: string,
     userId: string,
+    userRole: string,
   ): Promise<WorkflowRunResponseDto> {
-    // 1. Load template + current version within transaction
+    // Determine isTestRun from JWT role (AC7)
+    const isTestRun =
+      userRole === UserRole.BUBBLE_ADMIN || userRole === IMPERSONATOR_ROLE;
+
+    // 1. Load template + current version (read-only transaction — no lock needed)
     const { template, version } = await this.txManager.run(
       tenantId,
       async (manager) => {
@@ -76,16 +85,41 @@ export class WorkflowRunsService {
       },
     );
 
-    // 2. Validate required inputs against definition
+    // 2. Parse definition and validate inputs (outside transaction — no lock)
     const definition = version.definition as unknown as WorkflowDefinition;
     const definitionInputs: WorkflowInput[] = definition.inputs ?? [];
     this.validateRequiredInputs(definitionInputs, dto.inputs);
     this.validateInputTypes(definitionInputs, dto.inputs);
 
-    // 3. Validate asset IDs exist in tenant vault
+    // 3. Validate asset IDs exist in tenant vault (outside transaction — no lock)
     await this.validateAssetIds(dto.inputs, tenantId);
 
-    // 4. Build inputSnapshot
+    // 4. Pre-flight: validate model/provider availability (AC8)
+    if (definition.execution.model) {
+      await this.preFlightService.validateModelAvailability(
+        definition.execution.model,
+      );
+    }
+
+    // 5. Resolve subject-role inputs
+    const subjectFiles = await this.resolveSubjectFiles(
+      definitionInputs,
+      dto.inputs,
+      tenantId,
+    );
+
+    // 6. Compute processing mode and totalJobs
+    const processingMode: WorkflowProcessingMode =
+      definition.execution.processing || 'parallel';
+    const maxConcurrency = definition.execution.max_concurrency ?? 5;
+    const totalJobs =
+      subjectFiles.length === 0
+        ? 1
+        : processingMode === 'parallel'
+          ? subjectFiles.length
+          : 1;
+
+    // 7. Build inputSnapshot
     const inputSnapshot = {
       templateId: template.id,
       templateName: template.name,
@@ -95,88 +129,142 @@ export class WorkflowRunsService {
       userInputs: dto.inputs,
     };
 
-    // 5. Resolve subject-role inputs into WorkflowJobSubjectFile[]
-    const subjectFiles = await this.resolveSubjectFiles(
-      definitionInputs,
-      dto.inputs,
-      tenantId,
-    );
+    // 8. Credit-check-and-create transaction (AC5 — FOR UPDATE lock on tenant row)
+    const creditsPerRun = template.creditsPerRun ?? 1;
+    const savedRun = await this.txManager.run(tenantId, async (manager) => {
+      // Acquire FOR UPDATE lock on tenant row to prevent concurrent double-spend
+      await manager.query(
+        'SELECT id FROM tenants WHERE id = $1 FOR UPDATE',
+        [tenantId],
+      );
 
-    // 6. Determine processing mode and compute totalJobs
-    const processingMode: WorkflowProcessingMode =
-      definition.execution.processing || 'parallel';
-    const maxConcurrency = definition.execution.max_concurrency ?? 5;
-    const totalJobs =
-      subjectFiles.length === 0
-        ? 1 // context-only workflow
-        : processingMode === 'parallel'
-          ? subjectFiles.length // 1 job per file
-          : 1; // batch = 1 job
+      // Check and deduct credits (AC1-5, AC7)
+      const { creditsFromMonthly, creditsFromPurchased } =
+        await this.preFlightService.checkAndDeductCredits(
+          tenantId,
+          creditsPerRun,
+          isTestRun,
+          manager,
+        );
 
-    // 7. Create WorkflowRunEntity with totalJobs set BEFORE enqueue
-    return this.txManager.run(tenantId, async (manager) => {
+      const creditsConsumed = creditsFromMonthly + creditsFromPurchased;
+
+      // Create run entity with credit fields set
       const runEntity = manager.create(WorkflowRunEntity, {
         tenantId,
         versionId: version.id,
         status: WorkflowRunStatus.QUEUED,
         startedBy: userId,
         inputSnapshot,
-        creditsConsumed: 0,
+        creditsConsumed,
+        isTestRun,
+        creditsFromMonthly,
+        creditsFromPurchased,
         totalJobs,
         completedJobs: 0,
         failedJobs: 0,
       });
 
-      const savedRun = await manager.save(WorkflowRunEntity, runEntity);
+      return manager.save(WorkflowRunEntity, runEntity);
+    });
 
-      // 8. Build context inputs for WorkflowJobPayload
-      const contextInputs: Record<string, WorkflowJobContextInput> = {};
-      for (const defInput of definitionInputs) {
-        if (defInput.role !== 'context') continue;
-        const userInput = dto.inputs[defInput.name];
-        if (!userInput) continue;
+    // 9. Build context inputs and enqueue AFTER commit (AC5 — BullMQ enqueue outside transaction)
+    const contextInputs: Record<string, WorkflowJobContextInput> = {};
+    for (const defInput of definitionInputs) {
+      if (defInput.role !== 'context') continue;
+      const userInput = dto.inputs[defInput.name];
+      if (!userInput) continue;
 
-        if (userInput.type === 'asset' && userInput.assetIds?.length) {
-          // Translate DTO 'asset' → payload 'file'
-          contextInputs[defInput.name] = {
-            type: 'file',
-            assetId: userInput.assetIds[0],
-          };
-        } else if (userInput.type === 'text' && userInput.text) {
-          contextInputs[defInput.name] = {
-            type: 'text',
-            content: userInput.text,
-          };
-        }
+      if (userInput.type === 'asset' && userInput.assetIds?.length) {
+        contextInputs[defInput.name] = {
+          type: 'file',
+          assetId: userInput.assetIds[0],
+        };
+      } else if (userInput.type === 'text' && userInput.text) {
+        contextInputs[defInput.name] = {
+          type: 'text',
+          content: userInput.text,
+        };
       }
+    }
 
-      const payload: WorkflowJobPayload = {
-        runId: savedRun.id,
-        tenantId,
-        versionId: version.id,
-        definition,
-        contextInputs,
-      };
+    const payload: WorkflowJobPayload = {
+      runId: savedRun.id,
+      tenantId,
+      versionId: version.id,
+      definition,
+      contextInputs,
+    };
 
-      // 9. Enqueue with fan-out/fan-in parameters
+    try {
       await this.executionService.enqueueRun(savedRun.id, payload, {
         subjectFiles,
         processingMode,
         maxConcurrency,
       });
-
-      this.logger.log({
-        message: 'Workflow run initiated',
+    } catch (enqueueError) {
+      // Compensating action: refund credits and mark run as FAILED (Finding 9)
+      this.logger.error({
+        message:
+          'BullMQ enqueue failed after credit deduction — executing compensating refund',
         runId: savedRun.id,
         tenantId,
-        templateId: template.id,
-        versionId: version.id,
-        totalJobs,
-        processingMode,
+        error:
+          enqueueError instanceof Error
+            ? enqueueError.message
+            : String(enqueueError),
       });
 
-      return this.toResponse(savedRun);
+      try {
+        await this.txManager.run(tenantId, async (manager) => {
+          await manager.query(
+            'SELECT id FROM tenants WHERE id = $1 FOR UPDATE',
+            [tenantId],
+          );
+          await this.preFlightService.refundCredits(
+            tenantId,
+            savedRun.creditsFromPurchased,
+            manager,
+          );
+          await manager.update(WorkflowRunEntity, savedRun.id, {
+            status: WorkflowRunStatus.FAILED,
+            errorMessage:
+              'Failed to enqueue workflow for execution. Credits have been refunded.',
+            creditsConsumed: 0,
+            creditsFromMonthly: 0,
+            creditsFromPurchased: 0,
+          });
+        });
+      } catch (refundError) {
+        this.logger.error({
+          message:
+            'Compensating refund ALSO failed — credits may be stuck. Manual intervention required.',
+          runId: savedRun.id,
+          tenantId,
+          creditsFromPurchased: savedRun.creditsFromPurchased,
+          error:
+            refundError instanceof Error
+              ? refundError.message
+              : String(refundError),
+        });
+      }
+
+      throw enqueueError;
+    }
+
+    this.logger.log({
+      message: 'Workflow run initiated',
+      runId: savedRun.id,
+      tenantId,
+      templateId: template.id,
+      versionId: version.id,
+      totalJobs,
+      processingMode,
+      isTestRun,
+      creditsConsumed: savedRun.creditsConsumed,
     });
+
+    return this.toResponse(savedRun);
   }
 
   private async resolveSubjectFiles(
@@ -311,6 +399,9 @@ export class WorkflowRunsService {
     dto.status = entity.status;
     dto.startedBy = entity.startedBy;
     dto.creditsConsumed = entity.creditsConsumed;
+    dto.isTestRun = entity.isTestRun;
+    dto.creditsFromMonthly = entity.creditsFromMonthly;
+    dto.creditsFromPurchased = entity.creditsFromPurchased;
     dto.totalJobs = entity.totalJobs;
     dto.completedJobs = entity.completedJobs;
     dto.failedJobs = entity.failedJobs;

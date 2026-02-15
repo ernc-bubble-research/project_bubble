@@ -30,6 +30,10 @@ export class LlmModelsService {
     return models.map((m) => this.toResponse(m));
   }
 
+  async findOneById(id: string): Promise<LlmModelEntity | null> {
+    return this.repo.findOne({ where: { id } });
+  }
+
   async findAll(): Promise<LlmModelResponseDto[]> {
     const models = await this.repo.find({
       order: { displayName: 'ASC' },

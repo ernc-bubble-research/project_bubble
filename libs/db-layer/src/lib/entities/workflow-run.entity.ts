@@ -96,6 +96,15 @@ export class WorkflowRunEntity {
   @Column({ name: 'credits_consumed', type: 'int', default: 0 })
   creditsConsumed!: number;
 
+  @Column({ name: 'is_test_run', type: 'boolean', default: false })
+  isTestRun!: boolean;
+
+  @Column({ name: 'credits_from_monthly', type: 'int', default: 0 })
+  creditsFromMonthly!: number;
+
+  @Column({ name: 'credits_from_purchased', type: 'int', default: 0 })
+  creditsFromPurchased!: number;
+
   @Column({ name: 'started_at', type: 'timestamp', nullable: true })
   startedAt!: Date | null;
 

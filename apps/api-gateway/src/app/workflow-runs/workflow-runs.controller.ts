@@ -42,12 +42,13 @@ export class WorkflowRunsController {
   @ApiResponse({ status: 404, description: 'Template not found' })
   initiateRun(
     @Body() dto: InitiateWorkflowRunDto,
-    @Request() req: { user: { tenantId: string; userId: string } },
+    @Request() req: { user: { tenantId: string; userId: string; role: string } },
   ): Promise<WorkflowRunResponseDto> {
     return this.workflowRunsService.initiateRun(
       dto,
       req.user.tenantId,
       req.user.userId,
+      req.user.role,
     );
   }
 }

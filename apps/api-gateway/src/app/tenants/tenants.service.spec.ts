@@ -313,6 +313,76 @@ describe('TenantsService [P1]', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
+    it('[4.4-UNIT-033] [AC10] should auto-clamp maxCreditsPerRun to maxCreditsPerRunLimit', async () => {
+      const tenant = {
+        ...mockTenant,
+        maxCreditsPerRunLimit: 100,
+        maxCreditsPerRun: 100,
+      };
+      const saved = {
+        ...tenant,
+        maxCreditsPerRun: 100, // clamped to limit
+      };
+      repo.findOne.mockResolvedValue({ ...tenant });
+      repo.save.mockResolvedValue(saved);
+
+      // Update maxCreditsPerRun to 200 (exceeds limit of 100)
+      const result = await service.update(mockTenant.id, {
+        maxCreditsPerRun: 200,
+      } as never);
+
+      // Should have been clamped to limit
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          maxCreditsPerRun: 100,
+        }),
+      );
+    });
+
+    it('[4.4-UNIT-034] [AC10] should allow maxCreditsPerRun equal to maxCreditsPerRunLimit', async () => {
+      const tenant = {
+        ...mockTenant,
+        maxCreditsPerRunLimit: 100,
+        maxCreditsPerRun: 50,
+      };
+      repo.findOne.mockResolvedValue({ ...tenant });
+      repo.save.mockResolvedValue({ ...tenant, maxCreditsPerRun: 100 });
+
+      await service.update(mockTenant.id, {
+        maxCreditsPerRun: 100,
+      } as never);
+
+      // 100 === limit, should be saved as-is (not clamped)
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          maxCreditsPerRun: 100,
+        }),
+      );
+    });
+
+    it('[4.4-UNIT-035] [AC10] should auto-clamp existing maxCreditsPerRun when maxCreditsPerRunLimit is lowered', async () => {
+      const tenant = {
+        ...mockTenant,
+        maxCreditsPerRunLimit: 1000,
+        maxCreditsPerRun: 800,
+      };
+      repo.findOne.mockResolvedValue({ ...tenant });
+      repo.save.mockResolvedValue({ ...tenant, maxCreditsPerRunLimit: 500, maxCreditsPerRun: 500 });
+
+      // Only lower the limit — maxCreditsPerRun not in DTO
+      await service.update(mockTenant.id, {
+        maxCreditsPerRunLimit: 500,
+      } as never);
+
+      // Existing maxCreditsPerRun (800) should be clamped to new limit (500)
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          maxCreditsPerRunLimit: 500,
+          maxCreditsPerRun: 500,
+        }),
+      );
+    });
+
     it('[1H.1-UNIT-015] should update status from active to suspended', async () => {
       const updated = { ...mockTenant, status: TenantStatus.SUSPENDED };
       repo.findOne.mockResolvedValue({ ...mockTenant });

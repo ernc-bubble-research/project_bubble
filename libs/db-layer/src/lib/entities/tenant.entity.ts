@@ -45,6 +45,15 @@ export class TenantEntity {
   @Column({ name: 'asset_retention_days', type: 'int', default: 30 })
   assetRetentionDays!: number;
 
+  @Column({ name: 'purchased_credits', type: 'int', default: 0 })
+  purchasedCredits!: number;
+
+  @Column({ name: 'max_credits_per_run_limit', type: 'int', default: 1000 })
+  maxCreditsPerRunLimit!: number;
+
+  @Column({ name: 'max_credits_per_run', type: 'int', default: 1000 })
+  maxCreditsPerRun!: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

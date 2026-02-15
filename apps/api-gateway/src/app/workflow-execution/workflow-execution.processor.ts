@@ -312,7 +312,10 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     counters: CompletionCounters,
   ): Promise<void> {
     await this.txManager.run(tenantId, async (manager) => {
-      const entity = await manager.findOne(WorkflowRunEntity, { where: { id: runId } });
+      const entity = await manager.findOne(WorkflowRunEntity, {
+        where: { id: runId, tenantId },
+        lock: { mode: 'pessimistic_write' },
+      });
       if (!entity) return;
 
       // Determine final status
@@ -341,11 +344,40 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         ? completedAt.getTime() - new Date(entity.startedAt).getTime()
         : null;
 
+      // Credit refund on FAILED (AC6) — all files failed, no work delivered
+      // No refund on COMPLETED_WITH_ERRORS (AC6) — partial work was done
+      const creditUpdate: Record<string, unknown> = {};
+      if (finalStatus === WorkflowRunStatus.FAILED) {
+        const purchasedToRefund = entity.creditsFromPurchased;
+        creditUpdate.creditsConsumed = 0;
+        creditUpdate.creditsFromMonthly = 0;
+        creditUpdate.creditsFromPurchased = 0;
+
+        if (purchasedToRefund > 0) {
+          await manager.query(
+            'SELECT id FROM tenants WHERE id = $1 FOR UPDATE',
+            [tenantId],
+          );
+          await manager.query(
+            'UPDATE tenants SET purchased_credits = purchased_credits + $1 WHERE id = $2',
+            [purchasedToRefund, tenantId],
+          );
+
+          this.logger.log({
+            message: 'Credits refunded on fan-out run failure',
+            runId,
+            tenantId,
+            purchasedToRefund,
+          });
+        }
+      }
+
       await manager.update(WorkflowRunEntity, { id: runId }, {
         status: finalStatus,
         tokenUsage: aggregatedTokenUsage,
         completedAt,
         durationMs,
+        ...creditUpdate,
       });
 
       this.logger.log({
@@ -528,10 +560,52 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         : error.message;
 
       await this.txManager.run(tenantId, async (manager) => {
+        // Load run with pessimistic lock to prevent TOCTOU on credit fields (AC6)
+        const run = await manager.findOne(WorkflowRunEntity, {
+          where: { id: runId, tenantId },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!run) return;
+
+        // Idempotency: skip if already FAILED (prevents double-refund on BullMQ retry)
+        if (run.status === WorkflowRunStatus.FAILED) {
+          this.logger.warn({
+            message: 'Skipping markRunFailed — run already in FAILED state',
+            runId,
+            tenantId,
+          });
+          return;
+        }
+
+        const purchasedToRefund = run.creditsFromPurchased;
+
+        // Zero all credit fields on the run + set FAILED
         await manager.update(WorkflowRunEntity, { id: runId }, {
           status: WorkflowRunStatus.FAILED,
           errorMessage: `Workflow execution failed after ${attemptsMade} attempts: ${errorSummary}`,
+          creditsConsumed: 0,
+          creditsFromMonthly: 0,
+          creditsFromPurchased: 0,
         });
+
+        // Refund purchased credits back to tenant (monthly auto-corrects via SUM)
+        if (purchasedToRefund > 0) {
+          await manager.query(
+            'SELECT id FROM tenants WHERE id = $1 FOR UPDATE',
+            [tenantId],
+          );
+          await manager.query(
+            'UPDATE tenants SET purchased_credits = purchased_credits + $1 WHERE id = $2',
+            [purchasedToRefund, tenantId],
+          );
+
+          this.logger.log({
+            message: 'Credits refunded on run failure',
+            runId,
+            tenantId,
+            purchasedToRefund,
+          });
+        }
       });
     } catch (updateError) {
       this.logger.error({

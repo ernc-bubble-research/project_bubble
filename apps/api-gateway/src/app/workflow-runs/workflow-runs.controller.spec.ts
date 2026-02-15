@@ -20,6 +20,9 @@ describe('WorkflowRunsController [P0]', () => {
     status: WorkflowRunStatus.QUEUED,
     startedBy: userId,
     creditsConsumed: 0,
+    isTestRun: false,
+    creditsFromMonthly: 0,
+    creditsFromPurchased: 0,
     createdAt: new Date('2026-02-09'),
   };
 
@@ -34,10 +37,10 @@ describe('WorkflowRunsController [P0]', () => {
   });
 
   describe('initiateRun', () => {
-    it('[4.1-UNIT-016] [P0] Given valid body and JWT user, when POST / is called, then delegates to service.initiateRun with tenantId and userId from JWT', async () => {
+    it('[4.1-UNIT-016] [P0] Given valid body and JWT user, when POST / is called, then delegates to service.initiateRun with tenantId, userId, and role from JWT', async () => {
       // Given
       service.initiateRun.mockResolvedValue(mockRunResponse);
-      const req = { user: { tenantId, userId } };
+      const req = { user: { tenantId, userId, role: 'customer_admin' } };
       const dto = {
         templateId,
         inputs: {
@@ -50,7 +53,7 @@ describe('WorkflowRunsController [P0]', () => {
 
       // Then
       expect(result).toEqual(mockRunResponse);
-      expect(service.initiateRun).toHaveBeenCalledWith(dto, tenantId, userId);
+      expect(service.initiateRun).toHaveBeenCalledWith(dto, tenantId, userId, 'customer_admin');
     });
 
     it('[4.1-UNIT-017] [P0] Given service throws, when POST / is called, then exception propagates', async () => {
@@ -58,7 +61,7 @@ describe('WorkflowRunsController [P0]', () => {
       service.initiateRun.mockRejectedValue(
         new Error('Template not found'),
       );
-      const req = { user: { tenantId, userId } };
+      const req = { user: { tenantId, userId, role: 'customer_admin' } };
       const dto = { templateId, inputs: {} };
 
       // When/Then

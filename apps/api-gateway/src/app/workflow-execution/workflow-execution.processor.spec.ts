@@ -516,6 +516,7 @@ describe('WorkflowExecutionProcessor', () => {
     it('[4.3-UNIT-009] moves job to DLQ queue after all retries exhausted', async () => {
       const error = new Error('LLM provider timeout');
       const job = makeJob({ attemptsMade: 3 });
+      mockManager.findOne.mockResolvedValue(makeRun({ creditsFromPurchased: 0, creditsFromMonthly: 0 }));
 
       await processor.onFailed(job, error);
 
@@ -532,9 +533,10 @@ describe('WorkflowExecutionProcessor', () => {
       expect(jobData.failedAt).toBeDefined();
     });
 
-    it('[4.3-UNIT-010] updates WorkflowRunEntity status to FAILED', async () => {
+    it('[4.3-UNIT-010] updates WorkflowRunEntity status to FAILED with zeroed credit fields', async () => {
       const error = new Error('LLM provider timeout');
       const job = makeJob({ attemptsMade: 3 });
+      mockManager.findOne.mockResolvedValue(makeRun({ creditsFromPurchased: 0, creditsFromMonthly: 0 }));
 
       await processor.onFailed(job, error);
 
@@ -543,12 +545,16 @@ describe('WorkflowExecutionProcessor', () => {
       expect(updateCall[1]).toEqual({ id: runId });
       expect(updateCall[2]).toMatchObject({
         status: WorkflowRunStatus.FAILED,
+        creditsConsumed: 0,
+        creditsFromMonthly: 0,
+        creditsFromPurchased: 0,
       });
     });
 
     it('[4.3-UNIT-011] sets human-readable errorMessage (not raw stack trace)', async () => {
       const error = new Error('Connection refused to provider endpoint');
       const job = makeJob({ attemptsMade: 3 });
+      mockManager.findOne.mockResolvedValue(makeRun({ creditsFromPurchased: 0 }));
 
       await processor.onFailed(job, error);
 
@@ -564,6 +570,7 @@ describe('WorkflowExecutionProcessor', () => {
     it('[4.3-UNIT-012] includes metadata in DLQ job (originalJobId, attemptsMade, failedAt)', async () => {
       const error = new Error('fail');
       const job = makeJob({ attemptsMade: 3 });
+      mockManager.findOne.mockResolvedValue(makeRun({ creditsFromPurchased: 0 }));
 
       await processor.onFailed(job, error);
 
@@ -587,6 +594,7 @@ describe('WorkflowExecutionProcessor', () => {
     it('[4.3-UNIT-014] logs error but does NOT throw if entity update fails (resilience)', async () => {
       const error = new Error('LLM timeout');
       const job = makeJob({ attemptsMade: 3 });
+      mockManager.findOne.mockResolvedValue(makeRun({ creditsFromPurchased: 0 }));
 
       mockManager.update.mockRejectedValue(new Error('DB connection lost'));
 
@@ -601,10 +609,8 @@ describe('WorkflowExecutionProcessor', () => {
       const error = new Error('entity gone');
       const job = makeJob({ attemptsMade: 3 });
 
-      // Entity update fails because entity doesn't exist
-      mockManager.update.mockRejectedValue(
-        new Error('Could not find entity with id'),
-      );
+      // findOne returns null — entity gone
+      mockManager.findOne.mockResolvedValue(null);
 
       await expect(processor.onFailed(job, error)).resolves.toBeUndefined();
 
@@ -883,6 +889,7 @@ describe('WorkflowExecutionProcessor', () => {
     it('[4.3-UNIT-029] single-job failure marks run FAILED (not fan-out path)', async () => {
       const error = new Error('LLM provider timeout');
       const singleJob = makeJob({ attemptsMade: 3 }); // no :file: in jobId
+      mockManager.findOne.mockResolvedValue(makeRun({ creditsFromPurchased: 0, creditsFromMonthly: 0 }));
 
       await processor.onFailed(singleJob, error);
 
@@ -890,8 +897,6 @@ describe('WorkflowExecutionProcessor', () => {
       expect(dlqQueue.add).toHaveBeenCalledTimes(1);
       const updateCall = mockManager.update.mock.calls[0];
       expect(updateCall[2]).toMatchObject({ status: WorkflowRunStatus.FAILED });
-      // No raw query calls for single-job
-      expect(mockManager.query).not.toHaveBeenCalled();
     });
 
     it('[4.3-UNIT-030] fan-out failure does NOT call markRunFailed (no entity-level FAILED update)', async () => {
@@ -944,6 +949,178 @@ describe('WorkflowExecutionProcessor', () => {
 
       expect(dlqQueue.add).not.toHaveBeenCalled();
       expect(mockManager.query).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Credit refund on failure (AC6, AC7) ────────────────────────
+  describe('markRunFailed — credit refund (AC6)', () => {
+    it('[4.4-UNIT-027] [AC6] should refund purchased credits and zero run credit fields on single-job failure', async () => {
+      const error = new Error('LLM timeout');
+      const job = makeJob({ attemptsMade: 3 });
+      mockManager.findOne.mockResolvedValue(
+        makeRun({ creditsFromPurchased: 3, creditsFromMonthly: 2, creditsConsumed: 5 }),
+      );
+
+      await processor.onFailed(job, error);
+
+      // Run entity should have zeroed credit fields
+      const updateCall = mockManager.update.mock.calls[0];
+      expect(updateCall[2]).toMatchObject({
+        creditsConsumed: 0,
+        creditsFromMonthly: 0,
+        creditsFromPurchased: 0,
+      });
+
+      // Should have FOR UPDATE lock on tenant and refund
+      expect(mockManager.query).toHaveBeenCalledWith(
+        'SELECT id FROM tenants WHERE id = $1 FOR UPDATE',
+        [tenantId],
+      );
+      expect(mockManager.query).toHaveBeenCalledWith(
+        'UPDATE tenants SET purchased_credits = purchased_credits + $1 WHERE id = $2',
+        [3, tenantId],
+      );
+    });
+
+    it('[4.4-UNIT-028] should NOT refund when creditsFromPurchased is 0 (monthly-only run)', async () => {
+      const error = new Error('fail');
+      const job = makeJob({ attemptsMade: 3 });
+      mockManager.findOne.mockResolvedValue(
+        makeRun({ creditsFromPurchased: 0, creditsFromMonthly: 5, creditsConsumed: 5 }),
+      );
+
+      await processor.onFailed(job, error);
+
+      // Credit fields zeroed
+      const updateCall = mockManager.update.mock.calls[0];
+      expect(updateCall[2]).toMatchObject({
+        creditsConsumed: 0,
+        creditsFromMonthly: 0,
+        creditsFromPurchased: 0,
+      });
+
+      // No FOR UPDATE / refund query (only debit fields zeroed, monthly auto-corrects via SUM)
+      expect(mockManager.query).not.toHaveBeenCalled();
+    });
+
+    it('[4.4-UNIT-029] should skip refund when run entity not found (entity already deleted)', async () => {
+      const error = new Error('fail');
+      const job = makeJob({ attemptsMade: 3 });
+      mockManager.findOne.mockResolvedValue(null);
+
+      await processor.onFailed(job, error);
+
+      // No update or query calls since entity wasn't found
+      expect(mockManager.update).not.toHaveBeenCalled();
+      expect(mockManager.query).not.toHaveBeenCalled();
+    });
+
+    it('[4.4-UNIT-039] should skip refund when run is already in FAILED state (idempotency guard)', async () => {
+      const error = new Error('LLM timeout');
+      const job = makeJob({ attemptsMade: 3 });
+      mockManager.findOne.mockResolvedValue(
+        makeRun({ status: WorkflowRunStatus.FAILED, creditsFromPurchased: 0, creditsFromMonthly: 0, creditsConsumed: 0 }),
+      );
+
+      await processor.onFailed(job, error);
+
+      // Should NOT update entity or refund — already FAILED
+      expect(mockManager.update).not.toHaveBeenCalled();
+      expect(mockManager.query).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('finalizeRun — credit refund on FAILED (AC6, AC7)', () => {
+    const fanOutJobId = `${runId}:file:2`;
+    const fanOutPayload = {
+      ...basePayload,
+      subjectFile: { originalName: 'c.pdf', storagePath: '/uploads/c.pdf', assetId: 'asset-c' },
+    };
+
+    it('[4.4-UNIT-030] [AC6] should refund purchased credits when all fan-out jobs fail (FAILED)', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(makeRun({ status: WorkflowRunStatus.QUEUED })) // process() status check
+        .mockResolvedValueOnce(makeRun({ // finalizeRun entity load
+          status: WorkflowRunStatus.RUNNING,
+          startedAt: new Date('2025-01-01'),
+          creditsFromPurchased: 4,
+          creditsFromMonthly: 1,
+          creditsConsumed: 5,
+          perFileResults: [] as PerFileResult[],
+        }));
+      // All failed, none completed
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 0, failed_jobs: 3, total_jobs: 3 }], 1]);
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      // Should have refunded: FOR UPDATE + purchased_credits increment
+      const queryArgs = mockManager.query.mock.calls.map((c: unknown[]) => c[0]);
+      expect(queryArgs).toContain('SELECT id FROM tenants WHERE id = $1 FOR UPDATE');
+      expect(queryArgs).toContain(
+        'UPDATE tenants SET purchased_credits = purchased_credits + $1 WHERE id = $2',
+      );
+
+      // Final update should zero credit fields
+      const finalUpdate = mockManager.update.mock.calls.find(
+        (c: unknown[]) => c[2] && (c[2] as Partial<WorkflowRunEntity>).status === WorkflowRunStatus.FAILED,
+      );
+      expect(finalUpdate).toBeDefined();
+      expect((finalUpdate![2] as Record<string, unknown>).creditsConsumed).toBe(0);
+      expect((finalUpdate![2] as Record<string, unknown>).creditsFromMonthly).toBe(0);
+      expect((finalUpdate![2] as Record<string, unknown>).creditsFromPurchased).toBe(0);
+    });
+
+    it('[4.4-UNIT-031] [AC7] should NOT refund credits on COMPLETED_WITH_ERRORS', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(makeRun({ status: WorkflowRunStatus.QUEUED }))
+        .mockResolvedValueOnce(makeRun({
+          status: WorkflowRunStatus.RUNNING,
+          startedAt: new Date('2025-01-01'),
+          creditsFromPurchased: 4,
+          creditsFromMonthly: 1,
+          creditsConsumed: 5,
+          perFileResults: [
+            { index: 0, fileName: 'a.pdf', status: 'completed', tokenUsage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 } },
+          ] as PerFileResult[],
+        }));
+      // 2 completed + 1 failed = COMPLETED_WITH_ERRORS
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 2, failed_jobs: 1, total_jobs: 3 }], 1]);
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      // Should NOT have FOR UPDATE or refund queries
+      const queryTexts = mockManager.query.mock.calls.map((c: unknown[]) => (c[0] as string));
+      const forUpdateCalls = queryTexts.filter((q: string) => q.includes('FOR UPDATE'));
+      expect(forUpdateCalls).toHaveLength(0);
+
+      // Final update should NOT zero credit fields
+      const finalUpdate = mockManager.update.mock.calls.find(
+        (c: unknown[]) => c[2] && (c[2] as Partial<WorkflowRunEntity>).status === WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+      );
+      expect(finalUpdate).toBeDefined();
+      expect((finalUpdate![2] as Record<string, unknown>)).not.toHaveProperty('creditsConsumed');
+    });
+
+    it('[4.4-UNIT-032] should NOT refund credits on COMPLETED', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(makeRun({ status: WorkflowRunStatus.QUEUED }))
+        .mockResolvedValueOnce(makeRun({
+          status: WorkflowRunStatus.RUNNING,
+          startedAt: new Date('2025-01-01'),
+          creditsFromPurchased: 2,
+          perFileResults: [
+            { index: 0, fileName: 'a.pdf', status: 'completed', tokenUsage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 } },
+          ] as PerFileResult[],
+        }));
+      // All completed
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 3, failed_jobs: 0, total_jobs: 3 }], 1]);
+
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+
+      // No refund queries
+      const queryTexts = mockManager.query.mock.calls.map((c: unknown[]) => (c[0] as string));
+      const refundCalls = queryTexts.filter((q: string) => q.includes('purchased_credits + $1'));
+      expect(refundCalls).toHaveLength(0);
     });
   });
 

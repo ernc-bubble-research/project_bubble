@@ -47,6 +47,10 @@ export class LlmProviderConfigService {
     return !!this.encryptionKey;
   }
 
+  async findByProviderKey(providerKey: string): Promise<LlmProviderConfigEntity | null> {
+    return this.repo.findOne({ where: { providerKey } });
+  }
+
   async findAll(): Promise<LlmProviderConfigResponseDto[]> {
     const configs = await this.repo.find({
       order: { displayName: 'ASC' },

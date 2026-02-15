@@ -7,21 +7,31 @@ import {
   WorkflowRunEntity,
   WorkflowRunStatus,
   TransactionManager,
+  UserRole,
+  IMPERSONATOR_ROLE,
 } from '@project-bubble/db-layer';
 import { WorkflowRunsService } from './workflow-runs.service';
 import { AssetsService } from '../assets/assets.service';
 import { WorkflowExecutionService } from '../workflow-execution/workflow-execution.service';
+import { PreFlightValidationService } from './pre-flight-validation.service';
 
 describe('WorkflowRunsService [P0]', () => {
   let service: WorkflowRunsService;
   let txManager: jest.Mocked<TransactionManager>;
   let assetsService: jest.Mocked<Pick<AssetsService, 'findOne'>>;
   let executionService: jest.Mocked<Pick<WorkflowExecutionService, 'enqueueRun'>>;
+  let preFlightService: {
+    validateModelAvailability: jest.Mock;
+    checkAndDeductCredits: jest.Mock;
+    refundCredits: jest.Mock;
+  };
   let mockManager: {
     findOne: jest.Mock;
     find: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
+    query: jest.Mock;
+    update: jest.Mock;
   };
 
   const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
@@ -99,6 +109,9 @@ describe('WorkflowRunsService [P0]', () => {
     tokenUsage: null,
     modelId: null,
     creditsConsumed: 0,
+    isTestRun: false,
+    creditsFromMonthly: 0,
+    creditsFromPurchased: 0,
     startedAt: null,
     completedAt: null,
     durationMs: null,
@@ -111,6 +124,8 @@ describe('WorkflowRunsService [P0]', () => {
       find: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
+      query: jest.fn(),
+      update: jest.fn().mockResolvedValue(undefined),
     };
 
     txManager = {
@@ -128,10 +143,17 @@ describe('WorkflowRunsService [P0]', () => {
       enqueueRun: jest.fn().mockResolvedValue({ jobId: runId }),
     };
 
+    preFlightService = {
+      validateModelAvailability: jest.fn().mockResolvedValue(undefined),
+      checkAndDeductCredits: jest.fn().mockResolvedValue({ creditsFromMonthly: 0, creditsFromPurchased: 0 }),
+      refundCredits: jest.fn().mockResolvedValue(undefined),
+    };
+
     service = new WorkflowRunsService(
       txManager,
       assetsService as unknown as AssetsService,
       executionService as unknown as WorkflowExecutionService,
+      preFlightService as unknown as PreFlightValidationService,
     );
   });
 
@@ -152,7 +174,7 @@ describe('WorkflowRunsService [P0]', () => {
       };
 
       // When
-      const result = await service.initiateRun(dto, tenantId, userId);
+      const result = await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
 
       // Then
       expect(result.id).toBe(runId);
@@ -194,7 +216,7 @@ describe('WorkflowRunsService [P0]', () => {
       };
 
       // When
-      await service.initiateRun(dto, tenantId, userId);
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
 
       // Then
       expect(executionService.enqueueRun).toHaveBeenCalledWith(
@@ -224,7 +246,7 @@ describe('WorkflowRunsService [P0]', () => {
       };
 
       // When
-      await service.initiateRun(dto, tenantId, userId);
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
 
       // Then
       expect(executionService.enqueueRun).toHaveBeenCalledWith(
@@ -260,7 +282,7 @@ describe('WorkflowRunsService [P0]', () => {
       };
 
       // When
-      await service.initiateRun(dto, tenantId, userId);
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
 
       // Then — contextInputs should NOT include subject_files
       const enqueueCall = executionService.enqueueRun.mock.calls[0];
@@ -301,7 +323,7 @@ describe('WorkflowRunsService [P0]', () => {
       };
 
       // When
-      await service.initiateRun(dto, tenantId, userId);
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
 
       // Then — totalJobs should be 3 (1 per subject file in parallel mode)
       expect(mockManager.create).toHaveBeenCalledWith(
@@ -335,7 +357,7 @@ describe('WorkflowRunsService [P0]', () => {
 
       // When/Then
       await expect(
-        service.initiateRun(dto, tenantId, userId),
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -352,7 +374,7 @@ describe('WorkflowRunsService [P0]', () => {
 
       // When/Then
       await expect(
-        service.initiateRun(dto, tenantId, userId),
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -367,7 +389,7 @@ describe('WorkflowRunsService [P0]', () => {
 
       // When/Then
       await expect(
-        service.initiateRun(dto, tenantId, userId),
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -382,7 +404,7 @@ describe('WorkflowRunsService [P0]', () => {
 
       // When/Then
       await expect(
-        service.initiateRun(dto, tenantId, userId),
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -396,7 +418,7 @@ describe('WorkflowRunsService [P0]', () => {
 
       // When/Then
       await expect(
-        service.initiateRun(dto, tenantId, userId),
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -413,7 +435,7 @@ describe('WorkflowRunsService [P0]', () => {
 
       // When/Then
       await expect(
-        service.initiateRun(dto, tenantId, userId),
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -432,7 +454,7 @@ describe('WorkflowRunsService [P0]', () => {
 
       // When/Then
       await expect(
-        service.initiateRun(dto, tenantId, userId),
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -451,7 +473,7 @@ describe('WorkflowRunsService [P0]', () => {
 
       // When/Then
       await expect(
-        service.initiateRun(dto, tenantId, userId),
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -471,7 +493,7 @@ describe('WorkflowRunsService [P0]', () => {
 
       // When/Then
       await expect(
-        service.initiateRun(dto, tenantId, userId),
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -491,7 +513,7 @@ describe('WorkflowRunsService [P0]', () => {
 
       // When/Then
       await expect(
-        service.initiateRun(dto, tenantId, userId),
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -518,7 +540,7 @@ describe('WorkflowRunsService [P0]', () => {
 
       // When/Then
       await expect(
-        service.initiateRun(dto, tenantId, userId),
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -540,7 +562,7 @@ describe('WorkflowRunsService [P0]', () => {
       };
 
       // When
-      await service.initiateRun(dto, tenantId, userId);
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
 
       // Then
       expect(mockManager.create).toHaveBeenCalledWith(
@@ -563,6 +585,345 @@ describe('WorkflowRunsService [P0]', () => {
             userInputs: dto.inputs,
           },
         }),
+      );
+    });
+  });
+
+  describe('initiateRun — pre-flight and credit checks', () => {
+    it('[4.4-UNIT-018] [AC8] should call validateModelAvailability with definition.execution.model', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      mockManager.create.mockReturnValue(mockRunEntity);
+      mockManager.save.mockResolvedValue(mockRunEntity);
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      expect(preFlightService.validateModelAvailability).toHaveBeenCalledWith('mock-model');
+    });
+
+    it('[4.4-UNIT-019] [AC8] should propagate BadRequestException from model validation', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      preFlightService.validateModelAvailability.mockRejectedValue(
+        new BadRequestException('Model is inactive'),
+      );
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await expect(
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('[4.4-UNIT-020] [AC5] should call checkAndDeductCredits within credit transaction', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      preFlightService.checkAndDeductCredits.mockResolvedValue({
+        creditsFromMonthly: 1, creditsFromPurchased: 0,
+      });
+      mockManager.create.mockReturnValue(mockRunEntity);
+      mockManager.save.mockResolvedValue(mockRunEntity);
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      expect(preFlightService.checkAndDeductCredits).toHaveBeenCalledWith(
+        tenantId,
+        1, // creditsPerRun from template
+        false, // not a test run
+        expect.anything(), // manager
+      );
+    });
+
+    it('[4.4-UNIT-021] [AC7] should set isTestRun=true for BUBBLE_ADMIN role', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      preFlightService.checkAndDeductCredits.mockResolvedValue({
+        creditsFromMonthly: 0, creditsFromPurchased: 0,
+      });
+      mockManager.create.mockReturnValue({ ...mockRunEntity, isTestRun: true });
+      mockManager.save.mockResolvedValue({ ...mockRunEntity, isTestRun: true });
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await service.initiateRun(dto, tenantId, userId, UserRole.BUBBLE_ADMIN);
+
+      expect(preFlightService.checkAndDeductCredits).toHaveBeenCalledWith(
+        tenantId,
+        1,
+        true, // isTestRun = true for BUBBLE_ADMIN
+        expect.anything(),
+      );
+      expect(mockManager.create).toHaveBeenCalledWith(
+        WorkflowRunEntity,
+        expect.objectContaining({ isTestRun: true }),
+      );
+    });
+
+    it('[4.4-UNIT-022] [AC7] should set isTestRun=true for IMPERSONATOR_ROLE', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      preFlightService.checkAndDeductCredits.mockResolvedValue({
+        creditsFromMonthly: 0, creditsFromPurchased: 0,
+      });
+      mockManager.create.mockReturnValue({ ...mockRunEntity, isTestRun: true });
+      mockManager.save.mockResolvedValue({ ...mockRunEntity, isTestRun: true });
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await service.initiateRun(dto, tenantId, userId, IMPERSONATOR_ROLE);
+
+      expect(preFlightService.checkAndDeductCredits).toHaveBeenCalledWith(
+        tenantId,
+        1,
+        true, // isTestRun = true for impersonator
+        expect.anything(),
+      );
+    });
+
+    it('[4.4-UNIT-023] [AC7] should set isTestRun=false for CUSTOMER_ADMIN role', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      preFlightService.checkAndDeductCredits.mockResolvedValue({
+        creditsFromMonthly: 1, creditsFromPurchased: 0,
+      });
+      mockManager.create.mockReturnValue(mockRunEntity);
+      mockManager.save.mockResolvedValue(mockRunEntity);
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      expect(preFlightService.checkAndDeductCredits).toHaveBeenCalledWith(
+        tenantId,
+        1,
+        false,
+        expect.anything(),
+      );
+    });
+
+    it('[4.4-UNIT-024] should set creditsConsumed, creditsFromMonthly, creditsFromPurchased on run entity', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      preFlightService.checkAndDeductCredits.mockResolvedValue({
+        creditsFromMonthly: 3, creditsFromPurchased: 2,
+      });
+      mockManager.create.mockReturnValue(mockRunEntity);
+      mockManager.save.mockResolvedValue(mockRunEntity);
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      expect(mockManager.create).toHaveBeenCalledWith(
+        WorkflowRunEntity,
+        expect.objectContaining({
+          creditsConsumed: 5,
+          creditsFromMonthly: 3,
+          creditsFromPurchased: 2,
+        }),
+      );
+    });
+
+    it('[4.4-UNIT-025] [AC5] should execute SELECT FOR UPDATE on tenant row before credit check', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      preFlightService.checkAndDeductCredits.mockResolvedValue({
+        creditsFromMonthly: 0, creditsFromPurchased: 0,
+      });
+      mockManager.create.mockReturnValue(mockRunEntity);
+      mockManager.save.mockResolvedValue(mockRunEntity);
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      // Verify FOR UPDATE lock was acquired
+      expect(mockManager.query).toHaveBeenCalledWith(
+        'SELECT id FROM tenants WHERE id = $1 FOR UPDATE',
+        [tenantId],
+      );
+    });
+
+    it('[4.4-UNIT-026] [AC8] should skip model validation when definition has no model', async () => {
+      const noModelDefinition = {
+        ...mockDefinition,
+        execution: { processing: 'parallel' as const },
+      };
+      const noModelVersion = {
+        ...mockVersion,
+        definition: noModelDefinition as unknown as Record<string, unknown>,
+      };
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(noModelVersion);
+      mockManager.create.mockReturnValue(mockRunEntity);
+      mockManager.save.mockResolvedValue(mockRunEntity);
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      expect(preFlightService.validateModelAvailability).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('initiateRun — credit check failure propagation', () => {
+    it('[4.4-UNIT-040] [AC2] should propagate insufficient credits error and NOT create run entity', async () => {
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      preFlightService.checkAndDeductCredits.mockRejectedValue(
+        new BadRequestException('Insufficient credits to run this workflow. Please contact your administrator.'),
+      );
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await expect(
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
+      ).rejects.toThrow(/Insufficient credits/);
+
+      // Run entity should NOT have been created or saved
+      expect(mockManager.create).not.toHaveBeenCalled();
+      expect(mockManager.save).not.toHaveBeenCalled();
+      // BullMQ should NOT have been called
+      expect(executionService.enqueueRun).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('initiateRun — BullMQ enqueue failure', () => {
+    it('[4.4-UNIT-036] [AC5] should refund credits and mark run FAILED when enqueueRun throws', async () => {
+      const savedRunWithCredits = {
+        ...mockRunEntity,
+        creditsConsumed: 5,
+        creditsFromMonthly: 3,
+        creditsFromPurchased: 2,
+      };
+
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      preFlightService.checkAndDeductCredits.mockResolvedValue({
+        creditsFromMonthly: 3, creditsFromPurchased: 2,
+      });
+      mockManager.create.mockReturnValue(savedRunWithCredits);
+      mockManager.save.mockResolvedValue(savedRunWithCredits);
+
+      // BullMQ enqueue fails (e.g., Redis down)
+      executionService.enqueueRun.mockRejectedValue(new Error('Redis connection refused'));
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      // Should re-throw the enqueue error
+      await expect(
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
+      ).rejects.toThrow('Redis connection refused');
+
+      // Should have acquired FOR UPDATE lock for compensating refund
+      const forUpdateCalls = mockManager.query.mock.calls.filter(
+        (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('FOR UPDATE'),
+      );
+      // First FOR UPDATE from credit check, second from compensating refund
+      expect(forUpdateCalls).toHaveLength(2);
+
+      // Should have called refundCredits with the purchased amount
+      expect(preFlightService.refundCredits).toHaveBeenCalledWith(
+        tenantId,
+        2, // creditsFromPurchased from savedRun
+        expect.anything(), // manager
+      );
+
+      // Should have marked the run as FAILED
+      expect(mockManager.update).toHaveBeenCalledWith(
+        WorkflowRunEntity,
+        savedRunWithCredits.id,
+        expect.objectContaining({
+          status: WorkflowRunStatus.FAILED,
+          creditsConsumed: 0,
+          creditsFromMonthly: 0,
+          creditsFromPurchased: 0,
+        }),
+      );
+    });
+
+    it('[4.4-UNIT-037] should not refund when enqueue fails for a test run (zero credits)', async () => {
+      const testRunEntity = {
+        ...mockRunEntity,
+        isTestRun: true,
+        creditsConsumed: 0,
+        creditsFromMonthly: 0,
+        creditsFromPurchased: 0,
+      };
+
+      mockManager.findOne
+        .mockResolvedValueOnce(mockTemplate)
+        .mockResolvedValueOnce(mockVersion);
+      preFlightService.checkAndDeductCredits.mockResolvedValue({
+        creditsFromMonthly: 0, creditsFromPurchased: 0,
+      });
+      mockManager.create.mockReturnValue(testRunEntity);
+      mockManager.save.mockResolvedValue(testRunEntity);
+
+      executionService.enqueueRun.mockRejectedValue(new Error('Redis down'));
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await expect(
+        service.initiateRun(dto, tenantId, userId, UserRole.BUBBLE_ADMIN),
+      ).rejects.toThrow('Redis down');
+
+      // refundCredits should be called with 0 purchased credits
+      expect(preFlightService.refundCredits).toHaveBeenCalledWith(
+        tenantId,
+        0, // zero purchased credits for test run
+        expect.anything(),
       );
     });
   });

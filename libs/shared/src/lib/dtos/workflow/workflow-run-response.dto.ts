@@ -20,6 +20,15 @@ export class WorkflowRunResponseDto {
   @ApiProperty({ example: 0, default: 0 })
   creditsConsumed!: number;
 
+  @ApiProperty({ example: false, default: false })
+  isTestRun!: boolean;
+
+  @ApiProperty({ example: 0, default: 0 })
+  creditsFromMonthly!: number;
+
+  @ApiProperty({ example: 0, default: 0 })
+  creditsFromPurchased!: number;
+
   @ApiProperty({ example: 1, nullable: true, required: false })
   totalJobs?: number | null;
 

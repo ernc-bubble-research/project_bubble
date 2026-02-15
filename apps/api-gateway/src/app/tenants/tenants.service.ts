@@ -87,6 +87,16 @@ export class TenantsService {
       throw new NotFoundException(`Tenant with id "${id}" not found`);
     }
     Object.assign(tenant, dto);
+
+    // Cross-field validation: maxCreditsPerRun must not exceed maxCreditsPerRunLimit.
+    // Partial updates mean only one field may be in the DTO, so we validate after Object.assign.
+    if (tenant.maxCreditsPerRun > tenant.maxCreditsPerRunLimit) {
+      this.logger.warn(
+        `Tenant ${id}: maxCreditsPerRun (${tenant.maxCreditsPerRun}) exceeds maxCreditsPerRunLimit (${tenant.maxCreditsPerRunLimit}). Auto-clamping to limit.`,
+      );
+      tenant.maxCreditsPerRun = tenant.maxCreditsPerRunLimit;
+    }
+
     return this.tenantRepo.save(tenant);
   }
 
