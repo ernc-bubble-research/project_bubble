@@ -1,10 +1,15 @@
 import { LlmProviderConfigController } from './llm-provider-config.controller';
 import { LlmProviderConfigService } from './llm-provider-config.service';
 import { ProviderRegistry } from '../workflow-execution/llm/provider-registry.service';
-import type { LlmProviderConfigResponseDto } from '@project-bubble/shared';
+import { LlmModelsService } from '../workflows/llm-models.service';
+import { ModelReassignmentService } from '../workflows/model-reassignment.service';
+import type { LlmProviderConfigResponseDto, LlmModelResponseDto, DeactivateModelResponseDto } from '@project-bubble/shared';
+
+const providerId = '550e8400-e29b-41d4-a716-446655440000';
+const replacementId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
 const mockResponse: LlmProviderConfigResponseDto = {
-  id: '550e8400-e29b-41d4-a716-446655440000',
+  id: providerId,
   providerKey: 'google-ai-studio',
   displayName: 'Google AI Studio',
   maskedCredentials: { apiKey: '***********3456' },
@@ -14,23 +19,64 @@ const mockResponse: LlmProviderConfigResponseDto = {
   updatedAt: new Date('2026-01-01'),
 };
 
+const mockProviderEntity = {
+  id: providerId,
+  providerKey: 'google-ai-studio',
+  displayName: 'Google AI Studio',
+  isActive: true,
+};
+
+const mockModelResponse: LlmModelResponseDto = {
+  id: 'model-1',
+  providerKey: 'google-ai-studio',
+  modelId: 'models/gemini-2.0-flash',
+  displayName: 'Gemini 2.0 Flash',
+  contextWindow: 1000000,
+  maxOutputTokens: 8192,
+  isActive: true,
+  costPer1kInput: null,
+  costPer1kOutput: null,
+  generationDefaults: null,
+  createdAt: new Date('2026-02-02'),
+  updatedAt: new Date('2026-02-02'),
+};
+
 describe('LlmProviderConfigController [P1]', () => {
   let controller: LlmProviderConfigController;
   let service: jest.Mocked<LlmProviderConfigService>;
   let providerRegistry: ProviderRegistry;
+  let llmModelsService: jest.Mocked<LlmModelsService>;
+  let reassignmentService: jest.Mocked<ModelReassignmentService>;
 
   beforeEach(() => {
     service = {
       findAll: jest.fn().mockResolvedValue([mockResponse]),
+      findById: jest.fn().mockResolvedValue(mockProviderEntity),
       create: jest.fn().mockResolvedValue(mockResponse),
       update: jest.fn().mockResolvedValue(mockResponse),
       getDecryptedCredentials: jest.fn(),
     } as unknown as jest.Mocked<LlmProviderConfigService>;
 
+    llmModelsService = {
+      findAll: jest.fn().mockResolvedValue([mockModelResponse]),
+    } as unknown as jest.Mocked<LlmModelsService>;
+
+    reassignmentService = {
+      findAffectedVersions: jest.fn().mockResolvedValue([]),
+      reassignAndDeactivate: jest.fn(),
+      reassignMultipleAndDeactivate: jest.fn().mockResolvedValue([]),
+      getActiveModelCount: jest.fn(),
+    } as unknown as jest.Mocked<ModelReassignmentService>;
+
     providerRegistry = new ProviderRegistry();
     providerRegistry.onModuleInit();
 
-    controller = new LlmProviderConfigController(service, providerRegistry);
+    controller = new LlmProviderConfigController(
+      service,
+      providerRegistry,
+      llmModelsService,
+      reassignmentService,
+    );
   });
 
   describe('findAll', () => {
@@ -65,7 +111,7 @@ describe('LlmProviderConfigController [P1]', () => {
   describe('update', () => {
     it('[3.1-4-UNIT-040] [P1] should update a provider config and return response', async () => {
       // Given
-      const id = '550e8400-e29b-41d4-a716-446655440000';
+      const id = providerId;
       const dto = { displayName: 'Updated Name', isActive: false };
 
       // When
@@ -134,6 +180,80 @@ describe('LlmProviderConfigController [P1]', () => {
       const names = result.map((r) => r.displayName);
       const sorted = [...names].sort();
       expect(names).toEqual(sorted);
+    });
+  });
+
+  describe('getAffectedWorkflows', () => {
+    it('[4-H1-UNIT-029] should find provider config, get active model IDs, and query affected versions', async () => {
+      // When
+      const result = await controller.getAffectedWorkflows(providerId);
+
+      // Then
+      expect(service.findById).toHaveBeenCalledWith(providerId);
+      expect(llmModelsService.findAll).toHaveBeenCalled();
+      expect(reassignmentService.findAffectedVersions).toHaveBeenCalledWith(['model-1']);
+      expect(result).toEqual([]);
+    });
+
+    it('[4-H1-UNIT-030] should return empty array when provider has no active models', async () => {
+      // Given — model for a different provider
+      llmModelsService.findAll.mockResolvedValue([
+        { ...mockModelResponse, providerKey: 'openai' },
+      ]);
+
+      // When
+      const result = await controller.getAffectedWorkflows(providerId);
+
+      // Then
+      expect(reassignmentService.findAffectedVersions).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('deactivateProvider', () => {
+    it('[4-H1-UNIT-031] should atomically deactivate all active models and provider config in single transaction', async () => {
+      // Given
+      const mockDeactivateResult = {
+        versionsReassigned: 2,
+        deactivatedModelId: 'model-1',
+        replacementModelId: replacementId,
+      } as DeactivateModelResponseDto;
+      reassignmentService.reassignMultipleAndDeactivate.mockResolvedValue([mockDeactivateResult]);
+
+      // When
+      const result = await controller.deactivateProvider(providerId, {
+        replacementModelId: replacementId,
+      });
+
+      // Then
+      expect(service.findById).toHaveBeenCalledWith(providerId);
+      expect(reassignmentService.reassignMultipleAndDeactivate).toHaveBeenCalledWith(
+        ['model-1'],
+        replacementId,
+        providerId, // provider config ID passed for atomic deactivation
+      );
+      // Provider config deactivation is now inside the transaction — no separate update call
+      expect(service.update).not.toHaveBeenCalledWith(providerId, { isActive: false });
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(mockDeactivateResult);
+    });
+
+    it('[4-H1-UNIT-032] should pass empty array when no active models and still deactivate provider', async () => {
+      // Given — no models for this provider
+      llmModelsService.findAll.mockResolvedValue([]);
+
+      // When
+      const result = await controller.deactivateProvider(providerId, {
+        replacementModelId: replacementId,
+      });
+
+      // Then
+      expect(reassignmentService.reassignMultipleAndDeactivate).toHaveBeenCalledWith(
+        [],
+        replacementId,
+        providerId, // provider config ID passed for atomic deactivation
+      );
+      expect(result).toHaveLength(0);
     });
   });
 });

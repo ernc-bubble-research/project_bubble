@@ -140,6 +140,7 @@ export class WorkflowVersionsService {
     dto.templateId = entity.templateId;
     dto.versionNumber = entity.versionNumber;
     dto.definition = entity.definition;
+    dto.previousGenerationConfig = entity.previousGenerationConfig ?? null;
     dto.createdBy = entity.createdBy;
     dto.createdAt = entity.createdAt;
     return dto;

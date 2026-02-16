@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   UseGuards,
+  HttpCode,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UserRole } from '@project-bubble/db-layer';
@@ -15,12 +16,16 @@ import {
   UpdateLlmModelDto,
   LlmModelResponseDto,
   BulkUpdateModelStatusDto,
+  DeactivateModelDto,
+  AffectedWorkflowDto,
+  DeactivateModelResponseDto,
 } from '@project-bubble/shared';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { TenantStatusGuard } from '../guards/tenant-status.guard';
 import { LlmModelsService } from './llm-models.service';
+import { ModelReassignmentService } from './model-reassignment.service';
 
 @ApiTags('LLM Models')
 @ApiBearerAuth()
@@ -46,7 +51,10 @@ export class AppLlmModelsController {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.BUBBLE_ADMIN)
 export class AdminLlmModelsController {
-  constructor(private readonly llmModelsService: LlmModelsService) {}
+  constructor(
+    private readonly llmModelsService: LlmModelsService,
+    private readonly modelReassignmentService: ModelReassignmentService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List all LLM models (including inactive)' })
@@ -76,6 +84,35 @@ export class AdminLlmModelsController {
   @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
   bulkUpdateStatus(@Body() dto: BulkUpdateModelStatusDto) {
     return this.llmModelsService.bulkUpdateStatus(dto);
+  }
+
+  @Get(':id/affected-workflows')
+  @ApiOperation({ summary: 'List workflow versions affected by deactivating this model' })
+  @ApiResponse({ status: 200, description: 'List of affected workflow versions', type: [AffectedWorkflowDto] })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  getAffectedWorkflows(
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.modelReassignmentService.findAffectedVersions([id]);
+  }
+
+  @Post(':id/deactivate')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Deactivate model with mandatory reassignment of affected workflows' })
+  @ApiResponse({ status: 200, description: 'Model deactivated and workflows reassigned', type: DeactivateModelResponseDto })
+  @ApiResponse({ status: 400, description: 'Cannot deactivate (last active model, invalid replacement, etc.)' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Model or replacement not found' })
+  deactivateModel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DeactivateModelDto,
+  ) {
+    return this.modelReassignmentService.reassignAndDeactivate(
+      id,
+      dto.replacementModelId,
+    );
   }
 
   @Patch(':id')

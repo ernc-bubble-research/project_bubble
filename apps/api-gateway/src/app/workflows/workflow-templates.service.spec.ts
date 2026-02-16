@@ -58,6 +58,7 @@ describe('WorkflowTemplatesService [P0]', () => {
     definition: { metadata: { name: 'test', description: 'test', version: 1 } },
     createdBy: userId,
     createdAt: new Date('2026-02-02'),
+    previousGenerationConfig: null,
   } as WorkflowVersionEntity;
 
   beforeEach(() => {

@@ -89,6 +89,7 @@ describe('WorkflowRunsService [P0]', () => {
     definition: mockDefinition as unknown as Record<string, unknown>,
     createdBy: userId,
     createdAt: new Date('2026-02-02'),
+    previousGenerationConfig: null,
   } as WorkflowVersionEntity;
 
   const mockRunEntity: WorkflowRunEntity = {

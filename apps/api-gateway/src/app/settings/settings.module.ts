@@ -5,11 +5,13 @@ import { LlmProviderConfigEntity } from '@project-bubble/db-layer';
 import { LlmProviderConfigService } from './llm-provider-config.service';
 import { LlmProviderConfigController } from './llm-provider-config.controller';
 import { ProviderRegistryModule } from '../workflow-execution/llm/provider-registry.module';
+import { WorkflowsModule } from '../workflows/workflows.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([LlmProviderConfigEntity]),
     ProviderRegistryModule,
+    WorkflowsModule,
   ],
   controllers: [LlmProviderConfigController],
   providers: [LlmProviderConfigService],

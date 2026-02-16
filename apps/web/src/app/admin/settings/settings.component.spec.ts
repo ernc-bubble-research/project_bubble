@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import {
   LUCIDE_ICONS,
   LucideIconProvider,
@@ -8,6 +8,7 @@ import {
   Brain,
   Plus,
   AlertCircle,
+  AlertTriangle,
   Server,
   Pencil,
   Loader2,
@@ -36,21 +37,39 @@ const mockModel: LlmModel = {
   updatedAt: new Date(),
 };
 
+const mockModel2: LlmModel = {
+  id: 'model-2',
+  providerKey: 'openai',
+  modelId: 'gpt-4',
+  displayName: 'GPT-4',
+  contextWindow: 128000,
+  maxOutputTokens: 4096,
+  isActive: true,
+  costPer1kInput: null,
+  costPer1kOutput: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
 describe('SettingsComponent [P2]', () => {
   const mockLlmModelService = {
-    getAllModels: jest.fn().mockReturnValue(of([mockModel])),
+    getAllModels: jest.fn().mockReturnValue(of([mockModel, mockModel2])),
     createModel: jest.fn().mockReturnValue(of(mockModel)),
     updateModel: jest.fn().mockReturnValue(of(mockModel)),
+    getAffectedWorkflows: jest.fn().mockReturnValue(of([])),
+    deactivateModel: jest.fn().mockReturnValue(of({ versionsReassigned: 0, deactivatedModelId: 'model-1', replacementModelId: 'model-2' })),
   };
 
   const mockLlmProviderService = {
     getAllConfigs: jest.fn().mockReturnValue(of([])),
     createConfig: jest.fn().mockReturnValue(of({})),
     updateConfig: jest.fn().mockReturnValue(of({})),
+    getAffectedWorkflows: jest.fn().mockReturnValue(of([])),
+    deactivateProvider: jest.fn().mockReturnValue(of([])),
   };
 
   beforeEach(async () => {
-    mockLlmModelService.getAllModels.mockReturnValue(of([mockModel]));
+    mockLlmModelService.getAllModels.mockReturnValue(of([mockModel, mockModel2]));
     mockLlmProviderService.getAllConfigs.mockReturnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -77,6 +96,7 @@ describe('SettingsComponent [P2]', () => {
             Brain,
             Plus,
             AlertCircle,
+            AlertTriangle,
             Server,
             Pencil,
             Loader2,
@@ -254,5 +274,149 @@ describe('SettingsComponent [P2]', () => {
     expect(fixture.componentInstance.modelDialogOpen()).toBe(false);
     const dialog = fixture.nativeElement.querySelector('[data-testid="form-dialog"]');
     expect(dialog).toBeFalsy();
+  });
+
+  // --- Deactivation Dialog ---
+  it('[4-H1-UNIT-037] should open deactivate dialog on single model deactivate request', () => {
+    // Given
+    const fixture = TestBed.createComponent(SettingsComponent);
+    const component = fixture.componentInstance;
+    // When
+    component.onDeactivateRequested({
+      modelId: 'model-1',
+      allModels: [mockModel, mockModel2],
+    });
+    // Then
+    expect(component.deactivateDialogOpen()).toBe(true);
+    expect(component.deactivateDialogInput()).toEqual({
+      modelIds: ['model-1'],
+      allModels: [mockModel, mockModel2],
+      context: 'model',
+    });
+  });
+
+  it('[4-H1-UNIT-038] should open deactivate dialog on bulk deactivate request', () => {
+    // Given
+    const fixture = TestBed.createComponent(SettingsComponent);
+    const component = fixture.componentInstance;
+    // When
+    component.onDeactivateBulkRequested({
+      providerKey: 'google-ai-studio',
+      modelIds: ['model-1'],
+      allModels: [mockModel, mockModel2],
+    });
+    // Then
+    expect(component.deactivateDialogOpen()).toBe(true);
+    expect(component.deactivateDialogInput()?.context).toBe('provider');
+    expect(component.deactivateDialogInput()?.providerName).toBe('google-ai-studio');
+  });
+
+  it('[4-H1-UNIT-039] should close deactivate dialog and reset state', () => {
+    // Given
+    const fixture = TestBed.createComponent(SettingsComponent);
+    const component = fixture.componentInstance;
+    component.onDeactivateRequested({ modelId: 'model-1', allModels: [mockModel] });
+    expect(component.deactivateDialogOpen()).toBe(true);
+    // When
+    component.closeDeactivateDialog();
+    // Then
+    expect(component.deactivateDialogOpen()).toBe(false);
+    expect(component.deactivateDialogInput()).toBeNull();
+  });
+
+  it('[4-H1-UNIT-040] should call deactivateModel on single model confirmed', async () => {
+    // Given
+    const fixture = TestBed.createComponent(SettingsComponent);
+    const component = fixture.componentInstance;
+    component.onDeactivateRequested({ modelId: 'model-1', allModels: [mockModel] });
+    // When
+    component.onDeactivateConfirmed({ replacementModelId: 'model-2' });
+    await fixture.whenStable();
+    // Then
+    expect(mockLlmModelService.deactivateModel).toHaveBeenCalledWith('model-1', 'model-2');
+  });
+
+  it('[4-H1-UNIT-041] should call deactivateProvider on provider confirmed', async () => {
+    // Given
+    mockLlmModelService.getAllModels.mockReturnValue(of([mockModel, mockModel2]));
+    const fixture = TestBed.createComponent(SettingsComponent);
+    const component = fixture.componentInstance;
+    // Simulate provider deactivation — set providerConfigId via onProviderDeactivateRequested
+    component.onProviderDeactivateRequested({
+      configId: 'config-1',
+      providerKey: 'google-ai-studio',
+      displayName: 'Google AI Studio',
+    });
+    await fixture.whenStable();
+    // When
+    component.onDeactivateConfirmed({ replacementModelId: 'model-2' });
+    await fixture.whenStable();
+    // Then
+    expect(mockLlmProviderService.deactivateProvider).toHaveBeenCalledWith('config-1', 'model-2');
+  });
+
+  it('[4-H1-UNIT-049] should set deactivateError signal on single model deactivation failure', async () => {
+    // Given
+    mockLlmModelService.deactivateModel.mockReturnValue(throwError(() => new Error('fail')));
+    const fixture = TestBed.createComponent(SettingsComponent);
+    const component = fixture.componentInstance;
+    component.onDeactivateRequested({ modelId: 'model-1', allModels: [mockModel] });
+    // When
+    component.onDeactivateConfirmed({ replacementModelId: 'model-2' });
+    await fixture.whenStable();
+    // Then
+    expect(component.deactivateError()).toBe('Failed to deactivate model. Please try again.');
+    expect(component.deactivateDialogOpen()).toBe(false);
+  });
+
+  it('[4-H1-UNIT-050] should set deactivateError signal on provider deactivation failure', async () => {
+    // Given
+    mockLlmProviderService.deactivateProvider.mockReturnValue(throwError(() => new Error('fail')));
+    mockLlmModelService.getAllModels.mockReturnValue(of([mockModel, mockModel2]));
+    const fixture = TestBed.createComponent(SettingsComponent);
+    const component = fixture.componentInstance;
+    component.onProviderDeactivateRequested({
+      configId: 'config-1',
+      providerKey: 'google-ai-studio',
+      displayName: 'Google AI Studio',
+    });
+    await fixture.whenStable();
+    // When
+    component.onDeactivateConfirmed({ replacementModelId: 'model-2' });
+    await fixture.whenStable();
+    // Then
+    expect(component.deactivateError()).toBe('Failed to deactivate provider. Please try again.');
+    expect(component.deactivateDialogOpen()).toBe(false);
+  });
+
+  it('[4-H1-UNIT-054] should set deactivateError on provider deactivate request fetch failure', async () => {
+    // Given
+    mockLlmModelService.getAllModels.mockReturnValue(throwError(() => new Error('fetch fail')));
+    const fixture = TestBed.createComponent(SettingsComponent);
+    const component = fixture.componentInstance;
+    // When
+    component.onProviderDeactivateRequested({
+      configId: 'config-1',
+      providerKey: 'google-ai-studio',
+      displayName: 'Google AI Studio',
+    });
+    await fixture.whenStable();
+    // Then
+    expect(component.deactivateError()).toBe('Failed to load models for provider deactivation. Please try again.');
+    expect(component.deactivateDialogOpen()).toBe(false);
+  });
+
+  it('[4-H1-UNIT-051] should clear deactivateError when starting new deactivation', async () => {
+    // Given — set an existing error
+    const fixture = TestBed.createComponent(SettingsComponent);
+    const component = fixture.componentInstance;
+    component.deactivateError.set('Previous error');
+    // When — start new deactivation
+    component.onDeactivateRequested({ modelId: 'model-1', allModels: [mockModel] });
+    mockLlmModelService.deactivateModel.mockReturnValue(of({ versionsReassigned: 0, deactivatedModelId: 'model-1', replacementModelId: 'model-2' }));
+    component.onDeactivateConfirmed({ replacementModelId: 'model-2' });
+    await fixture.whenStable();
+    // Then
+    expect(component.deactivateError()).toBeNull();
   });
 });

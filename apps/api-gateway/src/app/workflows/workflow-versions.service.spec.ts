@@ -70,6 +70,7 @@ describe('WorkflowVersionsService [P0]', () => {
     definition: validDefinition,
     createdBy: userId,
     createdAt: new Date('2026-02-02'),
+    previousGenerationConfig: null,
   } as WorkflowVersionEntity;
 
   beforeEach(() => {

@@ -1,0 +1,130 @@
+<div
+  class="dialog-backdrop"
+  data-testid="deactivate-dialog-backdrop"
+  role="presentation"
+  (click)="onCancel()"
+>
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="'deactivate-dialog-title'"
+    data-testid="deactivate-dialog"
+    (click)="$event.stopPropagation()"
+    (keydown.escape)="onCancel()"
+    (keydown)="$event.stopPropagation()"
+  >
+    <!-- Header -->
+    <div class="dialog-header">
+      <div class="header-with-icon">
+        <lucide-icon name="alert-triangle" [size]="20" class="warning-icon"></lucide-icon>
+        <h2 id="deactivate-dialog-title" class="dialog-title">{{ dialogTitle() }}</h2>
+      </div>
+      <button
+        type="button"
+        class="close-btn"
+        aria-label="Close dialog"
+        data-testid="deactivate-dialog-close"
+        (click)="onCancel()"
+      >
+        <lucide-icon name="x" [size]="18"></lucide-icon>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="dialog-body">
+      @if (loading()) {
+        <div class="loading-state" data-testid="deactivate-loading">
+          Loading affected workflows...
+        </div>
+      } @else if (error()) {
+        <div class="error-state" data-testid="deactivate-error">
+          <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+          <span>{{ error() }}</span>
+        </div>
+      } @else {
+        <!-- No replacement models available -->
+        @if (!hasReplacements()) {
+          <div class="error-banner" data-testid="no-replacements-banner">
+            <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+            <span>Cannot deactivate: no active replacement models available. At least one other active model must exist.</span>
+          </div>
+        } @else {
+          <!-- Affected workflows list -->
+          @if (affectedWorkflows().length > 0) {
+            <div class="affected-section">
+              <p class="affected-description">
+                The following {{ affectedWorkflows().length }} workflow version(s) use
+                {{ dialogInput().context === 'provider' ? 'models from this provider' : 'this model' }}
+                and will be reassigned to the replacement model. All custom generation parameters
+                will be reset to the new model's defaults.
+              </p>
+              <div class="affected-list" data-testid="affected-workflows-list">
+                @for (wf of affectedWorkflows(); track wf.versionId) {
+                  <div class="affected-item">
+                    <span class="workflow-name">{{ wf.templateName }}</span>
+                    <span class="version-number">v{{ wf.versionNumber }}</span>
+                    <span class="status-badge" [class]="getStatusBadgeClass(wf.templateStatus)">
+                      {{ wf.templateStatus }}
+                    </span>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <p class="no-affected-text" data-testid="no-affected-workflows">
+              No workflow versions reference this model. It can be deactivated safely.
+            </p>
+          }
+
+          <!-- Replacement model dropdown -->
+          <div class="replacement-section">
+            <label for="replacement-model" class="field-label">Replacement Model</label>
+            <select
+              id="replacement-model"
+              class="form-select"
+              data-testid="replacement-model-select"
+              [ngModel]="selectedReplacementId()"
+              (ngModelChange)="onReplacementChange($event)"
+            >
+              <option value="" disabled>Select a replacement model...</option>
+              @for (model of replacementModels(); track model.id) {
+                <option [value]="model.id">
+                  {{ model.displayName }} ({{ model.providerKey }})
+                </option>
+              }
+            </select>
+            <p class="field-hint">
+              All affected workflows will be assigned to this model with default parameters.
+            </p>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Footer -->
+    <div class="dialog-footer">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        data-testid="deactivate-cancel-btn"
+        (click)="onCancel()"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn btn-danger"
+        data-testid="deactivate-confirm-btn"
+        [disabled]="!canConfirm()"
+        (click)="onConfirm()"
+      >
+        @if (submitting()) {
+          Deactivating...
+        } @else {
+          Reassign & Deactivate
+        }
+      </button>
+    </div>
+  </div>
+</div>

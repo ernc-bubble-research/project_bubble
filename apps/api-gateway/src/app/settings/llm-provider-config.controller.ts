@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   UseGuards,
+  HttpCode,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,12 +21,17 @@ import {
   UpdateLlmProviderConfigDto,
   LlmProviderConfigResponseDto,
   ProviderTypeDto,
+  DeactivateModelDto,
+  AffectedWorkflowDto,
+  DeactivateModelResponseDto,
 } from '@project-bubble/shared';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { LlmProviderConfigService } from './llm-provider-config.service';
 import { ProviderRegistry } from '../workflow-execution/llm/provider-registry.service';
+import { LlmModelsService } from '../workflows/llm-models.service';
+import { ModelReassignmentService } from '../workflows/model-reassignment.service';
 
 @ApiTags('Admin - LLM Provider Config')
 @ApiBearerAuth()
@@ -36,6 +42,8 @@ export class LlmProviderConfigController {
   constructor(
     private readonly providerConfigService: LlmProviderConfigService,
     private readonly providerRegistry: ProviderRegistry,
+    private readonly llmModelsService: LlmModelsService,
+    private readonly modelReassignmentService: ModelReassignmentService,
   ) {}
 
   @Get()
@@ -63,6 +71,52 @@ export class LlmProviderConfigController {
         isDevelopmentOnly: entry.isDevelopmentOnly,
       }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }
+
+  @Get(':id/affected-workflows')
+  @ApiOperation({ summary: 'List workflow versions affected by deactivating this provider' })
+  @ApiResponse({ status: 200, description: 'List of affected workflow versions', type: [AffectedWorkflowDto] })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Provider not found' })
+  async getAffectedWorkflows(
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    const config = await this.providerConfigService.findById(id);
+    const allModels = await this.llmModelsService.findAll();
+    const activeModelIds = allModels
+      .filter((m) => m.providerKey === config.providerKey && m.isActive)
+      .map((m) => m.id);
+
+    if (activeModelIds.length === 0) return [];
+    return this.modelReassignmentService.findAffectedVersions(activeModelIds);
+  }
+
+  @Post(':id/deactivate')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Deactivate provider — reassigns all affected workflows to replacement model' })
+  @ApiResponse({ status: 200, description: 'Provider deactivated and workflows reassigned', type: [DeactivateModelResponseDto] })
+  @ApiResponse({ status: 400, description: 'Cannot deactivate (no replacement, last active models, etc.)' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Provider not found' })
+  async deactivateProvider(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DeactivateModelDto,
+  ) {
+    const config = await this.providerConfigService.findById(id);
+    const allModels = await this.llmModelsService.findAll();
+    const activeModelIds = allModels
+      .filter((m) => m.providerKey === config.providerKey && m.isActive)
+      .map((m) => m.id);
+
+    // Atomic: reassign all models + deactivate provider config in a single transaction.
+    // If any step fails, the entire operation rolls back — no partial state.
+    return this.modelReassignmentService.reassignMultipleAndDeactivate(
+      activeModelIds,
+      dto.replacementModelId,
+      id, // provider config ID for atomic deactivation within same transaction
+    );
   }
 
   @Post()

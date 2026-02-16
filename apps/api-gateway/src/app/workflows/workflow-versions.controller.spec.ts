@@ -20,6 +20,7 @@ describe('WorkflowVersionsController [P1]', () => {
     definition: { metadata: { name: 'test' } },
     createdBy: userId,
     createdAt: new Date('2026-02-02'),
+    previousGenerationConfig: null,
   };
 
   beforeEach(() => {

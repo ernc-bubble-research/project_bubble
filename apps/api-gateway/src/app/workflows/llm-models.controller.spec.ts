@@ -1,13 +1,16 @@
-import { LlmModelResponseDto } from '@project-bubble/shared';
+import { LlmModelResponseDto, AffectedWorkflowDto, DeactivateModelResponseDto } from '@project-bubble/shared';
 import { AppLlmModelsController, AdminLlmModelsController } from './llm-models.controller';
 import { LlmModelsService } from './llm-models.service';
+import { ModelReassignmentService } from './model-reassignment.service';
 
 describe('LlmModelsControllers [P1]', () => {
   let appController: AppLlmModelsController;
   let adminController: AdminLlmModelsController;
   let service: jest.Mocked<LlmModelsService>;
+  let reassignmentService: jest.Mocked<ModelReassignmentService>;
 
   const modelId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  const replacementId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
   const mockModelResponse: LlmModelResponseDto = {
     id: modelId,
@@ -33,8 +36,14 @@ describe('LlmModelsControllers [P1]', () => {
       bulkUpdateStatus: jest.fn().mockResolvedValue({ affected: 3 }),
     } as unknown as jest.Mocked<LlmModelsService>;
 
+    reassignmentService = {
+      findAffectedVersions: jest.fn().mockResolvedValue([]),
+      reassignAndDeactivate: jest.fn(),
+      getActiveModelCount: jest.fn(),
+    } as unknown as jest.Mocked<ModelReassignmentService>;
+
     appController = new AppLlmModelsController(service);
-    adminController = new AdminLlmModelsController(service);
+    adminController = new AdminLlmModelsController(service, reassignmentService);
   });
 
   describe('AppLlmModelsController', () => {
@@ -128,6 +137,49 @@ describe('LlmModelsControllers [P1]', () => {
       // Then
       expect(result).toEqual({ affected: 3 });
       expect(service.bulkUpdateStatus).toHaveBeenCalledWith(dto);
+    });
+
+    it('[4-H1-UNIT-027] GET /admin/llm-models/:id/affected-workflows — delegates to reassignment service', async () => {
+      // Given
+      const mockAffected: AffectedWorkflowDto[] = [
+        Object.assign(new AffectedWorkflowDto(), {
+          versionId: 'v1',
+          templateId: 't1',
+          templateName: 'Template A',
+          versionNumber: 1,
+          templateStatus: 'published',
+        }),
+      ];
+      reassignmentService.findAffectedVersions.mockResolvedValue(mockAffected);
+
+      // When
+      const result = await adminController.getAffectedWorkflows(modelId);
+
+      // Then
+      expect(reassignmentService.findAffectedVersions).toHaveBeenCalledWith([modelId]);
+      expect(result).toEqual(mockAffected);
+    });
+
+    it('[4-H1-UNIT-028] POST /admin/llm-models/:id/deactivate — delegates to reassignment service', async () => {
+      // Given
+      const mockResponse = Object.assign(new DeactivateModelResponseDto(), {
+        versionsReassigned: 3,
+        deactivatedModelId: modelId,
+        replacementModelId: replacementId,
+      });
+      reassignmentService.reassignAndDeactivate.mockResolvedValue(mockResponse);
+
+      // When
+      const result = await adminController.deactivateModel(modelId, {
+        replacementModelId: replacementId,
+      });
+
+      // Then
+      expect(reassignmentService.reassignAndDeactivate).toHaveBeenCalledWith(
+        modelId,
+        replacementId,
+      );
+      expect(result).toEqual(mockResponse);
     });
   });
 });

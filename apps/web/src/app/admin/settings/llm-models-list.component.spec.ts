@@ -210,8 +210,28 @@ describe('LlmModelsListComponent [P2]', () => {
     expect(spy).toHaveBeenCalledWith(mockModels[0]);
   });
 
-  it('[3.1-3-UNIT-013] should toggle model active status', async () => {
-    const updatedModel = { ...mockModels[0], isActive: false };
+  it('[3.1-3-UNIT-013] should emit deactivateRequested when toggling active model off', async () => {
+    const fixture = TestBed.createComponent(LlmModelsListComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const spy = jest.fn();
+    fixture.componentInstance.deactivateRequested.subscribe(spy);
+
+    const toggleBtn = fixture.nativeElement.querySelector('[data-testid="toggle-model-1"]');
+    toggleBtn.click();
+
+    expect(spy).toHaveBeenCalledWith({
+      modelId: 'model-1',
+      allModels: mockModels,
+    });
+    // Should NOT call updateModel directly — deactivation goes through dialog
+    expect(mockLlmModelService.updateModel).not.toHaveBeenCalled();
+  });
+
+  it('[4-H1-UNIT-033] should call updateModel directly when activating an inactive model', async () => {
+    const updatedModel = { ...mockModels[1], isActive: true };
     mockLlmModelService.updateModel.mockReturnValue(of(updatedModel));
 
     const fixture = TestBed.createComponent(LlmModelsListComponent);
@@ -219,13 +239,12 @@ describe('LlmModelsListComponent [P2]', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const toggleBtn = fixture.nativeElement.querySelector('[data-testid="toggle-model-1"]');
-    toggleBtn.click();
+    // model-2 is inactive, toggling should activate directly
+    fixture.componentInstance.onToggleActive(mockModels[1]);
     await fixture.whenStable();
-    fixture.detectChanges();
 
-    expect(mockLlmModelService.updateModel).toHaveBeenCalledWith('model-1', {
-      isActive: false,
+    expect(mockLlmModelService.updateModel).toHaveBeenCalledWith('model-2', {
+      isActive: true,
     });
   });
 
@@ -263,7 +282,30 @@ describe('LlmModelsListComponent [P2]', () => {
     expect(el.querySelector('[data-testid="bulk-deactivate-mock"]')).toBeTruthy();
   });
 
-  it('[4-FIX-B-UNIT-013] should call bulkUpdateStatus and update local models on bulk deactivate', async () => {
+  it('[4-FIX-B-UNIT-013] should emit deactivateBulkRequested on bulk deactivate', async () => {
+    const fixture = TestBed.createComponent(LlmModelsListComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const spy = jest.fn();
+    fixture.componentInstance.deactivateBulkRequested.subscribe(spy);
+
+    const deactivateBtn = fixture.nativeElement.querySelector(
+      '[data-testid="bulk-deactivate-google-ai-studio"]'
+    );
+    deactivateBtn.click();
+
+    expect(spy).toHaveBeenCalledWith({
+      providerKey: 'google-ai-studio',
+      modelIds: ['model-1'], // only model-1 is active in google-ai-studio
+      allModels: mockModels,
+    });
+    // Should NOT call bulkUpdateStatus directly — deactivation goes through dialog
+    expect(mockLlmModelService.bulkUpdateStatus).not.toHaveBeenCalled();
+  });
+
+  it('[4-H1-UNIT-034] should call bulkUpdateStatus directly on bulk activate', async () => {
     mockLlmModelService.bulkUpdateStatus.mockReturnValue(of({ affected: 2 }));
 
     const fixture = TestBed.createComponent(LlmModelsListComponent);
@@ -271,32 +313,20 @@ describe('LlmModelsListComponent [P2]', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const deactivateBtn = fixture.nativeElement.querySelector(
-      '[data-testid="bulk-deactivate-google-ai-studio"]'
+    const activateBtn = fixture.nativeElement.querySelector(
+      '[data-testid="bulk-activate-google-ai-studio"]'
     );
-    deactivateBtn.click();
+    activateBtn.click();
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(mockLlmModelService.bulkUpdateStatus).toHaveBeenCalledWith({
       providerKey: 'google-ai-studio',
-      isActive: false,
+      isActive: true,
     });
-
-    // Verify models for google-ai-studio are now inactive in local state
-    const googleModels = fixture.componentInstance.models().filter(
-      (m) => m.providerKey === 'google-ai-studio'
-    );
-    expect(googleModels.every((m) => !m.isActive)).toBe(true);
-
-    // Mock provider model should be unaffected
-    const mockProviderModel = fixture.componentInstance.models().find(
-      (m) => m.providerKey === 'mock'
-    );
-    expect(mockProviderModel!.isActive).toBe(true);
   });
 
-  it('[4-FIX-B-UNIT-014] should show error banner on bulk update failure', async () => {
+  it('[4-FIX-B-UNIT-014] should show error banner on bulk activate failure', async () => {
     mockLlmModelService.bulkUpdateStatus.mockReturnValue(
       throwError(() => new Error('Bulk update failed'))
     );
@@ -306,10 +336,11 @@ describe('LlmModelsListComponent [P2]', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const deactivateBtn = fixture.nativeElement.querySelector(
-      '[data-testid="bulk-deactivate-google-ai-studio"]'
+    // Bulk activate calls bulkUpdateStatus directly (deactivate goes through dialog)
+    const activateBtn = fixture.nativeElement.querySelector(
+      '[data-testid="bulk-activate-google-ai-studio"]'
     );
-    deactivateBtn.click();
+    activateBtn.click();
     await fixture.whenStable();
     fixture.detectChanges();
 

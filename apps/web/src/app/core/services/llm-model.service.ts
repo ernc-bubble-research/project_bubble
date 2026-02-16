@@ -6,6 +6,8 @@ import type {
   CreateLlmModelDto,
   UpdateLlmModelDto,
   BulkUpdateModelStatusDto,
+  AffectedWorkflowDto,
+  DeactivateModelResponseDto,
 } from '@project-bubble/shared';
 
 // H5: Re-export as LlmModel alias for backward compatibility within the app
@@ -38,5 +40,20 @@ export class LlmModelService {
   /** Bulk update active status for all models of a provider (admin only) */
   bulkUpdateStatus(dto: BulkUpdateModelStatusDto): Observable<{ affected: number }> {
     return this.http.patch<{ affected: number }>('/api/admin/llm-models/bulk-status', dto);
+  }
+
+  /** Get workflow versions affected by deactivating a model (admin only) */
+  getAffectedWorkflows(modelId: string): Observable<AffectedWorkflowDto[]> {
+    return this.http.get<AffectedWorkflowDto[]>(
+      `/api/admin/llm-models/${modelId}/affected-workflows`,
+    );
+  }
+
+  /** Deactivate a model with mandatory reassignment (admin only) */
+  deactivateModel(modelId: string, replacementModelId: string): Observable<DeactivateModelResponseDto> {
+    return this.http.post<DeactivateModelResponseDto>(
+      `/api/admin/llm-models/${modelId}/deactivate`,
+      { replacementModelId },
+    );
   }
 }

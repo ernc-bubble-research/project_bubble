@@ -37,6 +37,14 @@ export class LlmProviderConfigService {
     return !!this.encryptionKey;
   }
 
+  async findById(id: string): Promise<LlmProviderConfigEntity> {
+    const config = await this.repo.findOne({ where: { id } });
+    if (!config) {
+      throw new NotFoundException(`Provider config with id "${id}" not found`);
+    }
+    return config;
+  }
+
   async findByProviderKey(providerKey: string): Promise<LlmProviderConfigEntity | null> {
     return this.repo.findOne({ where: { providerKey } });
   }

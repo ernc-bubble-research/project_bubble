@@ -14,6 +14,12 @@ import {
 } from '../../core/services/llm-provider.service';
 import { ProviderTypeService } from '../../core/services/provider-type.service';
 
+export interface DeactivateProviderRequest {
+  configId: string;
+  providerKey: string;
+  displayName: string;
+}
+
 @Component({
   standalone: true,
   imports: [LucideAngularModule],
@@ -33,6 +39,7 @@ export class ProviderConfigListComponent {
 
   readonly addConfigClicked = output<void>();
   readonly editConfigClicked = output<LlmProviderConfig>();
+  readonly deactivateProviderRequested = output<DeactivateProviderRequest>();
 
   readonly isEmpty = computed(
     () => this.configs().length === 0 && !this.loading(),
@@ -74,10 +81,21 @@ export class ProviderConfigListComponent {
   onToggleActive(config: LlmProviderConfig): void {
     if (this.togglingId()) return;
 
+    // If deactivating an active provider → delegate to parent (show confirmation dialog)
+    if (config.isActive) {
+      this.deactivateProviderRequested.emit({
+        configId: config.id,
+        providerKey: config.providerKey,
+        displayName: config.displayName,
+      });
+      return;
+    }
+
+    // Activating an inactive provider → proceed directly
     this.togglingId.set(config.id);
 
     this.providerService
-      .updateConfig(config.id, { isActive: !config.isActive })
+      .updateConfig(config.id, { isActive: true })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updated) => {

@@ -48,6 +48,17 @@
     </button>
   </div>
 
+  <!-- Deactivation error banner -->
+  @if (deactivateError()) {
+    <div class="error-banner" data-testid="deactivate-error-banner" role="alert">
+      <lucide-icon name="alert-circle" [size]="16"></lucide-icon>
+      <span>{{ deactivateError() }}</span>
+      <button type="button" class="dismiss-btn" aria-label="Dismiss" (click)="deactivateError.set(null)">
+        <lucide-icon name="x" [size]="14"></lucide-icon>
+      </button>
+    </div>
+  }
+
   <!-- Tab content -->
   <div class="tab-content">
     @if (activeTab() === 'llm-models') {
@@ -59,6 +70,8 @@
         <app-llm-models-list
           (addModelClicked)="openAddModelDialog()"
           (editModelClicked)="openEditModelDialog($event)"
+          (deactivateRequested)="onDeactivateRequested($event)"
+          (deactivateBulkRequested)="onDeactivateBulkRequested($event)"
         ></app-llm-models-list>
       </div>
     }
@@ -72,6 +85,7 @@
         <app-provider-config-list
           (addConfigClicked)="openAddProviderDialog()"
           (editConfigClicked)="openEditProviderDialog($event)"
+          (deactivateProviderRequested)="onProviderDeactivateRequested($event)"
         ></app-provider-config-list>
       </div>
     }
@@ -93,5 +107,14 @@
       (saved)="onProviderSaved()"
       (cancelled)="closeProviderDialog()"
     ></app-provider-config-form-dialog>
+  }
+
+  <!-- Model Deactivation Confirmation dialog -->
+  @if (deactivateDialogOpen() && deactivateDialogInput()) {
+    <app-model-deactivate-dialog
+      [dialogInput]="deactivateDialogInput()!"
+      (confirmed)="onDeactivateConfirmed($event)"
+      (cancelled)="closeDeactivateDialog()"
+    ></app-model-deactivate-dialog>
   }
 </div>

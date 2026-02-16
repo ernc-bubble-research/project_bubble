@@ -31,6 +31,14 @@ export class WorkflowVersionEntity {
   @Column({ type: 'jsonb' })
   definition!: Record<string, unknown>;
 
+  @Column({
+    name: 'previous_generation_config',
+    type: 'jsonb',
+    nullable: true,
+    default: null,
+  })
+  previousGenerationConfig!: Record<string, unknown> | null;
+
   @Column({ name: 'created_by', type: 'uuid' })
   createdBy!: string;
 

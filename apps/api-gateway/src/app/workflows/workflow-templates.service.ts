@@ -456,6 +456,7 @@ export class WorkflowTemplatesService {
       versionDto.templateId = currentVersion.templateId;
       versionDto.versionNumber = currentVersion.versionNumber;
       versionDto.definition = currentVersion.definition;
+      versionDto.previousGenerationConfig = currentVersion.previousGenerationConfig ?? null;
       versionDto.createdBy = currentVersion.createdBy;
       versionDto.createdAt = currentVersion.createdAt;
       dto.currentVersion = versionDto;

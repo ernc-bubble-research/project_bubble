@@ -5,6 +5,8 @@ import type {
   LlmProviderConfigResponseDto,
   CreateLlmProviderConfigDto,
   UpdateLlmProviderConfigDto,
+  AffectedWorkflowDto,
+  DeactivateModelResponseDto,
 } from '@project-bubble/shared';
 
 export type LlmProviderConfig = LlmProviderConfigResponseDto;
@@ -38,6 +40,21 @@ export class LlmProviderService {
     return this.http.patch<LlmProviderConfig>(
       `/api/admin/settings/llm-providers/${id}`,
       dto,
+    );
+  }
+
+  /** Get workflow versions affected by deactivating a provider (admin only) */
+  getAffectedWorkflows(providerId: string): Observable<AffectedWorkflowDto[]> {
+    return this.http.get<AffectedWorkflowDto[]>(
+      `/api/admin/settings/llm-providers/${providerId}/affected-workflows`,
+    );
+  }
+
+  /** Deactivate a provider with mandatory reassignment (admin only) */
+  deactivateProvider(providerId: string, replacementModelId: string): Observable<DeactivateModelResponseDto[]> {
+    return this.http.post<DeactivateModelResponseDto[]>(
+      `/api/admin/settings/llm-providers/${providerId}/deactivate`,
+      { replacementModelId },
     );
   }
 }

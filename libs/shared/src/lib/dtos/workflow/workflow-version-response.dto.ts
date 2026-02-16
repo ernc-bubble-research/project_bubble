@@ -16,6 +16,14 @@ export class WorkflowVersionResponseDto {
   @ApiProperty({ description: 'The full workflow definition as JSONB', type: Object })
   definition!: Record<string, unknown>;
 
+  @ApiProperty({
+    description: 'N-1 generation config snapshot for rollback (model UUID + param overrides)',
+    type: Object,
+    nullable: true,
+    required: false,
+  })
+  previousGenerationConfig!: Record<string, unknown> | null;
+
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   createdBy!: string;
 

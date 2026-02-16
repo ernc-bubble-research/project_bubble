@@ -18,6 +18,17 @@ export interface ProviderGroup {
   models: LlmModel[];
 }
 
+export interface DeactivateModelRequest {
+  modelId: string;
+  allModels: LlmModel[];
+}
+
+export interface DeactivateBulkRequest {
+  providerKey: string;
+  modelIds: string[];
+  allModels: LlmModel[];
+}
+
 @Component({
   standalone: true,
   imports: [LucideAngularModule],
@@ -39,6 +50,8 @@ export class LlmModelsListComponent {
 
   readonly addModelClicked = output<void>();
   readonly editModelClicked = output<LlmModel>();
+  readonly deactivateRequested = output<DeactivateModelRequest>();
+  readonly deactivateBulkRequested = output<DeactivateBulkRequest>();
 
   readonly providerGroups = computed<ProviderGroup[]>(() => {
     const modelList = this.models();
@@ -100,10 +113,20 @@ export class LlmModelsListComponent {
   onToggleActive(model: LlmModel): void {
     if (this.togglingId()) return; // Prevent double-click
 
+    // If deactivating an active model → delegate to parent (show dialog)
+    if (model.isActive) {
+      this.deactivateRequested.emit({
+        modelId: model.id,
+        allModels: this.models(),
+      });
+      return;
+    }
+
+    // Activating an inactive model → proceed directly
     this.togglingId.set(model.id);
 
     this.llmModelService
-      .updateModel(model.id, { isActive: !model.isActive })
+      .updateModel(model.id, { isActive: true })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updated) => {
@@ -124,6 +147,22 @@ export class LlmModelsListComponent {
   onBulkToggle(providerKey: string, isActive: boolean): void {
     if (this.bulkTogglingProvider()) return; // Prevent double-click
 
+    // If bulk deactivating → delegate to parent (show dialog)
+    if (!isActive) {
+      const modelIds = this.models()
+        .filter((m) => m.providerKey === providerKey && m.isActive)
+        .map((m) => m.id);
+      if (modelIds.length > 0) {
+        this.deactivateBulkRequested.emit({
+          providerKey,
+          modelIds,
+          allModels: this.models(),
+        });
+        return;
+      }
+    }
+
+    // Bulk activating → proceed directly
     this.bulkTogglingProvider.set(providerKey);
 
     this.llmModelService

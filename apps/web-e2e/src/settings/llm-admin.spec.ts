@@ -85,7 +85,7 @@ test.describe('Settings — LLM Admin', () => {
     await expect(providerRows.first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test('[2E-E2E-004d] toggle model active/inactive', async ({ page }) => {
+  test('[2E-E2E-004d] toggle active model opens deactivation dialog', async ({ page }) => {
     await page.goto('/admin/settings');
     await expect(page.getByTestId('settings-page')).toBeVisible();
     await page.getByTestId('tab-llm-models').click();
@@ -95,31 +95,28 @@ test.describe('Settings — LLM Admin', () => {
     const modelRows = page.locator('[data-testid^="model-row-"]');
     await expect(modelRows.first()).toBeVisible({ timeout: 10_000 });
 
-    // Find a toggle button (custom <button> with aria-pressed, not a native checkbox)
+    // Find a toggle button for an active model
     const modelsList = page.getByTestId('llm-models-list');
     const toggleButtons = modelsList.locator('[data-testid^="toggle-"]');
     const firstToggle = toggleButtons.first();
     await expect(firstToggle).toBeVisible();
 
-    // Get current toggle state via aria-pressed attribute
-    const wasActive = (await firstToggle.getAttribute('aria-pressed')) === 'true';
+    // Verify model is active
+    await expect(firstToggle).toHaveAttribute('aria-pressed', 'true');
 
-    // Click toggle to change state
+    // Click toggle — should open deactivation confirmation dialog (not direct deactivate)
     await firstToggle.click();
 
-    // Verify toggle state changed
-    if (wasActive) {
-      await expect(firstToggle).toHaveAttribute('aria-pressed', 'false');
-    } else {
-      await expect(firstToggle).toHaveAttribute('aria-pressed', 'true');
-    }
+    // Deactivation dialog should appear
+    const dialog = page.getByTestId('deactivate-dialog');
+    await expect(dialog).toBeVisible({ timeout: 5_000 });
 
-    // Toggle back to restore original state
-    await firstToggle.click();
-    if (wasActive) {
-      await expect(firstToggle).toHaveAttribute('aria-pressed', 'true');
-    } else {
-      await expect(firstToggle).toHaveAttribute('aria-pressed', 'false');
-    }
+    // Cancel the dialog
+    const cancelBtn = page.getByTestId('deactivate-cancel-btn');
+    await cancelBtn.click();
+
+    // Dialog should close and model should still be active
+    await expect(dialog).toBeHidden();
+    await expect(firstToggle).toHaveAttribute('aria-pressed', 'true');
   });
 });

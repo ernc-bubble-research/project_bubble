@@ -208,20 +208,41 @@ describe('ProviderConfigListComponent [P1]', () => {
     expect(spy).toHaveBeenCalledWith(mockConfig);
   });
 
-  it('[3.1-4-UNIT-050] [P1] should toggle active status', async () => {
+  it('[3.1-4-UNIT-050] [P1] should emit deactivateProviderRequested when toggling active provider off', async () => {
     // Given
-    const updatedConfig = { ...mockConfig, isActive: false };
-    mockProviderService.updateConfig.mockReturnValue(of(updatedConfig));
+    const fixture = TestBed.createComponent(ProviderConfigListComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const spy = jest.fn();
+    fixture.componentInstance.deactivateProviderRequested.subscribe(spy);
+    // When
+    fixture.componentInstance.onToggleActive(mockConfig);
+    // Then
+    expect(spy).toHaveBeenCalledWith({
+      configId: 'config-1',
+      providerKey: 'google-ai-studio',
+      displayName: 'Google AI Studio',
+    });
+    // Should NOT call updateConfig directly — deactivation goes through dialog
+    expect(mockProviderService.updateConfig).not.toHaveBeenCalled();
+  });
+
+  it('[4-H1-UNIT-036] [P1] should call updateConfig directly when activating an inactive provider', async () => {
+    // Given
+    const inactiveConfig = { ...mockConfig, isActive: false };
+    const reactivatedConfig = { ...mockConfig, isActive: true };
+    mockProviderService.updateConfig.mockReturnValue(of(reactivatedConfig));
     const fixture = TestBed.createComponent(ProviderConfigListComponent);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
     // When
-    fixture.componentInstance.onToggleActive(mockConfig);
+    fixture.componentInstance.onToggleActive(inactiveConfig);
     await fixture.whenStable();
     // Then
     expect(mockProviderService.updateConfig).toHaveBeenCalledWith('config-1', {
-      isActive: false,
+      isActive: true,
     });
   });
 

@@ -11,6 +11,7 @@ import { WorkflowTemplatesService } from './workflow-templates.service';
 import { WorkflowVersionsService } from './workflow-versions.service';
 import { WorkflowChainsService } from './workflow-chains.service';
 import { LlmModelsService } from './llm-models.service';
+import { ModelReassignmentService } from './model-reassignment.service';
 import { WorkflowTemplatesController } from './workflow-templates.controller';
 import { WorkflowVersionsController } from './workflow-versions.controller';
 import { WorkflowChainsController } from './workflow-chains.controller';
@@ -45,12 +46,14 @@ import { ProviderRegistryModule } from '../workflow-execution/llm/provider-regis
     WorkflowVersionsService,
     WorkflowChainsService,
     LlmModelsService,
+    ModelReassignmentService,
   ],
   exports: [
     WorkflowTemplatesService,
     WorkflowVersionsService,
     WorkflowChainsService,
     LlmModelsService,
+    ModelReassignmentService,
   ],
 })
 export class WorkflowsModule {}
