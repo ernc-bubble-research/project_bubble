@@ -19,8 +19,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { JwtService } from '@nestjs/jwt';
 import { DataSource } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+
+import { encrypt } from './common/crypto.util';
 
 import {
   DbLayerModule,
@@ -99,6 +102,16 @@ export const TENANT_A_TEMPLATE_ID = '33333333-3333-4333-a333-333333333333';
 export const TENANT_B_TEMPLATE_ID = '44444444-4444-4444-a444-444444444444';
 export const TENANT_A_PRIVATE_PUBLISHED_ID = '55555555-5555-4555-a555-555555555555';
 export const TENANT_A_PRIVATE_VERSION_ID = '55555555-5555-4555-a555-555555555556';
+
+// Story B fixtures — LLM providers, models, chains
+export const PROVIDER_CONFIG_ID = '66666666-6666-4666-a666-666666666666';
+export const MODEL_ACTIVE_ID = '77777777-7777-4777-a777-777777777777';
+export const MODEL_INACTIVE_ID = '88888888-8888-4888-a888-888888888888';
+export const CHAIN_DRAFT_ID = '99999999-9999-4999-a999-999999999999';
+
+// Known password for login testing (USER_A)
+export const USER_A_PASSWORD = 'TestPassword123!';
+export const USER_A_EMAIL = 'admin-a@tenant-a.io';
 
 export const TEST_DB_NAME = 'project_bubble_contract_test';
 
@@ -303,11 +316,13 @@ export async function seedContractData(seedDs: DataSource): Promise<void> {
     ON CONFLICT (id) DO NOTHING
   `, [ADMIN_USER_ID, SYSTEM_TENANT_ID]);
 
+  // USER_A gets real bcrypt hash for login testing (CT-101/CT-102)
+  const userAHash = await bcrypt.hash(USER_A_PASSWORD, 10);
   await seedDs.query(`
     INSERT INTO users (id, email, password_hash, role, tenant_id)
-    VALUES ($1, 'admin-a@tenant-a.io', '$2b$10$placeholder', 'customer_admin', $2)
+    VALUES ($1, $2, $3, 'customer_admin', $4)
     ON CONFLICT (id) DO NOTHING
-  `, [USER_A_ID, TENANT_A_ID]);
+  `, [USER_A_ID, USER_A_EMAIL, userAHash, TENANT_A_ID]);
 
   await seedDs.query(`
     INSERT INTO users (id, email, password_hash, role, tenant_id)
@@ -404,5 +419,50 @@ export async function seedContractData(seedDs: DataSource): Promise<void> {
   await seedDs.query(`
     UPDATE workflow_templates SET current_version_id = $1 WHERE id = $2
   `, [TENANT_A_PRIVATE_VERSION_ID, TENANT_A_PRIVATE_PUBLISHED_ID]);
+
+  // ── LLM Provider Config (Story B — CT-301+) ──
+  const encryptionKey = process.env['SETTINGS_ENCRYPTION_KEY'] ||
+    'Y29udHJhY3QtdGVzdC1rZXktMzItYnl0ZXMtbG9uZw==';
+  const encryptedCreds = encrypt(
+    JSON.stringify({ api_key: 'test-mock-api-key-123456' }),
+    encryptionKey,
+  );
+  // RlsSetupService.onModuleInit() already seeds a 'mock' provider (no credentials, random UUID).
+  // We update it to our known ID + encrypted credentials for testing.
+  await seedDs.query(`
+    UPDATE llm_provider_configs
+    SET id = $1, encrypted_credentials = $2, rate_limit_rpm = 15
+    WHERE provider_key = 'mock'
+  `, [PROVIDER_CONFIG_ID, encryptedCreds]);
+
+  // ── LLM Models (Story B — CT-401+) ──
+  await seedDs.query(`
+    INSERT INTO llm_models (id, provider_key, model_id, display_name, context_window, max_output_tokens, is_active)
+    VALUES ($1, 'mock', 'mock-model-active', 'Mock Model Active', 32000, 8192, true)
+    ON CONFLICT (id) DO NOTHING
+  `, [MODEL_ACTIVE_ID]);
+
+  await seedDs.query(`
+    INSERT INTO llm_models (id, provider_key, model_id, display_name, context_window, max_output_tokens, is_active)
+    VALUES ($1, 'mock', 'mock-model-inactive', 'Mock Model Inactive', 16000, 4096, false)
+    ON CONFLICT (id) DO NOTHING
+  `, [MODEL_INACTIVE_ID]);
+
+  // ── Workflow Chain (Story B — CT-501+) ──
+  const chainDefinition = JSON.stringify({
+    metadata: { name: 'Test Chain', description: 'Seeded for contract tests' },
+    steps: [
+      { workflow_id: TEMPLATE_PUBLIC_PUBLISHED_ID, alias: 'step-one' },
+      {
+        workflow_id: TEMPLATE_PUBLIC_PUBLISHED_ID, alias: 'step-two',
+        input_mapping: { raw_data: { from_step: 'step-one', from_output: 'outputs' } },
+      },
+    ],
+  });
+  await seedDs.query(`
+    INSERT INTO workflow_chains (id, tenant_id, name, description, definition, status, visibility, created_by)
+    VALUES ($1, $2, 'Test Draft Chain', 'A draft chain for testing', $3, 'draft', 'public', $4)
+    ON CONFLICT (id) DO NOTHING
+  `, [CHAIN_DRAFT_ID, SYSTEM_TENANT_ID, chainDefinition, ADMIN_USER_ID]);
 }
 
