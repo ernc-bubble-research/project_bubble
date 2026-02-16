@@ -38,6 +38,7 @@ export class WorkflowVersionsService {
       // (b) Verify template exists (defense-in-depth: tenantId in WHERE)
       const template = await manager.findOne(WorkflowTemplateEntity, {
         where: { id: templateId, tenantId },
+        withDeleted: false,
       });
       if (!template) {
         throw new NotFoundException(
@@ -97,6 +98,7 @@ export class WorkflowVersionsService {
       // Verify template exists before listing versions (defense-in-depth: tenantId in WHERE)
       const template = await manager.findOne(WorkflowTemplateEntity, {
         where: { id: templateId, tenantId },
+        withDeleted: false,
       });
       if (!template) {
         throw new NotFoundException(

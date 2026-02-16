@@ -55,6 +55,7 @@ export class WorkflowRunsService {
       async (manager) => {
         const tmpl = await manager.findOne(WorkflowTemplateEntity, {
           where: { id: dto.templateId, tenantId },
+          withDeleted: false,
         });
         if (!tmpl) {
           throw new NotFoundException(

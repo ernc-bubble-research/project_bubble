@@ -70,11 +70,34 @@ describe('TransactionManager [P0]', () => {
       );
     });
 
-    it('[1H.1-UNIT-003] should SET LOCAL app.is_admin when bypassRls is true (bubble_admin)', async () => {
+    it('[1H.1-UNIT-003] should SET LOCAL both current_tenant AND is_admin when bypassRls is true (bubble_admin)', async () => {
+      const callback = jest.fn().mockResolvedValue('result');
+      const adminTenantId = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+
+      const ctx: TenantContext = {
+        tenantId: adminTenantId,
+        bypassRls: true,
+      };
+
+      const result = await tenantContextStorage.run(ctx, () =>
+        txManager.run(callback),
+      );
+
+      expect(result).toBe('result');
+      // Both SET LOCAL calls must be made when context has bypassRls + tenantId
+      expect(mockManager.query).toHaveBeenCalledWith(
+        `SET LOCAL app.current_tenant = '${adminTenantId}'`,
+      );
+      expect(mockManager.query).toHaveBeenCalledWith(
+        `SET LOCAL app.is_admin = 'true'`,
+      );
+    });
+
+    it('[4-FIX-404-UNIT-014] should SET LOCAL only is_admin when bypassRls is true but tenantId is undefined', async () => {
       const callback = jest.fn().mockResolvedValue('result');
 
       const ctx: TenantContext = {
-        tenantId: 'admin-tenant',
+        tenantId: undefined as unknown as string,
         bypassRls: true,
       };
 
@@ -86,7 +109,6 @@ describe('TransactionManager [P0]', () => {
       expect(mockManager.query).toHaveBeenCalledWith(
         `SET LOCAL app.is_admin = 'true'`,
       );
-      // Must NOT set current_tenant when bypassing
       expect(mockManager.query).not.toHaveBeenCalledWith(
         expect.stringContaining('app.current_tenant'),
       );

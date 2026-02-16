@@ -569,6 +569,7 @@ describe('WorkflowTemplatesService [P0]', () => {
       // Rule 2c exception: no tenantId in WHERE
       expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
         where: { id: templateId, status: WorkflowTemplateStatus.PUBLISHED },
+        withDeleted: false,
       });
     });
 
@@ -638,21 +639,20 @@ describe('WorkflowTemplatesService [P0]', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('[4-FIX-A2-UNIT-016] [P0] Given published template with deletedAt set, when findPublishedOne is called, then throws NotFoundException', async () => {
-      // Given — soft-deleted template should not be visible in catalog
-      const deletedTemplate = {
-        ...mockTemplate,
-        status: WorkflowTemplateStatus.PUBLISHED,
-        visibility: WorkflowVisibility.PUBLIC,
-        currentVersionId: versionId,
-        deletedAt: new Date('2026-02-10'),
-      };
-      mockManager.findOne.mockResolvedValueOnce(deletedTemplate);
+    it('[4-FIX-A2-UNIT-016] [P0] Given findPublishedOne is called, then passes withDeleted:false to exclude soft-deleted templates', async () => {
+      // Given — findOne returns null (as it would for a soft-deleted record with withDeleted:false)
+      mockManager.findOne.mockResolvedValueOnce(null);
 
       // When/Then
       await expect(
         service.findPublishedOne(templateId, tenantId),
       ).rejects.toThrow(NotFoundException);
+
+      // Verify withDeleted:false is passed
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, status: WorkflowTemplateStatus.PUBLISHED },
+        withDeleted: false,
+      });
     });
   });
 
@@ -842,6 +842,65 @@ describe('WorkflowTemplatesService [P0]', () => {
       await expect(
         service.update(templateId, tenantId, { status: 'published' }),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('soft-delete exclusion (withDeleted:false)', () => {
+    it('[4-FIX-404-UNIT-001] [P0] findOne passes withDeleted:false', async () => {
+      mockManager.findOne.mockResolvedValueOnce({ ...mockTemplate });
+      await service.findOne(templateId, tenantId);
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, tenantId },
+        withDeleted: false,
+      });
+    });
+
+    it('[4-FIX-404-UNIT-002] [P0] update passes withDeleted:false', async () => {
+      mockManager.findOne.mockResolvedValueOnce({ ...mockTemplate });
+      mockManager.save.mockResolvedValueOnce({ ...mockTemplate });
+      await service.update(templateId, tenantId, { name: 'Updated' });
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, tenantId },
+        withDeleted: false,
+      });
+    });
+
+    it('[4-FIX-404-UNIT-003] [P0] publish passes withDeleted:false', async () => {
+      const publishable = { ...mockTemplate, currentVersionId: versionId };
+      mockManager.findOne.mockResolvedValueOnce(publishable);
+      mockManager.save.mockResolvedValueOnce({ ...publishable, status: WorkflowTemplateStatus.PUBLISHED });
+      await service.publish(templateId, tenantId);
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, tenantId },
+        withDeleted: false,
+      });
+    });
+
+    it('[4-FIX-404-UNIT-004] [P0] rollback passes withDeleted:false', async () => {
+      const published = { ...mockTemplate, status: WorkflowTemplateStatus.PUBLISHED, currentVersionId: versionId };
+      mockManager.findOne
+        .mockResolvedValueOnce(published)     // template lookup
+        .mockResolvedValueOnce(mockVersion);  // version lookup
+      await service.rollback(templateId, tenantId, versionId);
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, tenantId },
+        withDeleted: false,
+      });
+    });
+
+    it('[4-FIX-404-UNIT-005] [P0] softDelete passes withDeleted:false to prevent double-delete', async () => {
+      mockManager.findOne.mockResolvedValueOnce({ ...mockTemplate });
+      mockManager.softDelete.mockResolvedValueOnce({ affected: 1 });
+      await service.softDelete(templateId, tenantId);
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, tenantId },
+        withDeleted: false,
+      });
     });
   });
 });

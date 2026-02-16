@@ -125,6 +125,7 @@ export class WorkflowTemplatesService {
     return this.txManager.run(tenantId, async (manager) => {
       const template = await manager.findOne(WorkflowTemplateEntity, {
         where: { id, tenantId },
+        withDeleted: false,
       });
       if (!template) {
         throw new NotFoundException(
@@ -152,6 +153,7 @@ export class WorkflowTemplatesService {
     return this.txManager.run(tenantId, async (manager) => {
       const template = await manager.findOne(WorkflowTemplateEntity, {
         where: { id, tenantId },
+        withDeleted: false,
       });
       if (!template) {
         throw new NotFoundException(
@@ -196,6 +198,7 @@ export class WorkflowTemplatesService {
     return this.txManager.run(tenantId, async (manager) => {
       const template = await manager.findOne(WorkflowTemplateEntity, {
         where: { id, tenantId },
+        withDeleted: false,
       });
       if (!template) {
         throw new NotFoundException(
@@ -237,6 +240,7 @@ export class WorkflowTemplatesService {
     return this.txManager.run(tenantId, async (manager) => {
       const template = await manager.findOne(WorkflowTemplateEntity, {
         where: { id, tenantId },
+        withDeleted: false,
       });
       if (!template) {
         throw new NotFoundException(
@@ -290,6 +294,7 @@ export class WorkflowTemplatesService {
     return this.txManager.run(tenantId, async (manager) => {
       const template = await manager.findOne(WorkflowTemplateEntity, {
         where: { id, tenantId },
+        withDeleted: false,
       });
       if (!template) {
         throw new NotFoundException(
@@ -337,9 +342,10 @@ export class WorkflowTemplatesService {
       // Rule 2c exception: no tenantId in WHERE — admin-created templates are cross-tenant.
       const template = await manager.findOne(WorkflowTemplateEntity, {
         where: { id, status: WorkflowTemplateStatus.PUBLISHED },
+        withDeleted: false,
       });
 
-      if (!template || template.deletedAt) {
+      if (!template) {
         throw new NotFoundException(
           `Published workflow template with id "${id}" not found`,
         );

@@ -36,7 +36,8 @@ export class TransactionManager {
       if (ctx) {
         if (ctx.bypassRls) {
           bypassRls = true;
-        } else if (ctx.tenantId) {
+        }
+        if (ctx.tenantId) {
           tenantId = ctx.tenantId;
         }
       }
@@ -50,7 +51,8 @@ export class TransactionManager {
           throw new Error(`Invalid tenant ID format: ${tenantId}`);
         }
         await manager.query(`SET LOCAL app.current_tenant = '${tenantId}'`);
-      } else if (bypassRls) {
+      }
+      if (bypassRls) {
         // Admin bypass: set is_admin flag so RLS policies allow through
         await manager.query(`SET LOCAL app.is_admin = 'true'`);
       }

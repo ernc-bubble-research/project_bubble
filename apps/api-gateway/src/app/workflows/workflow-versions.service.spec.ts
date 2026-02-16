@@ -120,6 +120,7 @@ describe('WorkflowVersionsService [P0]', () => {
       );
       expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
         where: { id: templateId, tenantId },
+        withDeleted: false,
       });
     });
 
@@ -203,6 +204,7 @@ describe('WorkflowVersionsService [P0]', () => {
       // Then
       expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
         where: { id: templateId, tenantId },
+        withDeleted: false,
       });
     });
 
@@ -282,6 +284,35 @@ describe('WorkflowVersionsService [P0]', () => {
       // Then
       expect(result.id).toBe('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
       expect(mockManager.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('soft-delete exclusion (withDeleted:false)', () => {
+    it('[4-FIX-404-UNIT-011] [P0] createVersion passes withDeleted:false for template lookup', async () => {
+      mockManager.findOne.mockResolvedValueOnce({ ...mockTemplate });
+      mockQb.getRawOne.mockResolvedValue({ maxVersion: 0 });
+      const newVersion = { ...mockVersion, versionNumber: 1 };
+      mockManager.create.mockReturnValue(newVersion);
+      mockManager.save.mockResolvedValue(newVersion);
+
+      await service.createVersion(templateId, validDefinition, tenantId, userId);
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, tenantId },
+        withDeleted: false,
+      });
+    });
+
+    it('[4-FIX-404-UNIT-012] [P0] findAllByTemplate passes withDeleted:false for template lookup', async () => {
+      mockManager.findOne.mockResolvedValueOnce({ ...mockTemplate });
+      mockManager.find.mockResolvedValueOnce([mockVersion]);
+
+      await service.findAllByTemplate(templateId, tenantId);
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, tenantId },
+        withDeleted: false,
+      });
     });
   });
 });

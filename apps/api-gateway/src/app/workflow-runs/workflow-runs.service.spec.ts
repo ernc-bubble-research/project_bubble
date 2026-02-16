@@ -927,4 +927,24 @@ describe('WorkflowRunsService [P0]', () => {
       );
     });
   });
+
+  describe('soft-delete exclusion (withDeleted:false)', () => {
+    it('[4-FIX-404-UNIT-013] [P0] initiateRun passes withDeleted:false for template lookup', async () => {
+      mockManager.findOne.mockResolvedValueOnce(null); // simulate soft-deleted template
+
+      const dto = {
+        templateId,
+        inputs: {},
+      };
+
+      await expect(
+        service.initiateRun(dto, tenantId, userId, 'customer_admin'),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(
+        expect.anything(), // WorkflowTemplateEntity
+        expect.objectContaining({ withDeleted: false }),
+      );
+    });
+  });
 });

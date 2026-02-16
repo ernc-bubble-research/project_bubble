@@ -221,6 +221,7 @@ describe('WorkflowChainsService [P0]', () => {
       expect(result.id).toBe(chainId);
       expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowChainEntity, {
         where: { id: chainId, tenantId },
+        withDeleted: false,
       });
     });
 
@@ -400,6 +401,77 @@ describe('WorkflowChainsService [P0]', () => {
       await expect(service.publish(chainId, tenantId)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('soft-delete exclusion (withDeleted:false)', () => {
+    it('[4-FIX-404-UNIT-006] [P0] findOne passes withDeleted:false', async () => {
+      mockManager.findOne.mockResolvedValueOnce({ ...mockChain });
+      await service.findOne(chainId, tenantId);
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowChainEntity, {
+        where: { id: chainId, tenantId },
+        withDeleted: false,
+      });
+    });
+
+    it('[4-FIX-404-UNIT-007] [P0] update passes withDeleted:false', async () => {
+      mockManager.findOne.mockResolvedValueOnce({ ...mockChain });
+      mockManager.save.mockResolvedValueOnce({ ...mockChain });
+      await service.update(chainId, tenantId, { name: 'Updated' });
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowChainEntity, {
+        where: { id: chainId, tenantId },
+        withDeleted: false,
+      });
+    });
+
+    it('[4-FIX-404-UNIT-008] [P0] softDelete passes withDeleted:false', async () => {
+      mockManager.findOne.mockResolvedValueOnce({ ...mockChain });
+      mockManager.softDelete.mockResolvedValueOnce({ affected: 1 });
+      await service.softDelete(chainId, tenantId);
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowChainEntity, {
+        where: { id: chainId, tenantId },
+        withDeleted: false,
+      });
+    });
+
+    it('[4-FIX-404-UNIT-009] [P0] publish passes withDeleted:false', async () => {
+      const draftChain = { ...mockChain, status: WorkflowChainStatus.DRAFT };
+      mockManager.findOne
+        .mockResolvedValueOnce(draftChain)                                        // chain lookup
+        .mockResolvedValueOnce({ id: workflowId1, status: WorkflowTemplateStatus.PUBLISHED })  // step1 template
+        .mockResolvedValueOnce({ id: workflowId2, status: WorkflowTemplateStatus.PUBLISHED }); // step2 template
+      mockManager.save.mockResolvedValueOnce({ ...draftChain, status: WorkflowChainStatus.PUBLISHED });
+
+      await service.publish(chainId, tenantId);
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowChainEntity, {
+        where: { id: chainId, tenantId },
+        withDeleted: false,
+      });
+    });
+
+    it('[4-FIX-404-UNIT-010] [P0] validateReferencedWorkflows passes withDeleted:false for template lookups', async () => {
+      const draftChain = { ...mockChain, status: WorkflowChainStatus.DRAFT };
+      mockManager.findOne
+        .mockResolvedValueOnce(draftChain)                                        // chain lookup
+        .mockResolvedValueOnce({ id: workflowId1, status: WorkflowTemplateStatus.PUBLISHED })
+        .mockResolvedValueOnce({ id: workflowId2, status: WorkflowTemplateStatus.PUBLISHED });
+      mockManager.save.mockResolvedValueOnce({ ...draftChain, status: WorkflowChainStatus.PUBLISHED });
+
+      await service.publish(chainId, tenantId);
+
+      // Second and third calls are template lookups in validateReferencedWorkflows
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: workflowId1 },
+        withDeleted: false,
+      });
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: workflowId2 },
+        withDeleted: false,
+      });
     });
   });
 });

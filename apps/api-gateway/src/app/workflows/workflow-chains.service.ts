@@ -114,6 +114,7 @@ export class WorkflowChainsService {
       // Defense-in-depth: include tenantId in WHERE clause
       const chain = await manager.findOne(WorkflowChainEntity, {
         where: { id, tenantId },
+        withDeleted: false,
       });
       if (!chain) {
         throw new NotFoundException(
@@ -134,6 +135,7 @@ export class WorkflowChainsService {
       // Defense-in-depth: include tenantId in WHERE clause
       const chain = await manager.findOne(WorkflowChainEntity, {
         where: { id, tenantId },
+        withDeleted: false,
       });
       if (!chain) {
         throw new NotFoundException(
@@ -185,6 +187,7 @@ export class WorkflowChainsService {
       // Defense-in-depth: include tenantId in WHERE clause
       const chain = await manager.findOne(WorkflowChainEntity, {
         where: { id, tenantId },
+        withDeleted: false,
       });
       if (!chain) {
         throw new NotFoundException(
@@ -234,6 +237,7 @@ export class WorkflowChainsService {
       // Defense-in-depth: include tenantId in WHERE clause
       const chain = await manager.findOne(WorkflowChainEntity, {
         where: { id, tenantId },
+        withDeleted: false,
       });
       if (!chain) {
         throw new NotFoundException(
@@ -285,6 +289,7 @@ export class WorkflowChainsService {
       // We rely on RLS for cross-tenant visibility of public templates
       const template = await manager.findOne(WorkflowTemplateEntity, {
         where: { id: workflowId },
+        withDeleted: false,
       });
 
       if (!template) {

@@ -408,11 +408,12 @@ describe('Integration Wiring — Tier 2 Runtime [P0]', () => {
     });
   });
 
-  it('[MW-1-INTEG-013] [P0] TransactionManager.run() with bypassRls=true sets app.is_admin instead of current_tenant', async () => {
+  it('[MW-1-INTEG-013] [P0] TransactionManager.run() with bypassRls=true sets BOTH app.is_admin AND app.current_tenant', async () => {
     const txManager = module.get(TransactionManager);
+    const adminTenantId = '00000000-0000-0000-0000-000000000000';
 
     const tenantContext: TenantContext = {
-      tenantId: '00000000-0000-0000-0000-000000000000',
+      tenantId: adminTenantId,
       bypassRls: true,
     };
 
@@ -424,11 +425,11 @@ describe('Integration Wiring — Tier 2 Runtime [P0]', () => {
         );
         expect(adminResult[0].is_admin).toBe('true');
 
-        // current_tenant should NOT be set
+        // current_tenant should ALSO be set (fix for if/else if bug)
         const tenantResult = await manager.query(
           `SELECT current_setting('app.current_tenant', true) as tenant`,
         );
-        expect(tenantResult[0].tenant === null || tenantResult[0].tenant === '').toBe(true);
+        expect(tenantResult[0].tenant).toBe(adminTenantId);
       });
     });
   });
