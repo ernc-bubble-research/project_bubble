@@ -4,11 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideAngularModule } from 'lucide-angular';
-import {
+import type {
   WorkflowTemplateResponseDto,
   WorkflowRunResponseDto,
 } from '@project-bubble/shared';
-import {
+import type {
   WorkflowInput,
   WorkflowInputSourceType,
 } from '@project-bubble/shared';

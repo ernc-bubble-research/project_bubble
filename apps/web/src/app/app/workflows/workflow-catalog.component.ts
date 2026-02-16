@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideAngularModule } from 'lucide-angular';
-import { WorkflowTemplateResponseDto } from '@project-bubble/shared';
+import type { WorkflowTemplateResponseDto } from '@project-bubble/shared';
 import { WorkflowCatalogService } from '../../core/services/workflow-catalog.service';
 
 @Component({

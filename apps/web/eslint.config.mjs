@@ -1,4 +1,5 @@
 import nx from '@nx/eslint-plugin';
+import tseslint from 'typescript-eslint';
 import rxjsAngularX from 'eslint-plugin-rxjs-angular-x';
 import baseConfig from '../../eslint.config.mjs';
 
@@ -40,6 +41,32 @@ export default [
           alias: ['takeUntilDestroyed'],
           checkDecorators: ['Component', 'Directive', 'Pipe'],
           checkDestroy: false,
+        },
+      ],
+    },
+  },
+  {
+    // Ban runtime imports from @project-bubble/shared in browser code.
+    // Only @project-bubble/shared/web (runtime) or `import type` (type-only) are safe.
+    // Runtime barrel imports pull class-transformer → Reflect.getMetadata crash in browser.
+    // Spec files excluded: they run in Node/Jest where reflect-metadata is available.
+    files: ['**/*.ts'],
+    ignores: ['**/*.spec.ts'],
+    plugins: {
+      '@typescript-eslint': tseslint.plugin,
+    },
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@project-bubble/shared',
+              message:
+                'Use @project-bubble/shared/web for runtime imports, or `import type` for type-only imports. Runtime imports pull class-transformer into the browser bundle (Reflect.getMetadata crash).',
+              allowTypeImports: true,
+            },
+          ],
         },
       ],
     },
