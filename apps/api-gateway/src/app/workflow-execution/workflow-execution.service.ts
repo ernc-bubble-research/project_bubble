@@ -13,6 +13,11 @@ export interface EnqueueOptions {
   maxConcurrency: number;
 }
 
+const JOB_RETRY_OPTIONS = {
+  attempts: 3,
+  backoff: { type: 'exponential' as const, delay: 1000 },
+};
+
 @Injectable()
 export class WorkflowExecutionService {
   private readonly logger = new Logger(WorkflowExecutionService.name);
@@ -31,6 +36,7 @@ export class WorkflowExecutionService {
     if (!options || options.subjectFiles.length === 0) {
       await this.executionQueue.add('execute-workflow', payload, {
         jobId: runId,
+        ...JOB_RETRY_OPTIONS,
       });
 
       this.logger.log({
@@ -54,6 +60,7 @@ export class WorkflowExecutionService {
 
       await this.executionQueue.add('execute-workflow', batchPayload, {
         jobId: runId,
+        ...JOB_RETRY_OPTIONS,
       });
 
       this.logger.log({
@@ -82,6 +89,7 @@ export class WorkflowExecutionService {
 
       await this.executionQueue.add('execute-workflow', filePayload, {
         jobId,
+        ...JOB_RETRY_OPTIONS,
       });
 
       jobIds.push(jobId);

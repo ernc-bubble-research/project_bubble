@@ -47,7 +47,11 @@ describe('WorkflowExecutionService', () => {
       expect(queue.add).toHaveBeenCalledTimes(1);
       const [jobName, jobData, jobOpts] = queue.add.mock.calls[0];
       expect(jobName).toBe('execute-workflow');
-      expect(jobOpts).toEqual({ jobId: runId });
+      expect(jobOpts).toEqual({
+        jobId: runId,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 1000 },
+      });
       expect(jobData).toBe(payload);
     });
 
@@ -98,7 +102,11 @@ describe('WorkflowExecutionService', () => {
 
       const [jobName, jobData, jobOpts] = queue.add.mock.calls[0];
       expect(jobName).toBe('execute-workflow');
-      expect(jobOpts).toEqual({ jobId: runId });
+      expect(jobOpts).toEqual({
+        jobId: runId,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 1000 },
+      });
       expect(jobData.subjectFiles).toEqual(subjectFiles);
     });
 
@@ -150,7 +158,11 @@ describe('WorkflowExecutionService', () => {
       // Verify each queue.add call used the correct jobId
       for (let i = 0; i < 3; i++) {
         const jobOpts = queue.add.mock.calls[i][2];
-        expect(jobOpts).toEqual({ jobId: `${runId}:file:${i}` });
+        expect(jobOpts).toEqual({
+          jobId: `${runId}:file:${i}`,
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 1000 },
+        });
       }
     });
 

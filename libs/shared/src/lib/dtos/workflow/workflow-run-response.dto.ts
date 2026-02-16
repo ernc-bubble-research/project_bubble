@@ -41,6 +41,9 @@ export class WorkflowRunResponseDto {
   @ApiProperty({ nullable: true, required: false, type: 'array' })
   perFileResults?: PerFileResult[] | null;
 
+  @ApiProperty({ nullable: true, required: false, type: [String] })
+  outputAssetIds?: string[] | null;
+
   @ApiProperty()
   createdAt!: Date;
 }

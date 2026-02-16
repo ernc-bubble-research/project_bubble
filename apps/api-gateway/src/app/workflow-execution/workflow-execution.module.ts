@@ -14,6 +14,7 @@ import { ProviderRegistryModule } from './llm/provider-registry.module';
 import { PromptAssemblyService } from './prompt-assembly.service';
 import { SettingsModule } from '../settings/settings.module';
 import { IngestionModule } from '../ingestion/ingestion.module';
+import { AssetsModule } from '../assets/assets.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { IngestionModule } from '../ingestion/ingestion.module';
     SettingsModule,
     ProviderRegistryModule,
     IngestionModule,
+    AssetsModule,
   ],
   providers: [
     WorkflowExecutionProcessor,

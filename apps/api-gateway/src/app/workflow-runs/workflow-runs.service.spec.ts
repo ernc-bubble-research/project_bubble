@@ -18,12 +18,20 @@ import { PreFlightValidationService } from './pre-flight-validation.service';
 describe('WorkflowRunsService [P0]', () => {
   let service: WorkflowRunsService;
   let txManager: jest.Mocked<TransactionManager>;
-  let assetsService: jest.Mocked<Pick<AssetsService, 'findOne'>>;
+  let assetsService: jest.Mocked<Pick<AssetsService, 'findOne' | 'findEntityById'>>;
   let executionService: jest.Mocked<Pick<WorkflowExecutionService, 'enqueueRun'>>;
   let preFlightService: {
     validateModelAvailability: jest.Mock;
     checkAndDeductCredits: jest.Mock;
     refundCredits: jest.Mock;
+  };
+  let mockQueryBuilder: {
+    where: jest.Mock;
+    andWhere: jest.Mock;
+    orderBy: jest.Mock;
+    take: jest.Mock;
+    skip: jest.Mock;
+    getManyAndCount: jest.Mock;
   };
   let mockManager: {
     findOne: jest.Mock;
@@ -32,6 +40,7 @@ describe('WorkflowRunsService [P0]', () => {
     save: jest.Mock;
     query: jest.Mock;
     update: jest.Mock;
+    createQueryBuilder: jest.Mock;
   };
 
   const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
@@ -120,6 +129,15 @@ describe('WorkflowRunsService [P0]', () => {
   } as WorkflowRunEntity;
 
   beforeEach(() => {
+    mockQueryBuilder = {
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+    };
+
     mockManager = {
       findOne: jest.fn(),
       find: jest.fn(),
@@ -127,6 +145,7 @@ describe('WorkflowRunsService [P0]', () => {
       save: jest.fn(),
       query: jest.fn(),
       update: jest.fn().mockResolvedValue(undefined),
+      createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
     };
 
     txManager = {
@@ -138,6 +157,7 @@ describe('WorkflowRunsService [P0]', () => {
 
     assetsService = {
       findOne: jest.fn().mockResolvedValue({ id: assetId }),
+      findEntityById: jest.fn(),
     };
 
     executionService = {
@@ -945,6 +965,175 @@ describe('WorkflowRunsService [P0]', () => {
       expect(mockManager.findOne).toHaveBeenCalledWith(
         expect.anything(), // WorkflowTemplateEntity
         expect.objectContaining({ withDeleted: false }),
+      );
+    });
+  });
+
+  describe('findAllByTenant', () => {
+    it('[4-5-UNIT-030] returns paginated list of runs scoped to tenantId', async () => {
+      const run1 = { ...mockRunEntity, id: 'run-1' };
+      const run2 = { ...mockRunEntity, id: 'run-2' };
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[run1, run2], 2]);
+
+      const result = await service.findAllByTenant(tenantId, { page: 1, limit: 20 });
+
+      expect(result.data).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(20);
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'run.tenantId = :tenantId',
+        { tenantId },
+      );
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('run.createdAt', 'DESC');
+    });
+
+    it('[4-5-UNIT-031] applies status filter when provided', async () => {
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllByTenant(tenantId, { status: 'completed' });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'run.status = :status',
+        { status: 'completed' },
+      );
+    });
+
+    it('[4-5-UNIT-032] defaults to page 1, limit 20 when not provided', async () => {
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+
+      const result = await service.findAllByTenant(tenantId, {});
+
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(20);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(20);
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
+    });
+
+    it('[4-5-UNIT-033] computes correct offset for page 3, limit 10', async () => {
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllByTenant(tenantId, { page: 3, limit: 10 });
+
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(10);
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(20); // (3-1)*10
+    });
+  });
+
+  describe('findOneByTenant', () => {
+    it('[4-5-UNIT-034] returns run details scoped to tenantId', async () => {
+      mockManager.findOne.mockResolvedValue(mockRunEntity);
+
+      const result = await service.findOneByTenant(runId, tenantId);
+
+      expect(result.id).toBe(runId);
+      expect(result.tenantId).toBe(tenantId);
+      expect(mockManager.findOne).toHaveBeenCalledWith(
+        WorkflowRunEntity,
+        { where: { id: runId, tenantId } },
+      );
+    });
+
+    it('[4-5-UNIT-035] throws NotFoundException when run not found', async () => {
+      mockManager.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.findOneByTenant('nonexistent-id', tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('[4-5-UNIT-036] includes perFileResults and outputAssetIds in response', async () => {
+      const completedRun = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED,
+        perFileResults: [
+          { index: 0, fileName: 'report.pdf', status: 'completed', outputAssetId: 'asset-1' },
+        ],
+        outputAssetIds: ['asset-1'],
+      };
+      mockManager.findOne.mockResolvedValue(completedRun);
+
+      const result = await service.findOneByTenant(runId, tenantId);
+
+      expect(result.perFileResults).toHaveLength(1);
+      expect(result.outputAssetIds).toEqual(['asset-1']);
+    });
+  });
+
+  describe('getOutputFile', () => {
+    const completedRun = {
+      ...mockRunEntity,
+      status: WorkflowRunStatus.COMPLETED,
+      perFileResults: [
+        { index: 0, fileName: 'data.pdf', status: 'completed' as const, outputAssetId: 'out-asset-1' },
+        { index: 1, fileName: 'data2.pdf', status: 'failed' as const, errorMessage: 'Timeout' },
+      ],
+      outputAssetIds: ['out-asset-1'],
+    };
+
+    const mockOutputAsset = {
+      id: 'out-asset-1',
+      tenantId,
+      originalName: 'data-report.md',
+      storagePath: 'uploads/test/data-report.md',
+      mimeType: 'text/markdown',
+      fileSize: 500,
+    };
+
+    it('[4-5-UNIT-037] returns asset and perFileResult for valid completed output', async () => {
+      mockManager.findOne.mockResolvedValue(completedRun);
+      assetsService.findEntityById.mockResolvedValue(mockOutputAsset as never);
+
+      const result = await service.getOutputFile(runId, 0, tenantId);
+
+      expect(result.asset).toEqual(mockOutputAsset);
+      expect(result.perFileResult.index).toBe(0);
+      expect(result.perFileResult.status).toBe('completed');
+      expect(assetsService.findEntityById).toHaveBeenCalledWith('out-asset-1', tenantId);
+    });
+
+    it('[4-5-UNIT-038] throws NotFoundException when run not found', async () => {
+      mockManager.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getOutputFile('nonexistent', 0, tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('[4-5-UNIT-039] throws NotFoundException when fileIndex not found in perFileResults', async () => {
+      mockManager.findOne.mockResolvedValue(completedRun);
+
+      await expect(
+        service.getOutputFile(runId, 99, tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('[4-5-UNIT-040] throws BadRequestException when output file is not completed (failed status)', async () => {
+      mockManager.findOne.mockResolvedValue(completedRun);
+
+      await expect(
+        service.getOutputFile(runId, 1, tenantId), // index 1 is 'failed'
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('[4-5-UNIT-041] throws NotFoundException for empty perFileResults array', async () => {
+      const emptyRun = { ...mockRunEntity, perFileResults: [] };
+      mockManager.findOne.mockResolvedValue(emptyRun);
+
+      await expect(
+        service.getOutputFile(runId, 0, tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('[4-5-UNIT-042] includes tenantId in run lookup (Rule 2c)', async () => {
+      mockManager.findOne.mockResolvedValue(completedRun);
+      assetsService.findEntityById.mockResolvedValue(mockOutputAsset as never);
+
+      await service.getOutputFile(runId, 0, tenantId);
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(
+        WorkflowRunEntity,
+        { where: { id: runId, tenantId } },
       );
     });
   });

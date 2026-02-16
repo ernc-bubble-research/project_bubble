@@ -21,6 +21,7 @@ import {
   WorkflowJobPayload,
   WorkflowJobContextInput,
   WorkflowJobSubjectFile,
+  PerFileResult,
 } from '@project-bubble/shared';
 import { WorkflowDefinition, WorkflowInput, WorkflowProcessingMode } from '@project-bubble/shared';
 import { In } from 'typeorm';
@@ -392,6 +393,94 @@ export class WorkflowRunsService {
     }
   }
 
+  async findAllByTenant(
+    tenantId: string,
+    options: { page?: number; limit?: number; status?: string },
+  ): Promise<{ data: WorkflowRunResponseDto[]; total: number; page: number; limit: number }> {
+    const page = options.page ?? 1;
+    const limit = options.limit ?? 20;
+    const offset = Math.max(0, (page - 1) * limit);
+
+    return this.txManager.run(tenantId, async (manager) => {
+      const qb = manager
+        .createQueryBuilder(WorkflowRunEntity, 'run')
+        .where('run.tenantId = :tenantId', { tenantId })
+        .orderBy('run.createdAt', 'DESC')
+        .take(limit)
+        .skip(offset);
+
+      if (options.status) {
+        qb.andWhere('run.status = :status', { status: options.status });
+      }
+
+      const [entities, total] = await qb.getManyAndCount();
+
+      return {
+        data: entities.map((e) => this.toResponse(e)),
+        total,
+        page,
+        limit,
+      };
+    });
+  }
+
+  async findOneByTenant(
+    id: string,
+    tenantId: string,
+  ): Promise<WorkflowRunResponseDto> {
+    const entity = await this.txManager.run(tenantId, async (manager) => {
+      return manager.findOne(WorkflowRunEntity, {
+        where: { id, tenantId },
+      });
+    });
+
+    if (!entity) {
+      throw new NotFoundException(`Workflow run "${id}" not found`);
+    }
+
+    return this.toResponse(entity);
+  }
+
+  async getOutputFile(
+    runId: string,
+    fileIndex: number,
+    tenantId: string,
+  ): Promise<{ asset: AssetEntity; perFileResult: PerFileResult }> {
+    // Load run with tenant scoping (Rule 2c)
+    const entity = await this.txManager.run(tenantId, async (manager) => {
+      return manager.findOne(WorkflowRunEntity, {
+        where: { id: runId, tenantId },
+      });
+    });
+
+    if (!entity) {
+      throw new NotFoundException(`Workflow run "${runId}" not found`);
+    }
+
+    // Find the per-file result for the requested index
+    const perFileResults: PerFileResult[] = entity.perFileResults ?? [];
+    const result = perFileResults.find((r) => r.index === fileIndex);
+    if (!result) {
+      throw new NotFoundException(
+        `Output at file index ${fileIndex} not found in workflow run "${runId}"`,
+      );
+    }
+
+    if (result.status !== 'completed' || !result.outputAssetId) {
+      throw new BadRequestException(
+        `Output at file index ${fileIndex} is not available (status: ${result.status})`,
+      );
+    }
+
+    // Load the output asset (tenant-scoped via findEntityById)
+    const asset = await this.assetsService.findEntityById(
+      result.outputAssetId,
+      tenantId,
+    );
+
+    return { asset, perFileResult: result };
+  }
+
   private toResponse(entity: WorkflowRunEntity): WorkflowRunResponseDto {
     const dto = new WorkflowRunResponseDto();
     dto.id = entity.id;
@@ -407,6 +496,7 @@ export class WorkflowRunsService {
     dto.completedJobs = entity.completedJobs;
     dto.failedJobs = entity.failedJobs;
     dto.perFileResults = entity.perFileResults;
+    dto.outputAssetIds = entity.outputAssetIds;
     dto.createdAt = entity.createdAt;
     return dto;
   }

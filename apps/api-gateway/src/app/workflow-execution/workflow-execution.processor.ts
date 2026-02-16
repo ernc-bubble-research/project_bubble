@@ -6,10 +6,13 @@ import {
   WorkflowRunEntity,
   WorkflowRunStatus,
 } from '@project-bubble/db-layer';
-import { WorkflowJobPayload, PerFileResult } from '@project-bubble/shared';
+import { WorkflowJobPayload, PerFileResult, WorkflowOutputFormat } from '@project-bubble/shared';
 import { PromptAssemblyService } from './prompt-assembly.service';
 import { LlmProviderFactory } from './llm/llm-provider.factory';
 import { mergeGenerationParams } from './llm/generation-params.util';
+import { validateLlmOutput } from './output-sanity-check.util';
+import { generateOutputFilename } from './output-filename.util';
+import { AssetsService } from '../assets/assets.service';
 
 /** Detect fan-out job by `:file:` segment in jobId */
 function isFanOutJob(jobId: string | undefined): boolean {
@@ -27,6 +30,11 @@ interface CompletionCounters {
   failed_jobs: number;
   total_jobs: number;
 }
+
+const FORMAT_MIME_MAP: Record<WorkflowOutputFormat, string> = {
+  markdown: 'text/markdown',
+  json: 'application/json',
+};
 
 /**
  * Parse the result of an UPDATE ... RETURNING query executed via EntityManager.query().
@@ -94,6 +102,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     private readonly dlqQueue: Queue,
     private readonly promptAssembly: PromptAssemblyService,
     private readonly llmProviderFactory: LlmProviderFactory,
+    private readonly assetsService: AssetsService,
   ) {
     super();
   }
@@ -123,7 +132,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
 
     // Atomic: load entity, check status guards, update to RUNNING — single transaction
     const run = await this.txManager.run(tenantId, async (manager) => {
-      const entity = await manager.findOne(WorkflowRunEntity, { where: { id: runId } });
+      const entity = await manager.findOne(WorkflowRunEntity, { where: { id: runId, tenantId } });
 
       if (!entity) {
         throw new Error(`WorkflowRunEntity not found: ${runId}`);
@@ -152,7 +161,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
 
       // Only transition to RUNNING if currently QUEUED (not already RUNNING from another fan-out job)
       if (entity.status === WorkflowRunStatus.QUEUED) {
-        await manager.update(WorkflowRunEntity, { id: runId }, {
+        await manager.update(WorkflowRunEntity, { id: runId, tenantId }, {
           status: WorkflowRunStatus.RUNNING,
           startedAt,
         });
@@ -170,6 +179,19 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         tenantId,
       });
       return;
+    }
+
+    // Write intermediate 'processing' status for fan-out jobs (granular per-file tracking)
+    if (fanOut) {
+      const fileIndex = extractFileIndex(job.id!);
+      const fileName = job.data.subjectFile?.originalName ?? `file-${fileIndex}`;
+      const maxRetries = job.opts?.attempts ?? 3;
+      const attemptNumber = job.attemptsMade;
+
+      await this.writePerFileStatus(tenantId, runId, fileIndex, fileName,
+        attemptNumber > 0 ? 'retrying' : 'processing',
+        { retryAttempt: attemptNumber, maxRetries },
+      );
     }
 
     // Step 1: Assemble the prompt from template + inputs
@@ -207,22 +229,52 @@ export class WorkflowExecutionProcessor extends WorkerHost {
       outputTokens: llmResult.tokenUsage.outputTokens,
     });
 
-    // Step 4: Store results — behavioral split based on fan-out vs single-job
+    // Step 5: Store results — behavioral split based on fan-out vs single-job
+    // Each path runs sanity check → persists output as AssetEntity → records result.
     if (fanOut) {
-      await this.recordFanOutSuccess(job, assemblyResult, llmResult, model);
+      await this.recordFanOutSuccess(job, assemblyResult, llmResult, model, run.startedBy);
     } else {
-      // Single-job run (batch or context-only): write to entity columns directly
+      // Sanity check for single-job
+      const sanityResult = validateLlmOutput(
+        llmResult.text,
+        job.data.definition.execution.max_output_tokens,
+      );
+      if (!sanityResult.valid) {
+        throw new Error(`Output sanity check failed: ${sanityResult.reason}`);
+      }
+      // Single-job run (batch or context-only): persist output + update entity
+      const { definition } = job.data;
+      const outputFormat = definition.output.format;
+      const mimeType = FORMAT_MIME_MAP[outputFormat] ?? 'text/markdown';
+      const outputFilename = generateOutputFilename(
+        definition.output.filename_template,
+        undefined, // no subject file in single-job
+        0,
+      );
+
+      const asset = await this.assetsService.createFromBuffer(
+        Buffer.from(llmResult.text, 'utf-8'),
+        {
+          tenantId,
+          filename: outputFilename,
+          mimeType,
+          sourceType: 'workflow_output',
+          workflowRunId: runId,
+          uploadedBy: run.startedBy,
+        },
+      );
+
       const completedAt = new Date();
       const durationMs = completedAt.getTime() - startedAt.getTime();
 
       await this.txManager.run(tenantId, async (manager) => {
-        await manager.update(WorkflowRunEntity, { id: runId }, {
+        await manager.update(WorkflowRunEntity, { id: runId, tenantId }, {
           status: WorkflowRunStatus.COMPLETED,
           assembledPrompt: assemblyResult.prompt,
-          rawLlmResponse: llmResult.text,
           tokenUsage: llmResult.tokenUsage,
           modelId: model.id,
           validationWarnings: assemblyResult.warnings.length > 0 ? assemblyResult.warnings : null,
+          outputAssetIds: [asset.id],
           completedAt,
           durationMs,
         });
@@ -234,12 +286,14 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         runId,
         tenantId,
         durationMs,
+        outputAssetId: asset.id,
       });
     }
   }
 
   /**
    * Record a successful fan-out job result and check run completion.
+   * Runs sanity check → persists output as AssetEntity → records result.
    * Uses atomic RETURNING clause to prevent race conditions.
    */
   private async recordFanOutSuccess(
@@ -247,10 +301,44 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     assemblyResult: { prompt: string; warnings: string[] },
     llmResult: { text: string; tokenUsage: { inputTokens: number; outputTokens: number; totalTokens: number } },
     model: { id: string; modelId: string },
+    startedBy: string,
   ): Promise<void> {
-    const { runId, tenantId } = job.data;
+    const { runId, tenantId, definition } = job.data;
     const fileIndex = extractFileIndex(job.id!);
     const fileName = job.data.subjectFile?.originalName ?? `file-${fileIndex}`;
+    const maxRetries = job.opts?.attempts ?? 3;
+
+    // Sanity check: did we get usable output?
+    const sanityResult = validateLlmOutput(
+      llmResult.text,
+      definition.execution.max_output_tokens,
+    );
+
+    if (!sanityResult.valid) {
+      // Sanity check failed — throw to trigger BullMQ retry
+      throw new Error(`Output sanity check failed: ${sanityResult.reason}`);
+    }
+
+    // Persist output as AssetEntity
+    const outputFormat = definition.output.format;
+    const mimeType = FORMAT_MIME_MAP[outputFormat] ?? 'text/markdown';
+    const outputFilename = generateOutputFilename(
+      definition.output.filename_template,
+      job.data.subjectFile?.originalName,
+      fileIndex,
+    );
+
+    const asset = await this.assetsService.createFromBuffer(
+      Buffer.from(llmResult.text, 'utf-8'),
+      {
+        tenantId,
+        filename: outputFilename,
+        mimeType,
+        sourceType: 'workflow_output',
+        workflowRunId: runId,
+        uploadedBy: startedBy,
+      },
+    );
 
     const perFileResult: PerFileResult = {
       index: fileIndex,
@@ -259,16 +347,31 @@ export class WorkflowExecutionProcessor extends WorkerHost {
       assembledPrompt: assemblyResult.prompt,
       rawLlmResponse: llmResult.text,
       tokenUsage: llmResult.tokenUsage,
+      outputAssetId: asset.id,
+      retryAttempt: job.attemptsMade,
+      maxRetries,
     };
 
-    // Atomic: append per-file result + increment completed_jobs + RETURNING
+    // Atomic: upsert per-file result (replace by index) + increment completed_jobs + append outputAssetId + RETURNING
     const counters = await this.txManager.run(tenantId, async (manager) => {
-      // Append to perFileResults JSONB array
+      // Remove existing entry for this index (from intermediate status writes) and append final result
       await manager.query(
         `UPDATE workflow_runs
-         SET per_file_results = COALESCE(per_file_results, '[]'::jsonb) || $1::jsonb
-         WHERE id = $2`,
-        [JSON.stringify(perFileResult), runId],
+         SET per_file_results = (
+           SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+           FROM jsonb_array_elements(COALESCE(per_file_results, '[]'::jsonb)) AS elem
+           WHERE (elem->>'index')::int != $1
+         ) || $2::jsonb
+         WHERE id = $3 AND tenant_id = $4`,
+        [fileIndex, JSON.stringify(perFileResult), runId, tenantId],
+      );
+
+      // Append output asset ID to outputAssetIds array
+      await manager.query(
+        `UPDATE workflow_runs
+         SET output_asset_ids = array_append(COALESCE(output_asset_ids, ARRAY[]::uuid[]), $1::uuid)
+         WHERE id = $2 AND tenant_id = $3`,
+        [asset.id, runId, tenantId],
       );
 
       // Atomic increment + read with RETURNING
@@ -277,9 +380,9 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         `UPDATE workflow_runs
          SET completed_jobs = COALESCE(completed_jobs, 0) + 1,
              model_id = $2
-         WHERE id = $1
+         WHERE id = $1 AND tenant_id = $3
          RETURNING completed_jobs, failed_jobs, total_jobs`,
-        [runId, model.id],
+        [runId, model.id, tenantId],
       );
 
       return parseUpdateReturningRow<CompletionCounters>(result, [
@@ -377,7 +480,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         }
       }
 
-      await manager.update(WorkflowRunEntity, { id: runId }, {
+      await manager.update(WorkflowRunEntity, { id: runId, tenantId }, {
         status: finalStatus,
         tokenUsage: aggregatedTokenUsage,
         completedAt,
@@ -395,6 +498,42 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         totalJobs: counters.total_jobs,
         durationMs,
       });
+    });
+  }
+
+  /**
+   * Write intermediate per-file status for granular progress tracking.
+   * Uses JSONB array update to upsert by file index — if a PerFileResult for this index
+   * already exists (from a previous attempt), it is replaced. Otherwise, a new entry is appended.
+   */
+  private async writePerFileStatus(
+    tenantId: string,
+    runId: string,
+    fileIndex: number,
+    fileName: string,
+    status: 'pending' | 'processing' | 'retrying',
+    extra?: { retryAttempt?: number; maxRetries?: number },
+  ): Promise<void> {
+    const partialResult: Partial<PerFileResult> = {
+      index: fileIndex,
+      fileName,
+      status,
+      retryAttempt: extra?.retryAttempt,
+      maxRetries: extra?.maxRetries,
+    };
+
+    // Remove existing entry for this index (if retrying) and append updated status
+    await this.txManager.run(tenantId, async (manager) => {
+      await manager.query(
+        `UPDATE workflow_runs
+         SET per_file_results = (
+           SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+           FROM jsonb_array_elements(COALESCE(per_file_results, '[]'::jsonb)) AS elem
+           WHERE (elem->>'index')::int != $1
+         ) || $2::jsonb
+         WHERE id = $3 AND tenant_id = $4`,
+        [fileIndex, JSON.stringify(partialResult), runId, tenantId],
+      );
     });
   }
 
@@ -431,6 +570,26 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         attemptsMade,
         fanOut,
       });
+
+      // Write 'retrying' status for fan-out jobs (granular per-file tracking)
+      if (fanOut) {
+        try {
+          const fileIndex = extractFileIndex(job.id!);
+          const fileName = job.data.subjectFile?.originalName ?? `file-${fileIndex}`;
+          await this.writePerFileStatus(tenantId, runId, fileIndex, fileName, 'retrying', {
+            retryAttempt: attemptsMade,
+            maxRetries: maxAttempts,
+          });
+        } catch (statusError) {
+          this.logger.error({
+            message: 'Failed to write retrying status',
+            jobId: job.id,
+            runId,
+            error: statusError instanceof Error ? statusError.message : String(statusError),
+          });
+        }
+      }
+
       return;
     }
 
@@ -490,29 +649,36 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         ? error.message.substring(0, 200) + '...'
         : error.message;
 
+      const maxRetries = job.opts?.attempts ?? 3;
       const perFileResult: PerFileResult = {
         index: fileIndex,
         fileName,
         status: 'failed',
         errorMessage: errorSummary,
+        retryAttempt: job.attemptsMade,
+        maxRetries,
       };
 
-      // Atomic: append per-file result + increment failed_jobs + RETURNING
+      // Atomic: upsert per-file result (replace by index) + increment failed_jobs + RETURNING
       const counters = await this.txManager.run(tenantId, async (manager) => {
         await manager.query(
           `UPDATE workflow_runs
-           SET per_file_results = COALESCE(per_file_results, '[]'::jsonb) || $1::jsonb
-           WHERE id = $2`,
-          [JSON.stringify(perFileResult), runId],
+           SET per_file_results = (
+             SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+             FROM jsonb_array_elements(COALESCE(per_file_results, '[]'::jsonb)) AS elem
+             WHERE (elem->>'index')::int != $1
+           ) || $2::jsonb
+           WHERE id = $3 AND tenant_id = $4`,
+          [fileIndex, JSON.stringify(perFileResult), runId, tenantId],
         );
 
         // UPDATE RETURNING via EntityManager.query() returns [[rows], affectedCount]
         const result = await manager.query(
           `UPDATE workflow_runs
            SET failed_jobs = COALESCE(failed_jobs, 0) + 1
-           WHERE id = $1
+           WHERE id = $1 AND tenant_id = $2
            RETURNING completed_jobs, failed_jobs, total_jobs`,
-          [runId],
+          [runId, tenantId],
         );
 
         return parseUpdateReturningRow<CompletionCounters>(result, [
@@ -585,7 +751,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
         const purchasedToRefund = run.creditsFromPurchased;
 
         // Zero all credit fields on the run + set FAILED
-        await manager.update(WorkflowRunEntity, { id: runId }, {
+        await manager.update(WorkflowRunEntity, { id: runId, tenantId }, {
           status: WorkflowRunStatus.FAILED,
           errorMessage: `Workflow execution failed after ${attemptsMade} attempts: ${errorSummary}`,
           creditsConsumed: 0,

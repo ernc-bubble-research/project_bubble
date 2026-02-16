@@ -107,6 +107,78 @@ export class AssetsService {
     return this.toResponse(asset);
   }
 
+  /**
+   * Create an asset from a raw buffer (no Multer dependency).
+   * Used by the workflow processor to persist LLM output as downloadable files.
+   */
+  async createFromBuffer(
+    buffer: Buffer,
+    metadata: {
+      tenantId: string;
+      filename: string;
+      mimeType: string;
+      sourceType: string;
+      workflowRunId: string;
+      uploadedBy: string;
+    },
+  ): Promise<AssetEntity> {
+    const sha256Hash = createHash('sha256').update(buffer).digest('hex');
+
+    // Write file to disk
+    const fileUuid = uuidv4();
+    const tenantDir = join(UPLOADS_ROOT, metadata.tenantId);
+    await mkdir(tenantDir, { recursive: true });
+    const safeName = metadata.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storageName = `${fileUuid}-${safeName}`;
+    const storagePath = join(tenantDir, storageName);
+    await writeFile(storagePath, buffer);
+
+    let asset: AssetEntity;
+    try {
+      asset = await this.txManager.run(metadata.tenantId, async (manager) => {
+        const entity = manager.create(AssetEntity, {
+          tenantId: metadata.tenantId,
+          folderId: null,
+          originalName: metadata.filename,
+          storagePath,
+          mimeType: metadata.mimeType,
+          fileSize: buffer.length,
+          sha256Hash,
+          isIndexed: false,
+          status: AssetStatus.ACTIVE,
+          sourceType: metadata.sourceType,
+          workflowRunId: metadata.workflowRunId,
+          uploadedBy: metadata.uploadedBy,
+        });
+        return manager.save(AssetEntity, entity);
+      });
+    } catch (error) {
+      // Clean up orphan file if DB save fails
+      try {
+        await unlink(storagePath);
+      } catch {
+        this.logger.warn({
+          message: 'Failed to clean up orphan file after DB save failure',
+          storagePath,
+          tenantId: metadata.tenantId,
+        });
+      }
+      throw error;
+    }
+
+    this.logger.log({
+      message: 'Asset created from buffer',
+      id: asset.id,
+      filename: asset.originalName,
+      size: asset.fileSize,
+      sourceType: metadata.sourceType,
+      workflowRunId: metadata.workflowRunId,
+      tenantId: metadata.tenantId,
+    });
+
+    return asset;
+  }
+
   async findAll(
     tenantId: string,
     options?: {
@@ -143,6 +215,10 @@ export class AssetsService {
   async findOne(id: string, tenantId: string): Promise<AssetResponseDto> {
     const asset = await this.findEntity(id, tenantId);
     return this.toResponse(asset);
+  }
+
+  async findEntityById(id: string, tenantId: string): Promise<AssetEntity> {
+    return this.findEntity(id, tenantId);
   }
 
   private async findEntity(id: string, tenantId: string): Promise<AssetEntity> {

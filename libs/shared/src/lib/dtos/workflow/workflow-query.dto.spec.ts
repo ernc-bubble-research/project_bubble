@@ -1,6 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { ListWorkflowTemplatesQueryDto } from './list-workflow-templates-query.dto';
+import { ListWorkflowRunsQueryDto } from './list-workflow-runs-query.dto';
 import { CreateWorkflowVersionBodyDto } from './create-workflow-version-body.dto';
 import { UpdateLlmModelDto } from './update-llm-model.dto';
 import { PublishWorkflowTemplateDto } from './publish-workflow-template.dto';
@@ -124,6 +125,48 @@ describe('Workflow Query & Body DTOs [P1]', () => {
 
       // Then
       expect(errors).toHaveLength(0);
+    });
+  });
+
+  describe('ListWorkflowRunsQueryDto', () => {
+    it('[4-5-UNIT-043] Given valid query with all fields, when validated, then passes', async () => {
+      const dto = plainToInstance(ListWorkflowRunsQueryDto, {
+        page: 2,
+        limit: 50,
+        status: 'completed',
+      });
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('[4-5-UNIT-044] Given empty query (all defaults), when validated, then passes', async () => {
+      const dto = plainToInstance(ListWorkflowRunsQueryDto, {});
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('[4-5-UNIT-045] Given page < 1, when validated, then returns error', async () => {
+      const dto = plainToInstance(ListWorkflowRunsQueryDto, { page: 0 });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'page')).toBe(true);
+    });
+
+    it('[4-5-UNIT-046] Given limit > 100, when validated, then returns error', async () => {
+      const dto = plainToInstance(ListWorkflowRunsQueryDto, { limit: 101 });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'limit')).toBe(true);
+    });
+
+    it('[4-5-UNIT-047] Given invalid status enum, when validated, then returns error', async () => {
+      const dto = plainToInstance(ListWorkflowRunsQueryDto, { status: 'invalid_status' });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'status')).toBe(true);
+    });
+
+    it('[4-5-UNIT-048] Given non-integer page, when validated, then returns error', async () => {
+      const dto = plainToInstance(ListWorkflowRunsQueryDto, { page: 1.5 });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'page')).toBe(true);
     });
   });
 

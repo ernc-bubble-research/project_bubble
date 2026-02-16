@@ -22,11 +22,14 @@ export interface WorkflowJobSubjectFile {
 export interface PerFileResult {
   index: number;
   fileName: string;
-  status: 'completed' | 'failed';
+  status: 'pending' | 'processing' | 'retrying' | 'completed' | 'failed';
   assembledPrompt?: string;
   rawLlmResponse?: string;
   errorMessage?: string;
   tokenUsage?: { inputTokens: number; outputTokens: number; totalTokens: number };
+  outputAssetId?: string;
+  retryAttempt?: number;
+  maxRetries?: number;
 }
 
 export interface WorkflowJobPayload {

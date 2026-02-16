@@ -12,6 +12,7 @@ import { EntityManager } from 'typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PromptAssemblyService } from './prompt-assembly.service';
 import { LlmProviderFactory } from './llm/llm-provider.factory';
+import { AssetsService } from '../assets/assets.service';
 
 describe('WorkflowExecutionProcessor', () => {
   let processor: WorkflowExecutionProcessor;
@@ -21,6 +22,7 @@ describe('WorkflowExecutionProcessor', () => {
   let promptAssembly: { assemble: jest.Mock };
   let llmProviderFactory: { getProvider: jest.Mock };
   let mockLlmProvider: { generate: jest.Mock };
+  let assetsService: { createFromBuffer: jest.Mock };
 
   const tenantId = 'aaaaaaaa-0000-0000-0000-000000000001';
   const runId = 'bbbbbbbb-0000-0000-0000-000000000001';
@@ -97,8 +99,22 @@ describe('WorkflowExecutionProcessor', () => {
 
     mockLlmProvider = {
       generate: jest.fn().mockResolvedValue({
-        text: 'LLM response text',
+        text: 'This is a valid LLM response that is long enough to pass the sanity check minimum length requirement of fifty characters.',
         tokenUsage: { inputTokens: 50, outputTokens: 100, totalTokens: 150 },
+      }),
+    };
+
+    assetsService = {
+      createFromBuffer: jest.fn().mockResolvedValue({
+        id: 'asset-0000-0000-0000-000000000001',
+        tenantId,
+        originalName: 'output-00.md',
+        storagePath: 'uploads/test/output.md',
+        mimeType: 'text/markdown',
+        fileSize: 100,
+        sha256Hash: 'abc123',
+        sourceType: 'workflow_output',
+        workflowRunId: runId,
       }),
     };
 
@@ -128,6 +144,7 @@ describe('WorkflowExecutionProcessor', () => {
         { provide: getQueueToken('workflow-execution-dlq'), useValue: dlqQueue },
         { provide: PromptAssemblyService, useValue: promptAssembly },
         { provide: LlmProviderFactory, useValue: llmProviderFactory },
+        { provide: AssetsService, useValue: assetsService },
       ],
     }).compile();
 
@@ -144,7 +161,7 @@ describe('WorkflowExecutionProcessor', () => {
 
       const firstUpdate = mockManager.update.mock.calls[0];
       expect(firstUpdate[0]).toBe(WorkflowRunEntity);
-      expect(firstUpdate[1]).toEqual({ id: runId });
+      expect(firstUpdate[1]).toEqual({ id: runId, tenantId });
       expect(firstUpdate[2]).toMatchObject({ status: WorkflowRunStatus.RUNNING });
 
       const secondUpdate = mockManager.update.mock.calls[1];
@@ -254,21 +271,24 @@ describe('WorkflowExecutionProcessor', () => {
       );
     });
 
-    // [4.2-UNIT-048] Stores LLM results on entity
-    it('should store assembledPrompt, rawLlmResponse, tokenUsage, modelId', async () => {
+    // [4.2-UNIT-048] Stores LLM results on entity (rawLlmResponse removed per 4-5, output persisted as AssetEntity)
+    it('should store assembledPrompt, tokenUsage, modelId, outputAssetIds', async () => {
       mockManager.findOne.mockResolvedValue(makeRun());
 
       await processor.process(makeJob());
 
       const completedUpdate = mockManager.update.mock.calls[1][2] as Partial<WorkflowRunEntity>;
       expect(completedUpdate.assembledPrompt).toBe('Assembled prompt text');
-      expect(completedUpdate.rawLlmResponse).toBe('LLM response text');
       expect(completedUpdate.tokenUsage).toEqual({
         inputTokens: 50,
         outputTokens: 100,
         totalTokens: 150,
       });
       expect(completedUpdate.modelId).toBe(modelUuid);
+      expect(completedUpdate.outputAssetIds).toEqual(['asset-0000-0000-0000-000000000001']);
+      // rawLlmResponse no longer stored on entity — output persisted as AssetEntity
+      expect(completedUpdate).not.toHaveProperty('rawLlmResponse');
+      expect(assetsService.createFromBuffer).toHaveBeenCalledTimes(1);
     });
 
     // [4.2-UNIT-049] Stores validation warnings when present
@@ -367,6 +387,36 @@ describe('WorkflowExecutionProcessor', () => {
       await expect(processor.process(makeJob())).rejects.toThrow(
         'LLM API timeout',
       );
+    });
+
+    // [4-5-UNIT-050] M3-2: sanity check failure in fan-out throws for BullMQ retry
+    it('should throw when LLM response fails sanity check in fan-out path', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
+      // Return a too-short response (below 50 char minimum)
+      mockLlmProvider.generate.mockResolvedValue({
+        text: 'Too short',
+        tokenUsage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+      });
+
+      const fanOutJob = makeJob({
+        id: `${runId}:file:0`,
+        data: { ...basePayload, subjectFile: { originalName: 'doc.pdf', storagePath: '/uploads/doc.pdf', assetId: 'asset-1' } },
+        attemptsMade: 0,
+      });
+
+      await expect(processor.process(fanOutJob)).rejects.toThrow(
+        /sanity check failed/i,
+      );
+      // Asset should NOT have been created
+      expect(assetsService.createFromBuffer).not.toHaveBeenCalled();
+    });
+
+    // [4-5-UNIT-051] M3-3: createFromBuffer error propagates for BullMQ retry
+    it('should propagate error when createFromBuffer fails (single-job)', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun());
+      assetsService.createFromBuffer.mockRejectedValue(new Error('Disk full'));
+
+      await expect(processor.process(makeJob())).rejects.toThrow('Disk full');
     });
   });
 
@@ -585,7 +635,7 @@ describe('WorkflowExecutionProcessor', () => {
 
       const updateCall = mockManager.update.mock.calls[0];
       expect(updateCall[0]).toBe(WorkflowRunEntity);
-      expect(updateCall[1]).toEqual({ id: runId });
+      expect(updateCall[1]).toEqual({ id: runId, tenantId });
       expect(updateCall[2]).toMatchObject({
         status: WorkflowRunStatus.FAILED,
         creditsConsumed: 0,
@@ -670,22 +720,30 @@ describe('WorkflowExecutionProcessor', () => {
       subjectFile: { originalName: 'report.pdf', storagePath: '/uploads/report.pdf', assetId: 'asset-1' },
     };
 
-    it('[4.3-UNIT-016] fan-out job writes PerFileResult via JSONB append', async () => {
+    it('[4.3-UNIT-016] fan-out job writes intermediate processing status then completed PerFileResult via JSONB upsert', async () => {
       mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
       mockManager.query.mockResolvedValue([[{ completed_jobs: 1, failed_jobs: 0, total_jobs: 3 }], 1]);
 
-      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
+      await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload, attemptsMade: 0 }));
 
-      // First query = JSONB append for per-file result
-      const appendCall = mockManager.query.mock.calls[0];
+      // First query = intermediate 'processing' status write
+      const processingCall = mockManager.query.mock.calls[0];
+      expect(processingCall[0]).toContain('per_file_results');
+      const processingResult = JSON.parse(processingCall[1][1]);
+      expect(processingResult.status).toBe('processing');
+      expect(processingResult.index).toBe(0);
+
+      // Second query = upsert completed PerFileResult (replaces processing entry by index)
+      const appendCall = mockManager.query.mock.calls[1];
       expect(appendCall[0]).toContain('per_file_results');
       expect(appendCall[0]).toContain('COALESCE');
-      const parsedResult: PerFileResult = JSON.parse(appendCall[1][0]);
+      const parsedResult: PerFileResult = JSON.parse(appendCall[1][1]);
       expect(parsedResult.index).toBe(0);
       expect(parsedResult.fileName).toBe('report.pdf');
       expect(parsedResult.status).toBe('completed');
       expect(parsedResult.assembledPrompt).toBe('Assembled prompt text');
-      expect(parsedResult.rawLlmResponse).toBe('LLM response text');
+      expect(parsedResult.rawLlmResponse).toContain('valid LLM response');
+      expect(parsedResult.outputAssetId).toBe('asset-0000-0000-0000-000000000001');
     });
 
     it('[4.3-UNIT-017] fan-out job atomically increments completed_jobs with RETURNING', async () => {
@@ -694,8 +752,8 @@ describe('WorkflowExecutionProcessor', () => {
 
       await processor.process(makeJob({ id: fanOutJobId, data: fanOutPayload }));
 
-      // Second query = atomic increment with RETURNING
-      const incrementCall = mockManager.query.mock.calls[1];
+      // Query order: [0] processing status, [1] upsert perFileResult, [2] append outputAssetId, [3] increment
+      const incrementCall = mockManager.query.mock.calls[3];
       expect(incrementCall[0]).toContain('completed_jobs = COALESCE(completed_jobs, 0) + 1');
       expect(incrementCall[0]).toContain('RETURNING');
     });
@@ -714,16 +772,19 @@ describe('WorkflowExecutionProcessor', () => {
       expect(completedUpdates).toHaveLength(0);
     });
 
-    it('[4.3-UNIT-019] single-job (non-fan-out) writes directly to entity columns', async () => {
+    it('[4.3-UNIT-019] single-job (non-fan-out) writes directly to entity columns with output asset', async () => {
       mockManager.findOne.mockResolvedValue(makeRun({ status: WorkflowRunStatus.QUEUED }));
 
       await processor.process(makeJob()); // default jobId = runId (no :file: segment)
 
-      // Should have called manager.update with COMPLETED + assembledPrompt + rawLlmResponse
+      // Should have called manager.update with COMPLETED + assembledPrompt + outputAssetIds (no rawLlmResponse)
       const completedUpdate = mockManager.update.mock.calls[1][2] as Partial<WorkflowRunEntity>;
       expect(completedUpdate.status).toBe(WorkflowRunStatus.COMPLETED);
       expect(completedUpdate.assembledPrompt).toBe('Assembled prompt text');
-      expect(completedUpdate.rawLlmResponse).toBe('LLM response text');
+      expect(completedUpdate.outputAssetIds).toEqual(['asset-0000-0000-0000-000000000001']);
+      expect(completedUpdate).not.toHaveProperty('rawLlmResponse');
+      // createFromBuffer called for output persistence
+      expect(assetsService.createFromBuffer).toHaveBeenCalledTimes(1);
       // No raw query calls for single-job mode
       expect(mockManager.query).not.toHaveBeenCalled();
     });
@@ -880,21 +941,23 @@ describe('WorkflowExecutionProcessor', () => {
         attemptsMade: 3,
       });
 
-      // Counter: not last job
-      mockManager.query.mockResolvedValue([{ completed_jobs: 1, failed_jobs: 1, total_jobs: 3 }]);
+      // Counter: not last job — format must be [[rows], affectedCount] for parseUpdateReturningRow
+      mockManager.query.mockResolvedValue([[{ completed_jobs: 1, failed_jobs: 1, total_jobs: 3 }], 1]);
 
       await processor.onFailed(fanOutJob, error);
 
       // DLQ should still be called
       expect(dlqQueue.add).toHaveBeenCalledTimes(1);
 
-      // JSONB append for error PerFileResult
+      // JSONB upsert-by-index for error PerFileResult (args: [fileIndex, json, runId])
       const appendCall = mockManager.query.mock.calls[0];
       expect(appendCall[0]).toContain('per_file_results');
-      const parsedResult: PerFileResult = JSON.parse(appendCall[1][0]);
+      const parsedResult: PerFileResult = JSON.parse(appendCall[1][1]);
       expect(parsedResult.index).toBe(1);
       expect(parsedResult.status).toBe('failed');
       expect(parsedResult.errorMessage).toContain('LLM API timeout');
+      expect(parsedResult.retryAttempt).toBe(3);
+      expect(parsedResult.maxRetries).toBe(3);
 
       // Atomic increment of failed_jobs
       const incrementCall = mockManager.query.mock.calls[1];
@@ -974,12 +1037,13 @@ describe('WorkflowExecutionProcessor', () => {
 
       await processor.onFailed(fanOutJob, longError);
 
+      // Upsert-by-index args: [fileIndex, json, runId]
       const appendCall = mockManager.query.mock.calls[0];
-      const parsedResult: PerFileResult = JSON.parse(appendCall[1][0]);
+      const parsedResult: PerFileResult = JSON.parse(appendCall[1][1]);
       expect(parsedResult.errorMessage!.length).toBeLessThanOrEqual(203); // 200 + '...'
     });
 
-    it('[4.3-UNIT-032] intermediate fan-out failure (attemptsMade < attempts) does NOT route to DLQ', async () => {
+    it('[4.3-UNIT-032] intermediate fan-out failure (attemptsMade < attempts) does NOT route to DLQ but writes retrying status', async () => {
       const error = new Error('transient');
       const fanOutJob = makeJob({
         id: `${runId}:file:0`,
@@ -991,7 +1055,14 @@ describe('WorkflowExecutionProcessor', () => {
       await processor.onFailed(fanOutJob, error);
 
       expect(dlqQueue.add).not.toHaveBeenCalled();
-      expect(mockManager.query).not.toHaveBeenCalled();
+      // Intermediate fan-out failure writes 'retrying' status for granular per-file tracking
+      expect(mockManager.query).toHaveBeenCalledTimes(1);
+      const retryingCall = mockManager.query.mock.calls[0];
+      expect(retryingCall[0]).toContain('per_file_results');
+      const parsedStatus = JSON.parse(retryingCall[1][1]);
+      expect(parsedStatus.status).toBe('retrying');
+      expect(parsedStatus.retryAttempt).toBe(1);
+      expect(parsedStatus.maxRetries).toBe(3);
     });
   });
 
