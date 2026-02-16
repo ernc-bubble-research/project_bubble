@@ -180,6 +180,36 @@
         </div>
       </div>
 
+      <!-- Generation Defaults (dynamic based on provider) -->
+      @if (selectedProviderParams().length > 0) {
+        <div class="form-section" data-testid="generation-defaults-section">
+          <h3 class="form-section-title">Generation Defaults</h3>
+          <span class="field-hint">Optional. Leave empty to use provider defaults.</span>
+          <div class="form-row" [formGroup]="generationDefaultsForm">
+            @for (param of selectedProviderParams(); track param.key) {
+              <div class="form-group">
+                <label [for]="'gen-' + param.key">{{ param.label }}</label>
+                <input
+                  type="number"
+                  [id]="'gen-' + param.key"
+                  [formControlName]="param.key"
+                  [placeholder]="param.default !== null && param.default !== undefined ? 'Default: ' + param.default : ''"
+                  [min]="param.min ?? ''"
+                  [max]="param.max ?? ''"
+                  [step]="param.max !== undefined && param.max <= 2 ? 0.01 : 1"
+                  class="form-input"
+                  [class.error]="hasGenerationDefaultError(param.key)"
+                  [attr.data-testid]="'input-gen-' + param.key"
+                />
+                @if (hasGenerationDefaultError(param.key)) {
+                  <span class="field-error">{{ getGenerationDefaultError(param.key) }}</span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+
       <!-- Active checkbox -->
       <div class="form-group checkbox-group">
         <label class="checkbox-label">

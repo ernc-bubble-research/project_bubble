@@ -46,6 +46,9 @@ describe('LlmProviderFactory', () => {
     providerRegistry = {
       get: jest.fn().mockReturnValue({
         providerKey: 'google-ai-studio',
+        supportedGenerationParams: [
+          { key: 'temperature', label: 'Temperature', type: 'number', min: 0, max: 2, default: 1.0 },
+        ],
         createProvider: jest.fn().mockReturnValue(mockProvider),
       }),
     };
@@ -72,6 +75,9 @@ describe('LlmProviderFactory', () => {
 
     expect(result.provider).toBe(mockProvider);
     expect(result.model).toEqual(mockModel);
+    expect(result.supportedGenerationParams).toEqual([
+      { key: 'temperature', label: 'Temperature', type: 'number', min: 0, max: 2, default: 1.0 },
+    ]);
     expect(providerConfigService.getDecryptedCredentials).toHaveBeenCalledWith('google-ai-studio');
     expect(providerRegistry.get).toHaveBeenCalledWith('google-ai-studio');
   });

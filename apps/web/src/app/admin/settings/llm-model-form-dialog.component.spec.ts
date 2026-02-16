@@ -23,9 +23,17 @@ const mockModel: LlmModel = {
   isActive: true,
   costPer1kInput: '0.000150',
   costPer1kOutput: '0.000600',
+  generationDefaults: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
+
+const googleParams = [
+  { key: 'temperature', label: 'Temperature', type: 'number' as const, min: 0, max: 2, default: 1.0 },
+  { key: 'topP', label: 'Top P', type: 'number' as const, min: 0, max: 1, default: 0.95 },
+  { key: 'topK', label: 'Top K', type: 'number' as const, min: 1, max: 100, default: 40 },
+  { key: 'maxOutputTokens', label: 'Max Output Tokens', type: 'number' as const, min: 1, max: 8192, default: 8192 },
+];
 
 // Test host component to handle input.required via signal input
 @Component({
@@ -67,10 +75,10 @@ describe('LlmModelFormDialogComponent [P2]', () => {
 
     const mockProviderTypeService = {
       types: signal([
-        { providerKey: 'google-ai-studio', displayName: 'Google AI Studio', credentialFields: [], isDevelopmentOnly: false },
-        { providerKey: 'mock', displayName: 'Mock Provider', credentialFields: [], isDevelopmentOnly: true },
-        { providerKey: 'vertex', displayName: 'Vertex AI', credentialFields: [], isDevelopmentOnly: false },
-        { providerKey: 'openai', displayName: 'OpenAI', credentialFields: [], isDevelopmentOnly: false },
+        { providerKey: 'google-ai-studio', displayName: 'Google AI Studio', credentialFields: [], supportedGenerationParams: googleParams, isDevelopmentOnly: false },
+        { providerKey: 'mock', displayName: 'Mock Provider', credentialFields: [], supportedGenerationParams: [googleParams[0], googleParams[1], googleParams[3]], isDevelopmentOnly: true },
+        { providerKey: 'vertex', displayName: 'Vertex AI', credentialFields: [], supportedGenerationParams: googleParams, isDevelopmentOnly: false },
+        { providerKey: 'openai', displayName: 'OpenAI', credentialFields: [], supportedGenerationParams: [googleParams[0], googleParams[1], googleParams[3]], isDevelopmentOnly: false },
       ]),
       getProviderTypes: jest.fn().mockReturnValue(of([])),
       getDisplayName: jest.fn((key: string) => key),
@@ -258,6 +266,110 @@ describe('LlmModelFormDialogComponent [P2]', () => {
 
     const dialogComponent = fixture.debugElement.children[0].componentInstance as LlmModelFormDialogComponent;
     expect(dialogComponent.form.value.isActive).toBe(false);
+  });
+
+  it('[4-GP-UNIT-020] should show generation defaults section when provider is selected', async () => {
+    const fixture = TestBed.createComponent(TestHostComponent);
+    fixture.detectChanges();
+
+    const dialogComponent = fixture.debugElement.children[0].componentInstance as LlmModelFormDialogComponent;
+    dialogComponent.form.patchValue({ providerKey: 'google-ai-studio' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const section = fixture.nativeElement.querySelector('[data-testid="generation-defaults-section"]');
+    expect(section).toBeTruthy();
+    expect(dialogComponent.selectedProviderParams().length).toBe(4); // temperature, topP, topK, maxOutputTokens (stopSequences filtered)
+  });
+
+  it('[4-GP-UNIT-021] should populate generation defaults from model in edit mode', async () => {
+    const fixture = TestBed.createComponent(TestHostComponent);
+    const modelWithDefaults = { ...mockModel, generationDefaults: { temperature: 0.5, topP: 0.8 } };
+    fixture.componentInstance.model.set(modelWithDefaults);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const dialogComponent = fixture.debugElement.children[0].componentInstance as LlmModelFormDialogComponent;
+    expect(dialogComponent.generationDefaultsForm.get('temperature')?.value).toBe(0.5);
+    expect(dialogComponent.generationDefaultsForm.get('topP')?.value).toBe(0.8);
+  });
+
+  it('[4-GP-UNIT-022] should include generationDefaults in create DTO on submit', async () => {
+    const fixture = TestBed.createComponent(TestHostComponent);
+    fixture.detectChanges();
+
+    const dialogComponent = fixture.debugElement.children[0].componentInstance as LlmModelFormDialogComponent;
+    dialogComponent.form.patchValue({
+      providerKey: 'google-ai-studio',
+      modelId: 'models/test',
+      displayName: 'Test',
+      contextWindow: 1000,
+      maxOutputTokens: 100,
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Set a generation default
+    dialogComponent.generationDefaultsForm.get('temperature')?.setValue(0.3);
+    fixture.detectChanges();
+
+    const submitBtn = fixture.nativeElement.querySelector('[data-testid="submit-btn"]');
+    submitBtn.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(mockLlmModelService.createModel).toHaveBeenCalledWith(
+      expect.objectContaining({ generationDefaults: { temperature: 0.3 } }),
+    );
+  });
+
+  it('[4-GP-UNIT-047] should block submit when generationDefaults are invalid', async () => {
+    const fixture = TestBed.createComponent(TestHostComponent);
+    fixture.detectChanges();
+
+    const dialogComponent = fixture.debugElement.children[0].componentInstance as LlmModelFormDialogComponent;
+    dialogComponent.form.patchValue({
+      providerKey: 'google-ai-studio',
+      modelId: 'models/test',
+      displayName: 'Test',
+      contextWindow: 1000,
+      maxOutputTokens: 100,
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Set an invalid generation default (temperature max is 2)
+    dialogComponent.generationDefaultsForm.get('temperature')?.setValue(5);
+    fixture.detectChanges();
+
+    const submitBtn = fixture.nativeElement.querySelector('[data-testid="submit-btn"]');
+    submitBtn.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(mockLlmModelService.createModel).not.toHaveBeenCalled();
+  });
+
+  it('[4-GP-UNIT-059] should show empty generation defaults form when model has null generationDefaults', async () => {
+    const fixture = TestBed.createComponent(TestHostComponent);
+    // mockModel already has generationDefaults: null
+    fixture.componentInstance.model.set(mockModel);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const dialogComponent = fixture.debugElement.children[0].componentInstance as LlmModelFormDialogComponent;
+    // Provider is google-ai-studio → should have generation params form controls
+    expect(dialogComponent.selectedProviderParams().length).toBe(4);
+    // All generation defaults controls should be null (no pre-filled values)
+    expect(dialogComponent.generationDefaultsForm.get('temperature')?.value).toBeNull();
+    expect(dialogComponent.generationDefaultsForm.get('topP')?.value).toBeNull();
+    expect(dialogComponent.generationDefaultsForm.get('topK')?.value).toBeNull();
+    expect(dialogComponent.generationDefaultsForm.get('maxOutputTokens')?.value).toBeNull();
   });
 
   it('[3.1-3-UNIT-026] should show read-only hint for providerKey in edit mode', async () => {

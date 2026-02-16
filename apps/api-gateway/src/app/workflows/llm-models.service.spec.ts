@@ -25,6 +25,7 @@ describe('LlmModelsService [P1]', () => {
     isActive: true,
     costPer1kInput: '0.000150',
     costPer1kOutput: '0.000600',
+    generationDefaults: null,
     createdAt: new Date('2026-02-02'),
     updatedAt: new Date('2026-02-02'),
   };

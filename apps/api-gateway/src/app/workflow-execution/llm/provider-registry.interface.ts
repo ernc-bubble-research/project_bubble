@@ -13,7 +13,7 @@ export interface CredentialField {
 
 /**
  * Describes a generation parameter supported by a provider.
- * Placeholder for Story 4-GP — not populated in 4-PR.
+ * Keys use camelCase (matching LLMGenerateOptions output).
  */
 export interface GenerationParamSpec {
   key: string;
@@ -21,7 +21,7 @@ export interface GenerationParamSpec {
   type: 'number' | 'string[]';
   min?: number;
   max?: number;
-  default?: number;
+  default?: number | string[];
   maxItems?: number;
 }
 

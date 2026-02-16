@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { LlmModelEntity, LlmProviderConfigEntity } from '@project-bubble/db-layer';
 import { LlmProviderConfigService } from '../../settings/llm-provider-config.service';
 import { LLMProvider } from './llm.provider';
+import { GenerationParamSpec } from './provider-registry.interface';
 import { ProviderRegistry } from './provider-registry.service';
 
 interface CachedProvider {
@@ -43,7 +44,7 @@ export class LlmProviderFactory {
    */
   async getProvider(
     modelUuid: string,
-  ): Promise<{ provider: LLMProvider; model: LlmModelEntity }> {
+  ): Promise<{ provider: LLMProvider; model: LlmModelEntity; supportedGenerationParams: GenerationParamSpec[] }> {
     // Step 1: Look up LlmModelEntity by UUID
     const model = await this.modelRepo.findOne({ where: { id: modelUuid } });
     if (!model) {
@@ -72,28 +73,30 @@ export class LlmProviderFactory {
       );
     }
 
-    // Step 3: Check cache — keyed by providerKey:modelId to avoid cross-model collision
-    // (e.g., gemini-1.5-pro and gemini-2.0-flash both under google-ai-studio)
-    const cacheKey = `${model.providerKey}:${model.modelId}`;
-    const cached = this.cache.get(cacheKey);
-    if (cached && providerConfig.updatedAt <= cached.cachedAt) {
-      return { provider: cached.provider, model };
-    }
-
-    // Step 4: Get credentials and build provider via registry
-    const credentials = await this.providerConfigService.getDecryptedCredentials(
-      model.providerKey,
-    );
-
+    // Step 3: Look up registry entry for provider metadata (generation params)
     const registryEntry = this.providerRegistry.get(model.providerKey);
     if (!registryEntry) {
       throw new BadRequestException(
         `Unknown provider key: ${model.providerKey}`,
       );
     }
+    const generationParams = registryEntry.supportedGenerationParams ?? [];
+
+    // Step 4: Check cache — keyed by providerKey:modelId to avoid cross-model collision
+    // (e.g., gemini-1.5-pro and gemini-2.0-flash both under google-ai-studio)
+    const cacheKey = `${model.providerKey}:${model.modelId}`;
+    const cached = this.cache.get(cacheKey);
+    if (cached && providerConfig.updatedAt <= cached.cachedAt) {
+      return { provider: cached.provider, model, supportedGenerationParams: generationParams };
+    }
+
+    // Step 5: Get credentials and build provider
+    const credentials = await this.providerConfigService.getDecryptedCredentials(
+      model.providerKey,
+    );
     const provider = registryEntry.createProvider(model.modelId, credentials);
 
-    // Step 5: Cache the provider (keyed by providerKey:modelId)
+    // Step 6: Cache the provider (keyed by providerKey:modelId)
     this.cache.set(cacheKey, {
       provider,
       cachedAt: new Date(),
@@ -106,6 +109,6 @@ export class LlmProviderFactory {
       modelUuid,
     });
 
-    return { provider, model };
+    return { provider, model, supportedGenerationParams: generationParams };
   }
 }

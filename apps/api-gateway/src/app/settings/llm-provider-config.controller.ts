@@ -59,6 +59,7 @@ export class LlmProviderConfigController {
         providerKey: entry.providerKey,
         displayName: entry.displayName,
         credentialFields: entry.credentialSchema,
+        supportedGenerationParams: entry.supportedGenerationParams ?? [],
         isDevelopmentOnly: entry.isDevelopmentOnly,
       }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));

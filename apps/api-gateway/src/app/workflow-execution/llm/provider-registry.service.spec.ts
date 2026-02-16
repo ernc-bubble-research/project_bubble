@@ -123,6 +123,72 @@ describe('ProviderRegistry [P1]', () => {
     });
   });
 
+  describe('supportedGenerationParams', () => {
+    it('[4-GP-UNIT-001] should populate generation params for google-ai-studio', () => {
+      const entry = registry.get('google-ai-studio')!;
+      const params = entry.supportedGenerationParams!;
+      expect(params).toBeDefined();
+      expect(params.length).toBe(5);
+      const keys = params.map((p) => p.key);
+      expect(keys).toEqual(['temperature', 'topP', 'topK', 'maxOutputTokens', 'stopSequences']);
+    });
+
+    it('[4-GP-UNIT-002] should populate generation params for openai (no topK)', () => {
+      const entry = registry.get('openai')!;
+      const params = entry.supportedGenerationParams!;
+      expect(params).toBeDefined();
+      expect(params.length).toBe(4);
+      const keys = params.map((p) => p.key);
+      expect(keys).toEqual(['temperature', 'topP', 'maxOutputTokens', 'stopSequences']);
+      expect(keys).not.toContain('topK');
+    });
+
+    it('[4-GP-UNIT-003] should populate generation params for vertex (same as google-ai-studio)', () => {
+      const entry = registry.get('vertex')!;
+      const params = entry.supportedGenerationParams!;
+      expect(params).toBeDefined();
+      expect(params.length).toBe(5);
+      const googleParams = registry.get('google-ai-studio')!.supportedGenerationParams!;
+      expect(params).toEqual(googleParams);
+    });
+
+    it('[4-GP-UNIT-004] should populate generation params for mock (minimal set)', () => {
+      const entry = registry.get('mock')!;
+      const params = entry.supportedGenerationParams!;
+      expect(params).toBeDefined();
+      expect(params.length).toBe(3);
+      const keys = params.map((p) => p.key);
+      expect(keys).toEqual(['temperature', 'topP', 'maxOutputTokens']);
+      expect(keys).not.toContain('topK');
+      expect(keys).not.toContain('stopSequences');
+    });
+
+    it('[4-GP-UNIT-005] should have correct ranges for google-ai-studio temperature', () => {
+      const entry = registry.get('google-ai-studio')!;
+      const temp = entry.supportedGenerationParams!.find((p) => p.key === 'temperature')!;
+      expect(temp.min).toBe(0);
+      expect(temp.max).toBe(2);
+      expect(temp.default).toBe(1.0);
+      expect(temp.type).toBe('number');
+    });
+
+    it('[4-GP-UNIT-006] should have correct ranges for openai maxOutputTokens', () => {
+      const entry = registry.get('openai')!;
+      const param = entry.supportedGenerationParams!.find((p) => p.key === 'maxOutputTokens')!;
+      expect(param.min).toBe(1);
+      expect(param.max).toBe(16384);
+      expect(param.default).toBe(4096);
+    });
+
+    it('[4-GP-UNIT-007] should have stopSequences with maxItems for google-ai-studio', () => {
+      const entry = registry.get('google-ai-studio')!;
+      const param = entry.supportedGenerationParams!.find((p) => p.key === 'stopSequences')!;
+      expect(param.type).toBe('string[]');
+      expect(param.maxItems).toBe(5);
+      expect(param.default).toBeUndefined();
+    });
+  });
+
   describe('createProvider()', () => {
     it('[4-PR-UNIT-014] should create MockLlmProvider via registry', () => {
       const entry = registry.get('mock')!;

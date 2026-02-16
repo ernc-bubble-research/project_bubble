@@ -9,6 +9,7 @@ import {
 import { WorkflowJobPayload, PerFileResult } from '@project-bubble/shared';
 import { PromptAssemblyService } from './prompt-assembly.service';
 import { LlmProviderFactory } from './llm/llm-provider.factory';
+import { mergeGenerationParams } from './llm/generation-params.util';
 
 /** Detect fan-out job by `:file:` segment in jobId */
 function isFanOutJob(jobId: string | undefined): boolean {
@@ -176,7 +177,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
 
     // Step 2: Resolve the LLM provider from model UUID
     const modelUuid = job.data.definition.execution.model;
-    const { provider, model } = await this.llmProviderFactory.getProvider(modelUuid);
+    const { provider, model, supportedGenerationParams } = await this.llmProviderFactory.getProvider(modelUuid);
 
     // Defense-in-depth: check assembled prompt length vs model context window
     const estimatedTokens = Math.ceil(assemblyResult.assembledPromptLength / 4);
@@ -187,11 +188,15 @@ export class WorkflowExecutionProcessor extends WorkerHost {
       );
     }
 
-    // Step 3: Call the LLM provider
-    const llmResult = await provider.generate(assemblyResult.prompt, {
-      temperature: job.data.definition.execution.temperature,
-      maxOutputTokens: job.data.definition.execution.max_output_tokens,
-    });
+    // Step 3: Merge generation params (provider defaults < model defaults < workflow overrides)
+    const generationOptions = mergeGenerationParams(
+      supportedGenerationParams,
+      model.generationDefaults,
+      job.data.definition.execution,
+    );
+
+    // Step 4: Call the LLM provider
+    const llmResult = await provider.generate(assemblyResult.prompt, generationOptions);
 
     this.logger.log({
       message: 'LLM generation completed',

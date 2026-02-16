@@ -141,9 +141,9 @@ describe('jwtInterceptor [P0]', () => {
     const exitSpy = jest.spyOn(impersonationService, 'exitImpersonation');
 
     // First request
-    http.get('/api/data1').subscribe({ error: () => {} });
+    http.get('/api/data1').subscribe({ error: () => { /* expected 401 */ } });
     // Second request
-    http.get('/api/data2').subscribe({ error: () => {} });
+    http.get('/api/data2').subscribe({ error: () => { /* expected 401 */ } });
 
     const req1 = httpTesting.expectOne('/api/data1');
     req1.flush(null, { status: 401, statusText: 'Unauthorized' });

@@ -81,6 +81,7 @@ import {
   List,
   LayoutGrid,
   Undo2,
+  RotateCcw,
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
@@ -159,6 +160,7 @@ export const appConfig: ApplicationConfig = {
         List,
         LayoutGrid,
         Undo2,
+        RotateCcw,
       }),
     },
   ],

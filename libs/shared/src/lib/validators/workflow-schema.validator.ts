@@ -78,6 +78,21 @@ export function validateWorkflowDefinition(
     if (!definition.execution.model || typeof definition.execution.model !== 'string') {
       errors.push('execution.model is required and must be a string');
     }
+    if (definition.execution.top_p !== undefined) {
+      if (typeof definition.execution.top_p !== 'number' || definition.execution.top_p < 0 || definition.execution.top_p > 1) {
+        errors.push('execution.top_p must be a number between 0 and 1');
+      }
+    }
+    if (definition.execution.top_k !== undefined) {
+      if (typeof definition.execution.top_k !== 'number' || !Number.isInteger(definition.execution.top_k) || definition.execution.top_k < 1) {
+        errors.push('execution.top_k must be an integer >= 1');
+      }
+    }
+    if (definition.execution.stop_sequences !== undefined) {
+      if (!Array.isArray(definition.execution.stop_sequences) || !definition.execution.stop_sequences.every((s: unknown) => typeof s === 'string')) {
+        errors.push('execution.stop_sequences must be an array of strings');
+      }
+    }
   }
 
   // Validate knowledge

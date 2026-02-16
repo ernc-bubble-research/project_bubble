@@ -6,8 +6,11 @@ import {
   IsInt,
   IsBoolean,
   IsNumberString,
+  IsObject,
   Min,
+  Validate,
 } from 'class-validator';
+import { IsValidGenerationDefaultsConstraint } from './create-llm-model.dto';
 
 export class UpdateLlmModelDto {
   @ApiPropertyOptional({ example: 'Gemini 2.0 Flash', maxLength: 100 })
@@ -42,4 +45,10 @@ export class UpdateLlmModelDto {
   @IsOptional()
   @IsNumberString()
   costPer1kOutput?: string;
+
+  @ApiPropertyOptional({ description: 'Generation parameter defaults (camelCase keys, e.g. { temperature: 0.7, topP: 0.9 })' })
+  @IsOptional()
+  @IsObject()
+  @Validate(IsValidGenerationDefaultsConstraint)
+  generationDefaults?: Record<string, unknown>;
 }

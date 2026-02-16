@@ -9,12 +9,12 @@ import {
   effect,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LucideAngularModule } from 'lucide-angular';
 import { LlmModelService, type LlmModel } from '../../core/services/llm-model.service';
 import { ProviderTypeService } from '../../core/services/provider-type.service';
-import type { CreateLlmModelDto, UpdateLlmModelDto } from '@project-bubble/shared';
+import type { CreateLlmModelDto, UpdateLlmModelDto, GenerationParamSpecDto } from '@project-bubble/shared';
 
 @Component({
   standalone: true,
@@ -50,6 +50,12 @@ export class LlmModelFormDialogComponent {
     this.isEditMode() ? 'Edit LLM Model' : 'Add LLM Model'
   );
 
+  /** Provider params for the currently selected provider (excludes stopSequences) */
+  readonly selectedProviderParams = signal<GenerationParamSpecDto[]>([]);
+
+  /** Dynamic form group for generation defaults — rebuilt when provider changes */
+  generationDefaultsForm = new FormGroup<Record<string, FormControl>>({});
+
   readonly form = this.fb.nonNullable.group({
     providerKey: ['', [Validators.required, Validators.maxLength(50)]],
     modelId: ['', [Validators.required, Validators.maxLength(100)]],
@@ -79,6 +85,7 @@ export class LlmModelFormDialogComponent {
         // Disable providerKey and modelId in edit mode (unique key cannot be changed)
         this.form.controls.providerKey.disable();
         this.form.controls.modelId.disable();
+        this.rebuildGenerationDefaultsForm(m.providerKey, m.generationDefaults);
       } else {
         this.form.reset({
           providerKey: '',
@@ -92,8 +99,41 @@ export class LlmModelFormDialogComponent {
         });
         this.form.controls.providerKey.enable();
         this.form.controls.modelId.enable();
+        this.selectedProviderParams.set([]);
+        this.generationDefaultsForm = new FormGroup({});
       }
     });
+
+    // Rebuild generation defaults form when provider changes in add mode
+    this.form.controls.providerKey.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((key) => {
+        if (!this.isEditMode()) {
+          this.rebuildGenerationDefaultsForm(key, null);
+        }
+      });
+  }
+
+  private rebuildGenerationDefaultsForm(
+    providerKey: string,
+    existingDefaults: Record<string, unknown> | null,
+  ): void {
+    const providerType = this.providerTypeService.types().find((t) => t.providerKey === providerKey);
+    const params = (providerType?.supportedGenerationParams ?? [])
+      .filter((p) => p.key !== 'stopSequences');
+
+    this.selectedProviderParams.set(params);
+
+    const controls: Record<string, FormControl> = {};
+    for (const param of params) {
+      const validators = [];
+      if (param.min !== undefined) validators.push(Validators.min(param.min));
+      if (param.max !== undefined) validators.push(Validators.max(param.max));
+
+      const existingValue = existingDefaults?.[param.key] ?? null;
+      controls[param.key] = new FormControl(existingValue, validators);
+    }
+    this.generationDefaultsForm = new FormGroup(controls);
   }
 
   onCancel(): void {
@@ -101,8 +141,9 @@ export class LlmModelFormDialogComponent {
   }
 
   onSubmit(): void {
-    if (this.form.invalid || this.submitting()) {
+    if (this.form.invalid || this.generationDefaultsForm.invalid || this.submitting()) {
       this.form.markAllAsTouched();
+      this.generationDefaultsForm.markAllAsTouched();
       return;
     }
 
@@ -110,6 +151,8 @@ export class LlmModelFormDialogComponent {
     this.error.set(null);
 
     const rawValue = this.form.getRawValue(); // Gets disabled fields too
+
+    const generationDefaults = this.collectGenerationDefaults();
 
     if (this.isEditMode()) {
       const updateDto: UpdateLlmModelDto = {
@@ -119,6 +162,7 @@ export class LlmModelFormDialogComponent {
         isActive: rawValue.isActive,
         costPer1kInput: rawValue.costPer1kInput || undefined,
         costPer1kOutput: rawValue.costPer1kOutput || undefined,
+        generationDefaults: generationDefaults ?? undefined,
       };
 
       this.llmModelService
@@ -144,6 +188,7 @@ export class LlmModelFormDialogComponent {
         isActive: rawValue.isActive,
         costPer1kInput: rawValue.costPer1kInput || undefined,
         costPer1kOutput: rawValue.costPer1kOutput || undefined,
+        generationDefaults: generationDefaults ?? undefined,
       };
 
       this.llmModelService
@@ -160,6 +205,35 @@ export class LlmModelFormDialogComponent {
           },
         });
     }
+  }
+
+  private collectGenerationDefaults(): Record<string, unknown> | null {
+    const params = this.selectedProviderParams();
+    if (params.length === 0) return null;
+
+    const defaults: Record<string, unknown> = {};
+    let hasValue = false;
+    for (const param of params) {
+      const control = this.generationDefaultsForm.get(param.key);
+      if (control && control.value != null && control.value !== '') {
+        defaults[param.key] = Number(control.value);
+        hasValue = true;
+      }
+    }
+    return hasValue ? defaults : null;
+  }
+
+  hasGenerationDefaultError(key: string): boolean {
+    const control = this.generationDefaultsForm.get(key);
+    return !!control && control.invalid && control.touched;
+  }
+
+  getGenerationDefaultError(key: string): string {
+    const control = this.generationDefaultsForm.get(key);
+    if (!control || !control.errors) return '';
+    if (control.errors['min']) return `Minimum value: ${control.errors['min'].min}`;
+    if (control.errors['max']) return `Maximum value: ${control.errors['max'].max}`;
+    return 'Invalid value';
   }
 
   private getErrorMessage(err: HttpErrorResponse): string {

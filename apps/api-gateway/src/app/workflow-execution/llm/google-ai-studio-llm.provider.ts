@@ -43,6 +43,9 @@ export class GoogleAIStudioLlmProvider implements LLMProvider {
           generationConfig: {
             temperature: options.temperature,
             maxOutputTokens: options.maxOutputTokens,
+            topP: options.topP,
+            topK: options.topK,
+            stopSequences: options.stopSequences,
           },
         }),
       );

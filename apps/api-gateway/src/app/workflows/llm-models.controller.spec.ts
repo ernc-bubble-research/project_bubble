@@ -19,6 +19,7 @@ describe('LlmModelsControllers [P1]', () => {
     isActive: true,
     costPer1kInput: '0.000150',
     costPer1kOutput: '0.000600',
+    generationDefaults: null,
     createdAt: new Date('2026-02-02'),
     updatedAt: new Date('2026-02-02'),
   };
@@ -77,6 +78,38 @@ describe('LlmModelsControllers [P1]', () => {
     it('[3.3-UNIT-037] [P1] PATCH /admin/llm-models/:id — updates model', async () => {
       // Given
       const dto = { isActive: false };
+
+      // When
+      await adminController.update(modelId, dto);
+
+      // Then
+      expect(service.update).toHaveBeenCalledWith(modelId, dto);
+    });
+
+    it('[4-GP-UNIT-018] POST /admin/llm-models — creates model with generationDefaults', async () => {
+      // Given
+      const dto = {
+        providerKey: 'google-ai-studio',
+        modelId: 'models/gemini-2.0-flash',
+        displayName: 'Gemini 2.0 Flash',
+        contextWindow: 1000000,
+        maxOutputTokens: 8192,
+        generationDefaults: { temperature: 0.5, topP: 0.9 },
+      };
+
+      // When
+      await adminController.create(dto);
+
+      // Then
+      expect(service.create).toHaveBeenCalledWith(dto);
+      expect(service.create).toHaveBeenCalledWith(
+        expect.objectContaining({ generationDefaults: { temperature: 0.5, topP: 0.9 } }),
+      );
+    });
+
+    it('[4-GP-UNIT-019] PATCH /admin/llm-models/:id — updates model with generationDefaults', async () => {
+      // Given
+      const dto = { generationDefaults: { temperature: 1.2 } };
 
       // When
       await adminController.update(modelId, dto);

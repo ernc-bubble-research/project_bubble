@@ -18,6 +18,7 @@ export type {
   WorkflowOutputFormat,
   WorkflowOutputSection,
 } from './workflow-definition.interface';
+export { GENERATION_PARAM_KEY_MAP } from './workflow-definition.interface';
 export type {
   ChainDefinition,
   ChainMetadata,

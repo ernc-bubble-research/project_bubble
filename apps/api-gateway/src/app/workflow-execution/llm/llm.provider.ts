@@ -9,6 +9,9 @@
 export interface LLMGenerateOptions {
   temperature?: number;
   maxOutputTokens?: number;
+  topP?: number;
+  topK?: number;
+  stopSequences?: string[];
 }
 
 export interface LLMGenerateResult {

@@ -28,6 +28,9 @@ export class LlmModelResponseDto {
   @ApiPropertyOptional({ example: '0.000600' })
   costPer1kOutput!: string | null;
 
+  @ApiPropertyOptional({ description: 'Generation parameter defaults (camelCase keys)' })
+  generationDefaults!: Record<string, unknown> | null;
+
   @ApiProperty()
   createdAt!: Date;
 

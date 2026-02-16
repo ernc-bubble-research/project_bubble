@@ -2,9 +2,34 @@ import { Injectable, OnModuleInit, Logger, BadRequestException } from '@nestjs/c
 import {
   ProviderRegistryEntry,
   CredentialField,
+  GenerationParamSpec,
 } from './provider-registry.interface';
 import { MockLlmProvider } from './mock-llm.provider';
 import { GoogleAIStudioLlmProvider } from './google-ai-studio-llm.provider';
+
+/** Google AI Studio / Vertex AI generation params (same SDK family) */
+const GOOGLE_AI_STUDIO_PARAMS: GenerationParamSpec[] = [
+  { key: 'temperature', label: 'Temperature', type: 'number', min: 0, max: 2, default: 1.0 },
+  { key: 'topP', label: 'Top P', type: 'number', min: 0, max: 1, default: 0.95 },
+  { key: 'topK', label: 'Top K', type: 'number', min: 1, max: 100, default: 40 },
+  { key: 'maxOutputTokens', label: 'Max Output Tokens', type: 'number', min: 1, max: 8192, default: 8192 },
+  { key: 'stopSequences', label: 'Stop Sequences', type: 'string[]', maxItems: 5 },
+];
+
+/** OpenAI generation params (no topK) */
+const OPENAI_PARAMS: GenerationParamSpec[] = [
+  { key: 'temperature', label: 'Temperature', type: 'number', min: 0, max: 2, default: 1.0 },
+  { key: 'topP', label: 'Top P', type: 'number', min: 0, max: 1, default: 1.0 },
+  { key: 'maxOutputTokens', label: 'Max Output Tokens', type: 'number', min: 1, max: 16384, default: 4096 },
+  { key: 'stopSequences', label: 'Stop Sequences', type: 'string[]', maxItems: 4 },
+];
+
+/** Mock provider generation params (minimal set) */
+const MOCK_PARAMS: GenerationParamSpec[] = [
+  { key: 'temperature', label: 'Temperature', type: 'number', min: 0, max: 2, default: 0.7 },
+  { key: 'topP', label: 'Top P', type: 'number', min: 0, max: 1, default: 1.0 },
+  { key: 'maxOutputTokens', label: 'Max Output Tokens', type: 'number', min: 1, max: 65536, default: 4096 },
+];
 
 /**
  * ProviderRegistry — single source of truth for LLM provider metadata.
@@ -74,6 +99,7 @@ export class ProviderRegistry implements OnModuleInit {
         { key: 'apiKey', label: 'API Key', type: 'password', required: true },
       ],
       envVarFallbacks: { apiKey: 'GEMINI_API_KEY' },
+      supportedGenerationParams: GOOGLE_AI_STUDIO_PARAMS,
       isDevelopmentOnly: false,
       createProvider(
         modelId: string,
@@ -94,6 +120,7 @@ export class ProviderRegistry implements OnModuleInit {
       displayName: 'Mock Provider',
       credentialSchema: [],
       envVarFallbacks: {},
+      supportedGenerationParams: MOCK_PARAMS,
       isDevelopmentOnly: true,
       createProvider() {
         return new MockLlmProvider();
@@ -108,6 +135,7 @@ export class ProviderRegistry implements OnModuleInit {
         { key: 'location', label: 'Location', type: 'text', required: true },
       ],
       envVarFallbacks: {},
+      supportedGenerationParams: GOOGLE_AI_STUDIO_PARAMS, // Same SDK family
       isDevelopmentOnly: false,
       createProvider() {
         throw new BadRequestException(
@@ -123,6 +151,7 @@ export class ProviderRegistry implements OnModuleInit {
         { key: 'apiKey', label: 'API Key', type: 'password', required: true },
       ],
       envVarFallbacks: {},
+      supportedGenerationParams: OPENAI_PARAMS,
       isDevelopmentOnly: false,
       createProvider() {
         throw new BadRequestException(

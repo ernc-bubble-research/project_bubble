@@ -287,5 +287,75 @@ describe('Workflow DTOs', () => {
       // Then
       expect(errors.some((e) => e.property === 'providerKey')).toBe(true);
     });
+
+    it('[4-GP-UNIT-051] Given valid generationDefaults, when validated, then passes', async () => {
+      const dto = plainToInstance(CreateLlmModelDto, {
+        providerKey: 'google-ai-studio',
+        modelId: 'models/gemini-2.0-flash',
+        displayName: 'Gemini 2.0 Flash',
+        contextWindow: 1000000,
+        maxOutputTokens: 8192,
+        generationDefaults: { temperature: 0.7, topP: 0.9 },
+      });
+
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('[4-GP-UNIT-052] Given generationDefaults with stopSequences string array, when validated, then passes', async () => {
+      const dto = plainToInstance(CreateLlmModelDto, {
+        providerKey: 'google-ai-studio',
+        modelId: 'models/gemini-2.0-flash',
+        displayName: 'Gemini 2.0 Flash',
+        contextWindow: 1000000,
+        maxOutputTokens: 8192,
+        generationDefaults: { stopSequences: ['END', 'STOP'] },
+      });
+
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('[4-GP-UNIT-053] Given generationDefaults with unknown key, when validated, then returns error', async () => {
+      const dto = plainToInstance(CreateLlmModelDto, {
+        providerKey: 'google-ai-studio',
+        modelId: 'models/gemini-2.0-flash',
+        displayName: 'Gemini 2.0 Flash',
+        contextWindow: 1000000,
+        maxOutputTokens: 8192,
+        generationDefaults: { temperature: 0.7, unknownParam: 42 },
+      });
+
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'generationDefaults')).toBe(true);
+    });
+
+    it('[4-GP-UNIT-054] Given generationDefaults with string value for number param, when validated, then returns error', async () => {
+      const dto = plainToInstance(CreateLlmModelDto, {
+        providerKey: 'google-ai-studio',
+        modelId: 'models/gemini-2.0-flash',
+        displayName: 'Gemini 2.0 Flash',
+        contextWindow: 1000000,
+        maxOutputTokens: 8192,
+        generationDefaults: { temperature: 'not a number' },
+      });
+
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'generationDefaults')).toBe(true);
+    });
+
+    it('[4-GP-UNIT-055] Given generationDefaults with NaN value, when validated, then returns error', async () => {
+      const dto = plainToInstance(CreateLlmModelDto, {
+        providerKey: 'google-ai-studio',
+        modelId: 'models/gemini-2.0-flash',
+        displayName: 'Gemini 2.0 Flash',
+        contextWindow: 1000000,
+        maxOutputTokens: 8192,
+        generationDefaults: { temperature: NaN },
+      });
+
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'generationDefaults')).toBe(true);
+    });
   });
 });

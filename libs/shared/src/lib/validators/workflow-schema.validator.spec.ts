@@ -429,6 +429,77 @@ describe('validateWorkflowDefinition', () => {
     });
   });
 
+  describe('Generation parameter validation', () => {
+    it('[4-GP-UNIT-008] Given valid top_p, when validated, then result is valid', () => {
+      const definition = createValidDefinition();
+      definition.execution.top_p = 0.5;
+      const result = validateWorkflowDefinition(definition);
+      expect(result.valid).toBe(true);
+    });
+
+    it('[4-GP-UNIT-009] Given top_p out of range, when validated, then returns error', () => {
+      const definition = createValidDefinition();
+      (definition.execution as any).top_p = 1.5;
+      const result = validateWorkflowDefinition(definition);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('execution.top_p must be a number between 0 and 1');
+    });
+
+    it('[4-GP-UNIT-010] Given top_p as string, when validated, then returns error', () => {
+      const definition = createValidDefinition();
+      (definition.execution as any).top_p = 'high';
+      const result = validateWorkflowDefinition(definition);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('execution.top_p must be a number between 0 and 1');
+    });
+
+    it('[4-GP-UNIT-011] Given valid top_k, when validated, then result is valid', () => {
+      const definition = createValidDefinition();
+      definition.execution.top_k = 40;
+      const result = validateWorkflowDefinition(definition);
+      expect(result.valid).toBe(true);
+    });
+
+    it('[4-GP-UNIT-012] Given top_k as float, when validated, then returns error', () => {
+      const definition = createValidDefinition();
+      (definition.execution as any).top_k = 3.5;
+      const result = validateWorkflowDefinition(definition);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('execution.top_k must be an integer >= 1');
+    });
+
+    it('[4-GP-UNIT-013] Given top_k as 0, when validated, then returns error', () => {
+      const definition = createValidDefinition();
+      (definition.execution as any).top_k = 0;
+      const result = validateWorkflowDefinition(definition);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('execution.top_k must be an integer >= 1');
+    });
+
+    it('[4-GP-UNIT-014] Given valid stop_sequences, when validated, then result is valid', () => {
+      const definition = createValidDefinition();
+      definition.execution.stop_sequences = ['END', 'STOP'];
+      const result = validateWorkflowDefinition(definition);
+      expect(result.valid).toBe(true);
+    });
+
+    it('[4-GP-UNIT-015] Given stop_sequences with non-strings, when validated, then returns error', () => {
+      const definition = createValidDefinition();
+      (definition.execution as any).stop_sequences = [1, 2];
+      const result = validateWorkflowDefinition(definition);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('execution.stop_sequences must be an array of strings');
+    });
+
+    it('[4-GP-UNIT-016] Given stop_sequences as string, when validated, then returns error', () => {
+      const definition = createValidDefinition();
+      (definition.execution as any).stop_sequences = 'END';
+      const result = validateWorkflowDefinition(definition);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('execution.stop_sequences must be an array of strings');
+    });
+  });
+
   describe('Multiple errors', () => {
     it('[3.1-UNIT-022] [P1] Given multiple issues, when validated, then returns all errors', () => {
       // Given

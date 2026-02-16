@@ -53,6 +53,9 @@ export interface WorkflowExecution {
   temperature?: number;
   max_output_tokens?: number;
   max_retries?: number;
+  top_p?: number;
+  top_k?: number;
+  stop_sequences?: string[];
 }
 
 export type WorkflowQueryStrategy = 'auto' | 'custom';
@@ -79,3 +82,18 @@ export interface WorkflowOutputSection {
   label: string;
   required: boolean;
 }
+
+/**
+ * Maps snake_case generation param keys (WorkflowExecution) → camelCase keys
+ * (LLMGenerateOptions / GenerationParamSpec / model defaults).
+ *
+ * Single source of truth — used by both backend merge utility and frontend wizard.
+ * When adding a new generation param, add ONE entry here.
+ */
+export const GENERATION_PARAM_KEY_MAP: Readonly<Record<string, string>> = Object.freeze({
+  temperature: 'temperature',
+  max_output_tokens: 'maxOutputTokens',
+  top_p: 'topP',
+  top_k: 'topK',
+  stop_sequences: 'stopSequences',
+});

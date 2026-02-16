@@ -112,7 +112,12 @@ describe('WorkflowExecutionProcessor', () => {
           contextWindow: 1000000,
           maxOutputTokens: 8192,
           isActive: true,
+          generationDefaults: null,
         },
+        supportedGenerationParams: [
+          { key: 'temperature', label: 'Temperature', type: 'number', min: 0, max: 2, default: 0.7 },
+          { key: 'maxOutputTokens', label: 'Max Output Tokens', type: 'number', min: 1, max: 65536, default: 4096 },
+        ],
       }),
     };
 
@@ -233,14 +238,16 @@ describe('WorkflowExecutionProcessor', () => {
   });
 
   describe('process() — LLM integration', () => {
-    // [4.2-UNIT-047] Calls prompt assembly, provider factory, and LLM generate
-    it('should call prompt assembly then LLM provider generate', async () => {
+    // [4.2-UNIT-047] Calls prompt assembly, provider factory, and LLM generate with merged params
+    it('should call prompt assembly then LLM provider generate with merged params', async () => {
       mockManager.findOne.mockResolvedValue(makeRun());
 
       await processor.process(makeJob());
 
       expect(promptAssembly.assemble).toHaveBeenCalledWith(basePayload);
       expect(llmProviderFactory.getProvider).toHaveBeenCalledWith(modelUuid);
+      // Merge: spec defaults (temp 0.7, maxOutput 4096) + workflow overrides (temp 0.7, maxOutput 4096)
+      // Workflow overrides match spec defaults here, so result is same
       expect(mockLlmProvider.generate).toHaveBeenCalledWith(
         'Assembled prompt text',
         { temperature: 0.7, maxOutputTokens: 4096 },
@@ -299,7 +306,9 @@ describe('WorkflowExecutionProcessor', () => {
           modelId: 'small-model',
           contextWindow: 10, // very small
           isActive: true,
+          generationDefaults: null,
         },
+        supportedGenerationParams: [],
       });
 
       // Return a long prompt
@@ -313,6 +322,40 @@ describe('WorkflowExecutionProcessor', () => {
 
       await expect(processor.process(makeJob())).rejects.toThrow(
         /exceeds model context window/,
+      );
+    });
+
+    // [4-GP-UNIT-047] Merges model defaults into generation params via merge utility
+    it('should merge model defaults + workflow overrides into generation params', async () => {
+      mockManager.findOne.mockResolvedValue(makeRun());
+      llmProviderFactory.getProvider.mockResolvedValue({
+        provider: mockLlmProvider,
+        model: {
+          id: modelUuid,
+          modelId: 'gemini-1.5-pro',
+          providerKey: 'google-ai-studio',
+          contextWindow: 1000000,
+          maxOutputTokens: 8192,
+          isActive: true,
+          generationDefaults: { temperature: 0.3, topP: 0.8 },
+        },
+        supportedGenerationParams: [
+          { key: 'temperature', label: 'Temperature', type: 'number', min: 0, max: 2, default: 1.0 },
+          { key: 'topP', label: 'Top P', type: 'number', min: 0, max: 1, default: 0.95 },
+          { key: 'topK', label: 'Top K', type: 'number', min: 1, max: 100, default: 40 },
+          { key: 'maxOutputTokens', label: 'Max Output Tokens', type: 'number', min: 1, max: 8192, default: 8192 },
+        ],
+      });
+
+      await processor.process(makeJob());
+
+      // Merge: spec defaults (temp=1.0, topP=0.95, topK=40, maxOut=8192) →
+      //   model defaults (temp=0.3, topP=0.8) →
+      //   workflow overrides (temp=0.7, max_output_tokens=4096)
+      // Result: temp=0.7 (workflow), topP=0.8 (model), topK=40 (spec), maxOut=4096 (workflow)
+      expect(mockLlmProvider.generate).toHaveBeenCalledWith(
+        'Assembled prompt text',
+        { temperature: 0.7, topP: 0.8, topK: 40, maxOutputTokens: 4096 },
       );
     });
 

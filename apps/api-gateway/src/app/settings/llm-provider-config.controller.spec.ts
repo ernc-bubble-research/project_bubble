@@ -107,6 +107,25 @@ describe('LlmProviderConfigController [P1]', () => {
       expect(mockEntry!.isDevelopmentOnly).toBe(true);
     });
 
+    it('[4-GP-UNIT-017] should include supportedGenerationParams for each provider type', () => {
+      // When
+      const result = controller.getProviderTypes();
+
+      // Then
+      const googleEntry = result.find((r) => r.providerKey === 'google-ai-studio');
+      expect(googleEntry!.supportedGenerationParams).toBeDefined();
+      expect(googleEntry!.supportedGenerationParams.length).toBe(5);
+      expect(googleEntry!.supportedGenerationParams[0].key).toBe('temperature');
+
+      const mockEntry = result.find((r) => r.providerKey === 'mock');
+      expect(mockEntry!.supportedGenerationParams).toBeDefined();
+      expect(mockEntry!.supportedGenerationParams.length).toBe(3);
+
+      const openaiEntry = result.find((r) => r.providerKey === 'openai');
+      expect(openaiEntry!.supportedGenerationParams).toBeDefined();
+      expect(openaiEntry!.supportedGenerationParams.length).toBe(4);
+    });
+
     it('[4-PR-UNIT-CT03] should return results sorted by displayName', () => {
       // When
       const result = controller.getProviderTypes();

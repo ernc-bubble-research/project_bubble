@@ -7,6 +7,11 @@ import {
   Unique,
 } from 'typeorm';
 
+/**
+ * SYSTEM-WIDE entity — no tenant_id column, no RLS policy.
+ * Queries use findOne({ where: { id } }) without tenantId (documented Rule 2c exception).
+ * Managed exclusively by BUBBLE_ADMIN role.
+ */
 @Entity('llm_models')
 @Unique(['providerKey', 'modelId'])
 export class LlmModelEntity {
@@ -36,6 +41,9 @@ export class LlmModelEntity {
 
   @Column({ name: 'cost_per_1k_output', type: 'decimal', precision: 10, scale: 6, nullable: true })
   costPer1kOutput!: string | null;
+
+  @Column({ name: 'generation_defaults', type: 'jsonb', nullable: true })
+  generationDefaults!: Record<string, unknown> | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
