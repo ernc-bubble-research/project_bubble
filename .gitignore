@@ -18,11 +18,7 @@ node_modules
 *.sublime-workspace
 
 # IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode/
 
 # misc
 /.sass-cache
@@ -59,3 +55,7 @@ playwright/.auth/
 dist/.playwright/
 test-results/
 .env.test
+
+# Claude Code
+.claude/
+memory/

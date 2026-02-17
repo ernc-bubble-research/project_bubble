@@ -1,0 +1,121 @@
+**Transcript Information:**
+
+* **Date:** November 14, 2025
+* **Participants:**
+* **Elena Ross** (Community Lead, ConnectLearn)
+* **David Chen** (VP of Learning Strategy, OmniSystems)
+
+
+* **Duration:** 55 mins
+
+---
+
+**[0:00] Elena Ross (ConnectLearn):** Can you hear me? Ah, there you are! Hi!
+
+**[0:05] David Chen (OmniSystems):** Hi! Sorry, my camera decided to hide on another screen. How are things?
+
+**[0:10] Elena:** All good! It’s actually sunny here in London for once, which is a miracle for a Friday afternoon.
+
+**[0:15] David:** That is a miracle. It’s absolutely pouring here in Seattle. But hey, the weekend is close, so I can’t complain.
+
+**[0:22] Elena:** Exactly. It’s really nice to connect with you before the weekend kicks off.
+
+**[0:25] David:** Likewise. I’m looking forward to hearing about what you’re building.
+
+**[0:30] Elena:** Great. So, usually in these chats, I share a little about how our Learning Leaders Community is structured and what we focus on. Then, I love to pivot to you—hearing about your current learning goals and what challenges you're facing at OmniSystems. Is it okay if I turn on my AI notes assistant? It captures the summary much better than I can while typing.
+
+**[0:55] David:** Oh, absolutely. I use one myself; it’s a lifesaver. Go ahead.
+
+**[1:05] Elena:** Perfect. So, just a brief background on me. I’ve been in Learning Experience Design for about 15 years. I spent a long time working in organizational change in the US, then moved back to the UK a few years ago. Now I’m with ConnectLearn, which is based here in Europe.
+
+**[1:25] David:** That’s a nice shift.
+
+**[1:27] Elena:** It is. Around ConnectLearn, we’ve built this network of people interested in moving away from traditional "training" and towards genuine peer-to-peer knowledge exchange. We look at how to build cultures where learning is part of the daily workflow, not just a course you click through.
+
+**[1:45] David:** That’s exactly the conversation we need to be having.
+
+**[1:48] Elena:** We meet online once a month. We have members from all over—mostly Europe, but a growing group in North America too. We usually start with a pre-reflection, then do breakout discussions in the actual meeting so you get to talk to peers, not just listen to a presentation. We also try to do physical meetups in London and Berlin twice a year.
+
+**[2:15] David:** Wow, sounds like you’re busy!
+
+**[2:18] Elena:** It’s fun work! Our goal is to solve that common headache: "How do we get employees to engage in learning when they have no time?" Right now, we’re doing a deep dive into AI in L&D—moving beyond the hype to practical use cases. Next quarter, we’re focusing on the strategic shift: how L&D moves from an "order taker" for training requests to a strategic business partner.
+
+**[2:45] David:** That second topic is huge. That’s a constant battle.
+
+**[2:50] Elena:** Exactly. It’s a space for senior leaders to be vulnerable about those challenges. We have members from Novaritis, Siemens, and some big financial firms. It’s less about "how to build a slide deck" and more about "how to change the learning culture."
+
+**[3:10] David:** That sounds right up my alley. I’m curious—who else is in the group?
+
+**[3:15] Elena:** We have a mix. Some new folks from Spotify just joined, people from Maersk, and a few from the public sector—transport agencies mostly—but they operate very much like corporate entities. It’s a diverse mix of industries, but the challenges are surprisingly similar.
+
+**[3:35] David:** I can imagine. Well, I’d love to introduce myself a bit.
+
+**[3:40] Elena:** Please do!
+
+**[3:42] David:** So, I’ve been in this space for a long time. My passion is the intersection of human potential and business results. I started way back in the late 90s, actually in automotive sales training. I worked for a massive dealership network teaching people how to use the early CRM systems.
+
+**[4:05] Elena:** Oh, wow. That was early days for tech training.
+
+**[4:08] David:** It was. Then I spent about 15 years at DataCorp. I worked on leadership development for their cloud engineers. It was a very intense, sales-driven culture. Eventually, I decided I was done with the constant travel and the quarterly sales targets. I wanted to work somewhere that actually *made* things.
+
+**[4:30] Elena:** And that led you to OmniSystems?
+
+**[4:32] David:** Exactly. I came here, and they said, "Great, you can head up Learning for our Global R&D division." I didn't know much about heavy engineering at the time, but it’s been fascinating. I’ve been here six years now. My role is split—half is global strategy for technical upskilling, and the other half is managing the learning function for our North American operations.
+
+**[5:00] Elena:** That sounds like a massive scope.
+
+**[5:05] David:** It is. Just last week we onboarded 200 new engineers. But I also manage these cross-industry consortiums. We partner with two major aerospace competitors and a university to do high-level leadership training for our top engineers. The idea is to strengthen the industry as a whole, not just our company.
+
+**[5:30] Elena:** That is fascinating. Actually, I think we might have crossed paths before. Did you ever use a tool called BoardSync back in your DataCorp days?
+
+**[5:40] David:** BoardSync? Yes! We were one of the first big enterprise clients. Wait... did we meet?
+
+**[5:45] Elena:** I think so! I was a Customer Success lead there. I ran the "Virtual Design Thinking" workshops for your team in Austin.
+
+**[5:55] David:** No way! That was you? I remember those! You taught us how to stop using sticky notes on the wall and move everything to the cloud. I still use those templates!
+
+**[6:05] Elena:** Small world! I remember your team because you were the only ones who actually turned your cameras on back then.
+
+**[6:12] David:** Hah! That was mandatory. The CEO at the time was obsessed with "visual connection." But that’s amazing. I knew your name sounded familiar.
+
+**[6:20] Elena:** It’s always fun to reconnect. So, tell me, with everything going on at OmniSystems—what’s top of mind for you? What kind of discussions are you looking for in a community like ours?
+
+**[6:40] David:** Well, obviously AI is the big one. But not "how to write a prompt." We’ve been doing data science for years. I’m interested in AI for *personalization*. How do I create a learning path that adapts in real-time?
+
+**[7:00] David:** The other big thing is scaling the human element. We run these mentorship programs. Everyone loves them, but they are a logistical nightmare. Matching mentors, tracking progress... it takes so much manual time. I want to know if anyone has cracked the code on scaling mentorship without losing the personal touch.
+
+**[7:20] Elena:** We actually had a session on that last month! One of our members from a big pharma company shared how they use a semi-automated matching system but keep the check-ins human. I can send you the recording and introduce you to her.
+
+**[7:35] David:** That would be incredible. Please do. The other thing keeping me up at night is the "Brain Drain." We have engineers who have been here for 40 years. They hold the patents, the history, the "why we don't do it that way" knowledge. They are retiring. How do we extract that knowledge before they walk out the door?
+
+**[8:00] Elena:** That is such a common theme right now. We have a member from a national energy grid facing the exact same issue. We’re planning a session on "Knowledge Transfer & Succession Planning" for early next year.
+
+**[8:15] David:** Count me in for that. Because right now, our onboarding is... well, it’s functional, but it’s dry. We have a platform, let's call it "SkillTrack," and it’s just lists of videos. I want to turn onboarding into a scavenger hunt. Go find this expert, ask them this question, come back and report.
+
+**[8:35] Elena:** Gamification of the social network. I love that.
+
+**[8:40] David:** Exactly. But how do you measure that? How do you prove they learned it? That’s the struggle.
+
+**[8:50] Elena:** I think you’d get a lot out of our upcoming session on "Social Learning Metrics."
+
+**[8:55] David:** It sounds like it. Honestly, just getting out of the OmniSystems bubble is valuable. I do these hackathons sometimes with startups, and I always come back energized. It’s easy to get stuck in your own corporate echo chamber.
+
+**[9:15] Elena:** That’s the whole point of the community. To pop the bubble.
+
+**[9:20] David:** I’m curious—ConnectLearn... are you a consultancy? Or a software company?
+
+**[9:25] Elena:** We’re a platform for collaborative learning. Think of it like BoardSync but specifically for running long-term learning journeys and communities. However, you don't have to be a customer to be in this network. We keep the sales pitch out of the community calls.
+
+**[9:40] David:** Okay, good to know. Because I might be interested in the platform too, especially if it helps with that social onboarding idea. But for now, the network is the draw.
+
+**[9:50] Elena:** That’s great. Well, David, I know we’re over time. I’m going to send you the invite for next Friday’s session on AI Facilitation. And I’ll introduce you to the member who runs the mentorship program.
+
+**[10:05] David:** Perfect. I’ll try to hop on the call next Friday just to listen in and get a feel for the vibe.
+
+**[10:10] Elena:** Sounds like a plan. It was so great to reconnect after all these years.
+
+**[10:15] David:** You too, Elena. Have a great weekend in London!
+
+**[10:18] Elena:** You too! Bye!
+
+**[10:20] David:** Bye.

@@ -1,0 +1,3 @@
+**Research Goal provided by the user:** {research_goal} --> NEEDS TO BE ADDED TO THE PROMPT!
+
+Who is the ideal customer profile (ICP) for the product discussed in this interview, and what are their key pains, buying triggers, and decision criteria?

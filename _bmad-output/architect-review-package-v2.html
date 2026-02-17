@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architect Review Package v2 — Bubble</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface-2: #242736;
+    --surface-3: #2e3144;
+    --text: #e4e7ef;
+    --text-secondary: #9ba1b7;
+    --text-muted: #6b7191;
+    --accent: #6366f1;
+    --accent-light: #818cf8;
+    --accent-glow: rgba(99, 102, 241, 0.15);
+    --green: #22c55e;
+    --green-bg: rgba(34, 197, 94, 0.1);
+    --green-border: rgba(34, 197, 94, 0.3);
+    --yellow: #eab308;
+    --yellow-bg: rgba(234, 179, 8, 0.1);
+    --yellow-border: rgba(234, 179, 8, 0.3);
+    --red: #ef4444;
+    --red-bg: rgba(239, 68, 68, 0.1);
+    --red-border: rgba(239, 68, 68, 0.3);
+    --blue: #3b82f6;
+    --blue-bg: rgba(59, 130, 246, 0.1);
+    --orange: #f97316;
+    --orange-bg: rgba(249, 115, 22, 0.1);
+    --cyan: #06b6d4;
+    --border: #2e3144;
+    --code-bg: #242736;
+    --pre-bg: #0d0f16;
+    --pre-text: #c4c9de;
+    --gradient-1: linear-gradient(135deg, #6366f1, #8b5cf6);
+    --gradient-2: linear-gradient(135deg, #06b6d4, #3b82f6);
+    --gradient-3: linear-gradient(135deg, #22c55e, #06b6d4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 14.5px;
+  }
+
+  .container {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 48px 40px 100px;
+  }
+
+  /* ─── Header ─── */
+  .doc-header {
+    text-align: center;
+    padding: 60px 0 48px;
+    margin-bottom: 48px;
+    position: relative;
+  }
+  .doc-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 3px;
+    background: var(--gradient-1);
+    border-radius: 2px;
+  }
+  .doc-header .version-tag {
+    display: inline-block;
+    background: var(--accent-glow);
+    color: var(--accent-light);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+  }
+  .doc-header h1 {
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 8px;
+    letter-spacing: -1px;
+  }
+  .doc-header .subtitle {
+    font-size: 18px;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-bottom: 20px;
+  }
+  .doc-meta {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 24px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .doc-meta span { display: flex; align-items: center; gap: 6px; }
+  .doc-meta code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--code-bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--accent-light);
+  }
+
+  /* ─── Stat Cards ─── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin: 24px 0 40px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+  .stat-card.purple::before { background: var(--gradient-1); }
+  .stat-card.blue::before { background: var(--gradient-2); }
+  .stat-card.green::before { background: var(--gradient-3); }
+  .stat-card.orange::before { background: linear-gradient(135deg, #f97316, #eab308); }
+  .stat-number {
+    font-size: 32px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.1;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* ─── TOC ─── */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 48px;
+  }
+  .toc h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    font-weight: 700;
+    border: none;
+    padding: 0;
+  }
+  .toc ol {
+    list-style: none;
+    counter-reset: toc;
+    columns: 2;
+    column-gap: 32px;
+  }
+  .toc li {
+    counter-increment: toc;
+    margin-bottom: 8px;
+    break-inside: avoid;
+  }
+  .toc li::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent-light);
+    font-weight: 700;
+    margin-right: 10px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .toc a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .toc a:hover { color: var(--accent-light); }
+
+  /* ─── Sections ─── */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 36px;
+    margin-bottom: 28px;
+  }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 24px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -0.3px;
+  }
+  h2 .section-num {
+    color: var(--accent-light);
+    margin-right: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+  }
+
+  h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    margin-top: 32px;
+    margin-bottom: 12px;
+  }
+  h3:first-of-type { margin-top: 0; }
+
+  h4 {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin-top: 24px;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  p { margin-bottom: 12px; }
+
+  /* ─── Tables ─── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  thead th {
+    background: var(--surface-2);
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text-secondary);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  td code, th code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11.5px;
+    color: var(--accent-light);
+  }
+
+  /* ─── Code blocks ─── */
+  pre {
+    background: var(--pre-bg);
+    color: var(--pre-text);
+    padding: 20px 24px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    margin: 16px 0;
+    white-space: pre;
+    border: 1px solid var(--border);
+  }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+  }
+
+  p code, li code {
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--accent-light);
+  }
+
+  /* ─── Callouts ─── */
+  .flag {
+    background: var(--yellow-bg);
+    border-left: 3px solid var(--yellow);
+    padding: 14px 18px;
+    margin: 16px 0;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .flag strong { color: var(--yellow); }
+
+  .flag-critical {
+    background: var(--red-bg);
+    border-left-color: var(--red);
+  }
+  .flag-critical strong { color: var(--red); }
+
+  .flag-security {
+    background: var(--red-bg);
+    border-left-color: #dc2626;
+  }
+  .flag-security strong { color: #dc2626; }
+
+  .flag-resolved {
+    background: var(--green-bg);
+    border-left-color: var(--green);
+  }
+  .flag-resolved strong { color: var(--green); }
+
+  .flag-info {
+    background: var(--blue-bg);
+    border-left-color: var(--blue);
+  }
+  .flag-info strong { color: var(--blue); }
+
+  /* ─── Lists ─── */
+  ul, ol {
+    margin: 8px 0 12px 20px;
+  }
+  li {
+    margin-bottom: 6px;
+    font-size: 13.5px;
+    color: var(--text-secondary);
+  }
+  li strong { color: var(--text); }
+
+  /* ─── Architecture diagram ─── */
+  .diagram {
+    background: var(--pre-bg);
+    color: var(--text-muted);
+    padding: 24px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    margin: 16px 0;
+    white-space: pre;
+    border: 1px solid var(--border);
+  }
+
+  /* ─── Progress Bars ─── */
+  .progress-bar-container {
+    margin: 10px 0;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .progress-label span:first-child { color: var(--text-secondary); }
+  .progress-label span:last-child { color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+  .progress-track {
+    height: 8px;
+    background: var(--surface-3);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  .progress-fill.green { background: linear-gradient(90deg, #22c55e, #4ade80); }
+  .progress-fill.blue { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+  .progress-fill.purple { background: var(--gradient-1); }
+  .progress-fill.yellow { background: linear-gradient(90deg, #eab308, #facc15); }
+
+  /* ─── Timeline ─── */
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+    margin: 24px 0;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: var(--border);
+  }
+  .timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 16px 20px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -27px;
+    top: 20px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--surface);
+  }
+  .timeline-item.done::before {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .timeline-item.active::before {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+  }
+  .timeline-item.pending::before {
+    background: var(--surface-3);
+    border-color: var(--text-muted);
+  }
+  .timeline-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .timeline-detail {
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+  .timeline-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+  }
+  .timeline-badge.done { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .timeline-badge.active { background: var(--accent-glow); color: var(--accent-light); border: 1px solid rgba(99,102,241,0.3); }
+  .timeline-badge.pending { background: var(--surface-3); color: var(--text-muted); border: 1px solid var(--border); }
+
+  /* ─── Agent Cards ─── */
+  .agent-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .agent-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: border-color 0.2s;
+  }
+  .agent-card:hover { border-color: var(--accent); }
+  .agent-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+  }
+  .agent-role {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .agent-desc {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* ─── Pipeline Steps ─── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 24px 0;
+    overflow-x: auto;
+    padding: 4px 0;
+  }
+  .pipeline-step {
+    flex-shrink: 0;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 18px;
+    text-align: center;
+    min-width: 140px;
+  }
+  .pipeline-step .step-name {
+    font-weight: 700;
+    font-size: 12px;
+    color: #fff;
+  }
+  .pipeline-step .step-detail {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .pipeline-arrow {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-size: 18px;
+    padding: 0 6px;
+  }
+
+  /* ─── Summary Cards ─── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .summary-card {
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .summary-card.good { border-left: 3px solid var(--green); }
+  .summary-card.decisions { border-left: 3px solid var(--accent); }
+  .summary-card.resolved { border-left: 3px solid var(--cyan); }
+  .summary-card.risk { border-left: 3px solid var(--orange); }
+  .summary-card h3 {
+    margin-top: 0;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .summary-card ul { margin-left: 16px; }
+  .summary-card li { font-size: 12.5px; }
+
+  /* ─── Badges ─── */
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-critical { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .badge-high { background: var(--orange-bg); color: var(--orange); border: 1px solid rgba(249,115,22,0.3); }
+  .badge-medium { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+  .badge-low { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .badge-done { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .badge-new { background: var(--accent-glow); color: var(--accent-light); border: 1px solid rgba(99,102,241,0.3); }
+
+  /* ─── Section Group Headers ─── */
+  .group-header {
+    text-align: center;
+    padding: 40px 0 20px;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-weight: 700;
+  }
+
+  /* ─── Resolved strikethrough ─── */
+  .resolved { text-decoration: line-through; color: var(--text-muted); }
+  .resolved-tag { color: var(--green); font-size: 11px; font-weight: 600; margin-left: 6px; }
+
+  /* ─── Print ─── */
+  @media print {
+    body { background: #fff; color: #111; font-size: 11px; }
+    .container { max-width: 100%; padding: 20px; }
+    .section { break-inside: avoid; border: 1px solid #ccc; background: #fff; }
+    .toc { break-after: page; }
+    pre, .diagram { font-size: 9px; background: #f5f5f5; color: #333; border: 1px solid #ccc; }
+    .stat-card { background: #f9f9f9; border: 1px solid #ccc; }
+    .stat-number { color: #111; }
+    h2, h3 { color: #111; }
+    td, li, p { color: #333; }
+  }
+
+  @media (max-width: 700px) {
+    .container { padding: 20px 16px; }
+    .section { padding: 20px; }
+    .toc ol { columns: 1; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .summary-grid { grid-template-columns: 1fr; }
+    .agent-grid { grid-template-columns: 1fr; }
+    .pipeline { flex-direction: column; }
+    table { font-size: 11px; }
+    thead th, tbody td { padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- HEADER                                                         -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="doc-header">
+    <div class="version-tag">V2 &mdash; Updated 2026-02-13</div>
+    <h1>Architect Review Package</h1>
+    <div class="subtitle">Bubble &mdash; AI-Powered Research Workflow Platform</div>
+    <div class="doc-meta">
+      <span>Branch: <code>main</code></span>
+      <span>Epic 4 in progress (4 of 7 stories complete)</span>
+      <span>Updated from v1 (2026-02-05)</span>
+    </div>
+  </div>
+
+  <!-- ─── Key Metrics at a Glance ─── -->
+  <div class="stats-row">
+    <div class="stat-card purple">
+      <div class="stat-number">1,200+</div>
+      <div class="stat-label">Total Tests</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-number">12</div>
+      <div class="stat-label">DB Entities</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-number">254</div>
+      <div class="stat-label">Source Files</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-number">22,700</div>
+      <div class="stat-label">Lines of Code</div>
+    </div>
+  </div>
+
+  <!-- ─── TOC ─── -->
+  <div class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#s0">How This Was Built &mdash; The BMAD Framework</a></li>
+      <li><a href="#s1">Product Overview &amp; Phase 1 Scope</a></li>
+      <li><a href="#s2">Architecture Overview</a></li>
+      <li><a href="#s3">Epic Progress &amp; Implementation Timeline</a></li>
+      <li><a href="#s4">Workflow Execution Engine (Epic 4)</a></li>
+      <li><a href="#s5">Database Schema &amp; Security</a></li>
+      <li><a href="#s6">API Route Inventory</a></li>
+      <li><a href="#s7">Tech Stack &amp; Infrastructure</a></li>
+      <li><a href="#s8">Quality &amp; Testing</a></li>
+      <li><a href="#s9">Technical Debt &amp; Known Issues</a></li>
+      <li><a href="#s10">Deployment &amp; Operational Gaps</a></li>
+      <li><a href="#s11">Summary &amp; Architect Decisions</a></li>
+    </ol>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 0 — BMAD                                               -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="group-header">How This Was Built</div>
+
+  <div class="section" id="s0">
+    <h2><span class="section-num">00.</span> The BMAD Framework</h2>
+
+    <p><strong>BMAD</strong> (Bounded Multi-Agent Development) is a structured, multi-agent software development framework that orchestrates specialized AI agents through disciplined workflows to produce production-grade code systematically.</p>
+
+    <p>Unlike ad-hoc AI-assisted coding, BMAD treats software development as a <strong>choreography of specialized roles</strong> &mdash; each with explicit responsibilities, known failure patterns to watch for, and well-defined quality gates. Every line of code in this codebase was produced through this process.</p>
+
+    <h3>The Agent Team</h3>
+    <p>BMAD coordinates a roster of specialized agents. Each is a distinct persona with domain expertise, communication style, and defined principles:</p>
+
+    <div class="agent-grid">
+      <div class="agent-card">
+        <div class="agent-role">Senior Developer</div>
+        <div class="agent-name">Amelia</div>
+        <div class="agent-desc">Code execution, test-first development, story file accountability. Writes all production code and self-reviews in Pass 1.</div>
+      </div>
+      <div class="agent-card" style="border-color: var(--red); border-width: 1px;">
+        <div class="agent-role">Adversarial Reviewer</div>
+        <div class="agent-name">Naz</div>
+        <div class="agent-desc">Security auditor background. Fresh context, different LLM. Checks known violation patterns (V1-V5) FIRST. Minimum 3 findings per review.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-role">Test Architect</div>
+        <div class="agent-name">Murat</div>
+        <div class="agent-desc">Risk-based testing, coverage gaps, API/E2E strategy. Fresh context, different LLM. Pass 3 validates test quality and architecture.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-role">System Architect</div>
+        <div class="agent-name">Winston</div>
+        <div class="agent-desc">Distributed systems, scalability patterns, technology selection. Drives architecture decisions and tradeoff analysis.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-role">Business Analyst</div>
+        <div class="agent-name">Mary</div>
+        <div class="agent-desc">Requirements elicitation, root cause analysis. Ensures stories reflect real user needs, not assumed requirements.</div>
+      </div>
+      <div class="agent-card">
+        <div class="agent-role">Product Manager</div>
+        <div class="agent-name">John</div>
+        <div class="agent-desc">Jobs-to-be-Done framework, opportunity scoring. Prioritizes backlog and validates product-market fit decisions.</div>
+      </div>
+    </div>
+
+    <h3>Execution Pipeline</h3>
+    <p>Every story follows a strict, mandatory execution path:</p>
+
+    <div class="pipeline">
+      <div class="pipeline-step" style="border-color: var(--accent);">
+        <div class="step-name">Party Mode</div>
+        <div class="step-detail">Multi-agent planning</div>
+      </div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step">
+        <div class="step-name">Create Story</div>
+        <div class="step-detail">Requirements lock</div>
+      </div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step">
+        <div class="step-name">Implement</div>
+        <div class="step-detail">Code + Tests</div>
+      </div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step" style="border-color: var(--green);">
+        <div class="step-name">3-Pass Review</div>
+        <div class="step-detail">Mandatory gate</div>
+      </div>
+    </div>
+
+    <div class="flag flag-info">
+      <strong>Key constraint:</strong> Party Mode is NEVER optional. It is the first step for every story. This is a disciplinary rule with termination-level enforcement &mdash; after a violation on 2026-02-11 where an agent skipped party mode and 4 High-severity findings were discovered later, this was elevated to the strictest enforcement level.
+    </div>
+
+    <h3>The 3-Pass Code Review</h3>
+    <p>The most critical quality mechanism. Every story must pass ALL three reviews before it is considered done:</p>
+
+    <table>
+      <thead><tr><th>Pass</th><th>Reviewer</th><th>Context</th><th>Focus</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Pass 1</strong></td><td>Amelia (Dev)</td><td>Same session</td><td>Self-review: tasks checked, file list accurate, Out-of-Scope section present</td></tr>
+        <tr><td><strong>Pass 2</strong></td><td>Naz (Adversarial)</td><td>Fresh context, different LLM</td><td>Known violation patterns checked FIRST. Security, data isolation, severity never downgraded</td></tr>
+        <tr><td><strong>Pass 3</strong></td><td>Murat (Test Arch)</td><td>Fresh context, different LLM</td><td>Test coverage, architecture patterns, risk assessment, regression prevention</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Known Violation Patterns</h3>
+    <p>Instead of generic checklists, the framework codifies <strong>recurring failures</strong> discovered across stories and checks for them first in every review:</p>
+    <table>
+      <thead><tr><th>ID</th><th>Pattern</th><th>Occurrences</th><th>Impact</th></tr></thead>
+      <tbody>
+        <tr><td><strong>V1</strong></td><td>Missing <code>tenantId</code> in WHERE clauses</td><td>6 across 5 stories</td><td>Data isolation vulnerability &mdash; tenant can access another tenant's data</td></tr>
+        <tr><td><strong>V2</strong></td><td>Story file not updated after implementation</td><td>2 occurrences</td><td>No traceability, no accountability, false "done" status</td></tr>
+        <tr><td><strong>V3</strong></td><td>Undocumented deferrals</td><td>Every story (before rule)</td><td>Reviewer can't tell if omission is intentional or a bug</td></tr>
+        <tr><td><strong>V4</strong></td><td>RETURNING queries without wiring tests</td><td>Story 4-FIX-A1</td><td>pg driver returns <code>[[rows], count]</code> not <code>[rows]</code> &mdash; silent data corruption</td></tr>
+        <tr><td><strong>V5</strong></td><td>Severity downgrading with excuses</td><td>Story 4-3 R2</td><td>Real bugs labeled "acceptable" to avoid doing work</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Why This Works</h3>
+    <div class="summary-grid">
+      <div class="summary-card good">
+        <h3>Structural Independence</h3>
+        <ul>
+          <li>Reviewer (Naz) runs on a <strong>different LLM</strong> with fresh context</li>
+          <li>Zero loyalty to the code &mdash; adversarial by design</li>
+          <li>Self-review by the author is only Pass 1 of 3</li>
+        </ul>
+      </div>
+      <div class="summary-card decisions">
+        <h3>Institutional Memory</h3>
+        <ul>
+          <li>Violation patterns are <strong>codified, not memorized</strong></li>
+          <li>Rules added after each failure &mdash; 32 rules and growing</li>
+          <li>Retrospectives after each epic update the process itself</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Concrete Metrics from This Codebase</h3>
+    <div class="stats-row">
+      <div class="stat-card green">
+        <div class="stat-number">100%</div>
+        <div class="stat-label">Review Fix Rate</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-number">32</div>
+        <div class="stat-label">Enforced Rules</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-number">16</div>
+        <div class="stat-label">Live Test Findings</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-number">0</div>
+        <div class="stat-label">Regressions</div>
+      </div>
+    </div>
+    <p style="font-size: 12px; color: var(--text-muted); text-align: center;">All code review findings are fixed before a story is marked done. Live test round 1 found 16 issues (3 Critical, 6 High, 7 Medium) &mdash; all systematically triaged and assigned to fix stories.</p>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1 — PRODUCT OVERVIEW                                    -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="group-header">The Product</div>
+
+  <div class="section" id="s1">
+    <h2><span class="section-num">01.</span> Product Overview &amp; Phase 1 Scope</h2>
+
+    <h3>What Bubble Is</h3>
+    <p>Bubble is a multi-tenant SaaS platform that enables marketing research teams to run AI-powered workflows on their data. Users upload research materials (transcripts, documents), select a pre-built workflow (e.g., "Qualitative Data Analysis"), and receive structured reports with citations back to source material.</p>
+
+    <h3>Core Value Proposition</h3>
+    <ul>
+      <li><strong>For Researchers:</strong> Replace weeks of manual qualitative analysis with AI-generated reports that cite their sources</li>
+      <li><strong>For Admins:</strong> Define reusable YAML-based workflow templates that non-technical users can execute through a guided wizard</li>
+      <li><strong>For Organizations:</strong> Multi-tenant architecture with strict data isolation (PostgreSQL RLS) and role-based access</li>
+    </ul>
+
+    <h3>Phase 1 Scope</h3>
+    <table>
+      <thead><tr><th>Area</th><th>What's In</th><th>What's Out</th></tr></thead>
+      <tbody>
+        <tr><td>Workflows</td><td>Atomic workflows (single LLM call), chains (sequential), fan-out (parallel per-file)</td><td>LangGraph orchestration, conditional branching</td></tr>
+        <tr><td>File Support</td><td>PDF, DOCX, TXT, MD (text extraction via Mammoth + pdf-parse)</td><td>Image/OCR, video, audio transcription</td></tr>
+        <tr><td>LLM Providers</td><td>Google AI Studio, OpenAI, Mock (testing) &mdash; hexagonal adapter pattern</td><td>Self-hosted models, Azure OpenAI, Vertex AI</td></tr>
+        <tr><td>Knowledge</td><td>pgvector RAG with cosine similarity (HNSW index)</td><td>Knowledge graph (nodes + edges), hybrid search</td></tr>
+        <tr><td>Reports</td><td>Markdown with inline citations, per-file results</td><td>PDF export, slide deck generation</td></tr>
+        <tr><td>Auth</td><td>JWT + RBAC (3 roles) + TenantStatusGuard</td><td>OAuth/SSO, MFA, SAML, refresh tokens</td></tr>
+        <tr><td>Billing</td><td>Credit-based pricing per workflow template</td><td>Stripe integration, plan tier management</td></tr>
+      </tbody>
+    </table>
+
+    <h3>User Roles</h3>
+    <table>
+      <thead><tr><th>Role</th><th>Scope</th><th>Access</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Bubble Admin</strong></td><td>Global</td><td>Tenant management, system settings, LLM config (provider credentials, models), impersonation</td></tr>
+        <tr><td><strong>Customer Admin</strong></td><td>Tenant</td><td>User management, invitations, tenant settings, workflow execution</td></tr>
+        <tr><td><strong>Creator</strong></td><td>Tenant</td><td>Run workflows, upload files, view reports</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2 — ARCHITECTURE                                        -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s2">
+    <h2><span class="section-num">02.</span> Architecture Overview</h2>
+
+    <h3>System Architecture</h3>
+    <div class="diagram">┌─────────────────────────────────────────────────────────────────────┐
+│                          FRONTEND                                    │
+│  Angular 21 SPA (apps/web)  &mdash;  Signals, Zoneless, Custom Design     │
+│  ┌───────────┐ ┌────────────┐ ┌────────────┐                       │
+│  │  Zone A   │ │  Zone B    │ │  Zone C    │                       │
+│  │  /auth    │ │  /app      │ │  /admin    │                       │
+│  │  (Public) │ │  (Tenant)  │ │  (Admin)   │                       │
+│  └───────────┘ └────────────┘ └────────────┘                       │
+│          │            │              │                               │
+│          └────────────┼──────────────┘                               │
+│                       │  HTTP + JWT                                  │
+└───────────────────────┼─────────────────────────────────────────────┘
+                        │
+┌───────────────────────┼─────────────────────────────────────────────┐
+│                  API GATEWAY  (apps/api-gateway)                     │
+│  NestJS 11 &mdash; Port 3000                                             │
+│                                                                      │
+│  ┌──────────┐  ┌───────────────┐  ┌───────────────┐               │
+│  │  Guards  │&rarr;│  Interceptors │&rarr;│  Controllers  │               │
+│  │  JWT     │  │  TenantContext │  │  18 total     │               │
+│  │  Roles   │  │  (RLS setup)   │  │               │               │
+│  │  Status  │  └───────────────┘  └───────┬───────┘               │
+│  │  API Key │                             │                         │
+│  └──────────┘                             ▼                         │
+│  ┌──────────────────────────────────────────────────────────┐      │
+│  │  Services + TransactionManager + PromptAssemblyService   │      │
+│  │  LlmProviderFactory + WorkflowExecutionService           │      │
+│  └─────────────────────────┬────────────────────────────────┘      │
+│                             │                                       │
+│               ┌─────────────┼─────────────┐                        │
+│               ▼             ▼             ▼                         │
+│        ┌──────────┐  ┌──────────┐  ┌──────────────────┐           │
+│        │PostgreSQL│  │  Redis   │  │     BullMQ       │           │
+│        │  + RLS   │  │  (cache) │  │ ingestion queue  │           │
+│        │+pgvector │  │          │  │ execution queue  │           │
+│        └──────────┘  └──────────┘  │ execution DLQ    │           │
+│                                     └──────────────────┘           │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  LLM PROVIDERS (Hexagonal Adapters)                                  │
+│  ┌─────────────┐  ┌───────────────────┐  ┌──────────────┐          │
+│  │ Mock LLM    │  │ Google AI Studio  │  │   OpenAI     │          │
+│  │ (testing)   │  │ (Gemini)          │  │  (deferred)  │          │
+│  │ 15 rpm      │  │ credentials in DB │  │              │          │
+│  └─────────────┘  └───────────────────┘  └──────────────┘          │
+└─────────────────────────────────────────────────────────────────────┘</div>
+
+    <h3>Key Architectural Decisions</h3>
+    <table>
+      <thead><tr><th>Decision</th><th>Choice</th><th>Rationale</th></tr></thead>
+      <tbody>
+        <tr><td>Monorepo</td><td>Nx 22 workspace</td><td>Single repo for frontend, backend, shared libs; affected-by detection</td></tr>
+        <tr><td>Multi-tenancy</td><td>Shared DB + RLS</td><td>Cost-efficient; PostgreSQL RLS enforces isolation at DB level</td></tr>
+        <tr><td>Auth</td><td>JWT (7-day expiry)</td><td>Stateless; <code>/api/auth/me</code> endpoint for user info; refresh tokens deferred</td></tr>
+        <tr><td>LLM integration</td><td>Hexagonal adapter pattern</td><td>Provider-agnostic; <code>LlmProviderFactory</code> resolves adapter from model UUID</td></tr>
+        <tr><td>Job processing</td><td>BullMQ + Redis (in-process)</td><td>Async workflow execution; DLQ + idempotency; extraction to separate worker deferred (7P-5b)</td></tr>
+        <tr><td>Workflow execution</td><td>Fan-out/fan-in per file</td><td>Parallel processing of N files via N BullMQ jobs; per-file results in JSONB column</td></tr>
+        <tr><td>Vector search</td><td>pgvector (HNSW)</td><td>PostgreSQL-native; no separate vector DB needed</td></tr>
+        <tr><td>Frontend state</td><td>Angular Signals</td><td>No NgRx; signals + <code>takeUntilDestroyed</code> sufficient for current complexity</td></tr>
+        <tr><td>Credential storage</td><td>AES-256-GCM in DB</td><td>Provider credentials encrypted at rest via <code>LlmProviderConfigEntity</code>; masked in API responses</td></tr>
+        <tr><td>Testing</td><td>Jest 30 + Playwright</td><td>3-tier: unit (1,100+), wiring (40), E2E (46) with real PostgreSQL</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3 — EPIC PROGRESS                                       -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="group-header">Implementation Progress</div>
+
+  <div class="section" id="s3">
+    <h2><span class="section-num">03.</span> Epic Progress &amp; Implementation Timeline</h2>
+
+    <div class="timeline">
+      <div class="timeline-item done">
+        <div class="timeline-title">Epic 1 &mdash; Foundation <span class="timeline-badge done">Done</span></div>
+        <div class="timeline-detail">Multi-tenant core, JWT auth, RBAC, tenant CRUD, user management, invitations, email service. <strong>237 tests.</strong></div>
+      </div>
+      <div class="timeline-item done">
+        <div class="timeline-title">Epic 2 &mdash; Data Management <span class="timeline-badge done">Done</span></div>
+        <div class="timeline-detail">File upload (PDF/DOCX/TXT/MD), folder management, knowledge base with pgvector, semantic search, text extraction pipeline. <strong>406 tests.</strong></div>
+      </div>
+      <div class="timeline-item done">
+        <div class="timeline-title">Epic 3 &mdash; Workflow Definition &amp; Admin <span class="timeline-badge done">Done</span></div>
+        <div class="timeline-detail">Workflow wizard (6-step), chain builder (visual), template versioning/publishing, settings shell, LLM model + provider config CRUD, E2E test suite. <strong>1,114 tests (1,028 unit + 40 wiring + 46 E2E).</strong></div>
+      </div>
+      <div class="timeline-item active">
+        <div class="timeline-title">Epic 4 &mdash; Workflow Execution Engine <span class="timeline-badge active">In Progress</span></div>
+        <div class="timeline-detail">LLM provider interface, prompt assembly, fan-out/fan-in execution, catalog, run initiation, DLQ, idempotency. 4 of 7 stories done + fix stories.</div>
+      </div>
+      <div class="timeline-item pending">
+        <div class="timeline-title">Epic 5 &mdash; Reports &amp; Output <span class="timeline-badge pending">Planned</span></div>
+        <div class="timeline-detail">Report rendering, evidence drawer, magic links, run history dashboard.</div>
+      </div>
+      <div class="timeline-item pending">
+        <div class="timeline-title">Epic 7P &mdash; Production Readiness <span class="timeline-badge pending">Planned</span></div>
+        <div class="timeline-detail">Deployment, cloud storage, secrets management, backups, BullMQ extraction, RLS enablement, load testing.</div>
+      </div>
+    </div>
+
+    <h3>Epic 4 Story Breakdown</h3>
+    <table>
+      <thead><tr><th>Story</th><th>Title</th><th>Status</th><th>Tests Added</th></tr></thead>
+      <tbody>
+        <tr><td>4-0</td><td>BullMQ DLQ + Idempotency</td><td><span class="badge badge-done">Done</span></td><td>19</td></tr>
+        <tr><td>4-1</td><td>Workflow Catalog + Run Initiation</td><td><span class="badge badge-done">Done</span></td><td>46 E2E</td></tr>
+        <tr><td>4-2</td><td>LLM Provider Interface + Prompt Assembly</td><td><span class="badge badge-done">Done</span></td><td>65</td></tr>
+        <tr><td>4-3</td><td>Execution Engine Core (Fan-Out/Fan-In)</td><td><span class="badge badge-done">Done</span></td><td>Tagged v0.4.3</td></tr>
+        <tr><td>4-FIX-A1</td><td>RETURNING Engine Fixes (6 tasks)</td><td><span class="badge badge-done">Done</span></td><td>10 wiring</td></tr>
+        <tr><td>4-FIX-A2</td><td>Lifecycle UI/API Fixes (10 tasks)</td><td><span class="badge badge-new">In Review</span></td><td>&mdash;</td></tr>
+        <tr><td>4-RLS</td><td>Full RLS Enablement (non-superuser role)</td><td><span class="badge" style="background:var(--surface-3);color:var(--text-muted);border:1px solid var(--border);">Planned</span></td><td>&mdash;</td></tr>
+        <tr><td>4-4</td><td>Pre-Flight Validation + Credit Check</td><td><span class="badge" style="background:var(--surface-3);color:var(--text-muted);border:1px solid var(--border);">Planned</span></td><td>&mdash;</td></tr>
+        <tr><td>4-PR</td><td>Backend-Driven Provider Registry</td><td><span class="badge" style="background:var(--surface-3);color:var(--text-muted);border:1px solid var(--border);">Planned</span></td><td>&mdash;</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Test Coverage Growth</h3>
+    <div class="progress-bar-container">
+      <div class="progress-label"><span>Epic 1 (Foundation)</span><span>237 tests</span></div>
+      <div class="progress-track"><div class="progress-fill green" style="width: 20%"></div></div>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-label"><span>Epic 2 (Data Management)</span><span>406 tests</span></div>
+      <div class="progress-track"><div class="progress-fill green" style="width: 34%"></div></div>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-label"><span>Epic 3 (Workflow Definition)</span><span>1,114 tests</span></div>
+      <div class="progress-track"><div class="progress-fill green" style="width: 93%"></div></div>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-label"><span>Epic 4 (Execution Engine) &mdash; in progress</span><span>1,200+ tests</span></div>
+      <div class="progress-track"><div class="progress-fill purple" style="width: 100%"></div></div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 4 — EXECUTION ENGINE                                    -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s4">
+    <h2><span class="section-num">04.</span> Workflow Execution Engine <span class="badge badge-new">New in Epic 4</span></h2>
+
+    <h3>Data Flow: User Runs a Workflow</h3>
+    <pre>1. User browses published workflows in Catalog (/app/workflows)
+2. Selects workflow &rarr; Run Wizard collects subject files + context inputs
+3. Frontend POSTs to /api/app/workflow-runs (InitiateWorkflowRunDto)
+4. API Gateway creates WorkflowRunEntity (status: QUEUED)
+5. WorkflowExecutionService dispatches N BullMQ jobs:
+   &mdash; Context-only:  1 job (no files)
+   &mdash; Batch mode:    1 job with all files concatenated
+   &mdash; Fan-out mode:  N jobs (1 per subject file)
+6. WorkflowExecutionProcessor picks up each job:
+   a. Resolves subject files (text extraction: PDF/DOCX/TXT/MD)
+   b. Runs PromptAssemblyService (variable substitution, context inputs)
+   c. Calls LLM provider via LlmProviderFactory (Mock/GoogleAI/OpenAI)
+   d. Stores per-file result in JSONB column
+7. Fan-in: When completed_jobs + failed_jobs >= total_jobs:
+   &mdash; All succeeded &rarr; status: COMPLETED
+   &mdash; Some failed   &rarr; status: COMPLETED_WITH_ERRORS
+   &mdash; All failed    &rarr; status: FAILED
+8. User views results (per-file breakdown with token usage)</pre>
+
+    <h3>Hexagonal LLM Provider Pattern</h3>
+    <table>
+      <thead><tr><th>Provider</th><th>Status</th><th>Configuration</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><strong>MockLlmProvider</strong></td><td><span class="badge badge-done">Active</span></td><td>15 rpm, 500ms-2s latency</td><td>Deterministic responses from SHA-256 hash of prompt; for development and testing</td></tr>
+        <tr><td><strong>GoogleAIStudioProvider</strong></td><td><span class="badge badge-done">Active</span></td><td>Credentials encrypted (AES-256-GCM)</td><td>Real Gemini calls; credentials stored in <code>LlmProviderConfigEntity</code></td></tr>
+        <tr><td><strong>OpenAIProvider</strong></td><td><span class="badge" style="background:var(--surface-3);color:var(--text-muted);border:1px solid var(--border);">Deferred</span></td><td>&mdash;</td><td>Story 4-PR (provider registry)</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>LlmProviderFactory</strong> resolves the correct adapter from a model UUID. Caches provider instances per <code>providerKey:modelId</code> with TTL invalidation when credentials are updated.</p>
+
+    <h3>BullMQ Queue Configuration</h3>
+    <table>
+      <thead><tr><th>Queue</th><th>Concurrency</th><th>Lock Duration</th><th>Retries</th><th>DLQ</th></tr></thead>
+      <tbody>
+        <tr><td><code>ingestion</code></td><td>Default</td><td>Default</td><td>3 (exp backoff 5s)</td><td>No</td></tr>
+        <tr><td><code>workflow-execution</code></td><td>100 (env: <code>WORKER_CONCURRENCY</code>)</td><td>300,000ms (5 min)</td><td>3 (exp backoff 5s)</td><td>Yes</td></tr>
+        <tr><td><code>workflow-execution-dlq</code></td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>Persists all failed jobs</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Key Epic 4 Architectural Decisions</h3>
+    <table>
+      <thead><tr><th>Decision</th><th>Choice</th><th>Rationale</th></tr></thead>
+      <tbody>
+        <tr><td>Fan-out model</td><td>1 BullMQ job per file</td><td>Parallel processing; <code>completed_with_errors</code> status for partial success</td></tr>
+        <tr><td>Credit pricing</td><td><code>credits_per_run</code> on template</td><td>Upfront deduction, refund on failure; <code>is_test_run</code> bypasses entirely</td></tr>
+        <tr><td>Token budget</td><td>Estimate: <code>fileSize/4</code></td><td>Precise counting only if &gt;80% budget to minimize overhead</td></tr>
+        <tr><td>Rate limiting (LLM)</td><td><code>rate_limit_rpm</code> per provider</td><td>BullMQ RateLimiter prevents exceeding provider quotas</td></tr>
+        <tr><td>Idempotency</td><td>Deterministic job IDs</td><td><code>{runId}:file:{index}</code> prevents duplicate processing on retry</td></tr>
+        <tr><td>RETURNING queries</td><td><code>parseUpdateReturningRow()</code> helper</td><td>pg driver returns <code>[[rows], count]</code> &mdash; discovered via Tier 2 wiring test</td></tr>
+        <tr><td>Worker deployment</td><td>In-process (api-gateway)</td><td>Simplicity; extraction to separate process deferred to Story 7P-5b</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Live Test Round 1 Results (2026-02-12)</h3>
+    <p>First end-to-end live test with real user flows discovered <strong>16 issues</strong>:</p>
+    <div class="stats-row" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="stat-card" style="border-left: 3px solid var(--red);">
+        <div class="stat-number" style="color: var(--red);">3</div>
+        <div class="stat-label">Critical</div>
+      </div>
+      <div class="stat-card" style="border-left: 3px solid var(--orange);">
+        <div class="stat-number" style="color: var(--orange);">6</div>
+        <div class="stat-label">High</div>
+      </div>
+      <div class="stat-card" style="border-left: 3px solid var(--yellow);">
+        <div class="stat-number" style="color: var(--yellow);">7</div>
+        <div class="stat-label">Medium</div>
+      </div>
+    </div>
+    <p style="font-size: 12.5px; color: var(--text-muted);">All findings systematically triaged via party mode and split into fix stories (4-FIX-A1, 4-FIX-A2, 4-FIX-B). Critical findings include: fan-in RETURNING destructuring bug, missing publish/unpublish buttons, and catalog visibility filtering gaps.</p>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 5 — DATABASE                                            -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="group-header">Technical Deep Dive</div>
+
+  <div class="section" id="s5">
+    <h2><span class="section-num">05.</span> Database Schema &amp; Security</h2>
+
+    <h3>Entity Summary (12 entities, ~164 columns)</h3>
+    <table>
+      <thead><tr><th>Entity</th><th>Table</th><th>Cols</th><th>RLS</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>TenantEntity</td><td><code>tenants</code></td><td>8</td><td>NO</td><td>Root table &mdash; no tenant_id</td></tr>
+        <tr><td>UserEntity</td><td><code>users</code></td><td>10</td><td>YES</td><td>+ failedLoginAttempts, lockedUntil</td></tr>
+        <tr><td>InvitationEntity</td><td><code>invitations</code></td><td>10</td><td>YES</td><td>Token hash + prefix for lookup</td></tr>
+        <tr><td>AssetEntity</td><td><code>assets</code></td><td>14</td><td>YES</td><td>SHA-256 dedup, workflowRunId link</td></tr>
+        <tr><td>FolderEntity</td><td><code>folders</code></td><td>5</td><td>YES</td><td>Hierarchical (parentId)</td></tr>
+        <tr><td>KnowledgeChunkEntity</td><td><code>knowledge_chunks</code></td><td>11</td><td>YES</td><td>pgvector embedding, HNSW index</td></tr>
+        <tr><td>WorkflowTemplateEntity</td><td><code>workflow_templates</code></td><td>11</td><td>YES</td><td>+ <code>credits_per_run</code>, soft delete</td></tr>
+        <tr><td>WorkflowVersionEntity</td><td><code>workflow_versions</code></td><td>7</td><td>YES</td><td>YAML definition per version</td></tr>
+        <tr><td>WorkflowChainEntity</td><td><code>workflow_chains</code></td><td>9</td><td>YES</td><td>Sequential workflow composition, soft delete</td></tr>
+        <tr><td><strong>WorkflowRunEntity</strong></td><td><code>workflow_runs</code></td><td><strong>23</strong></td><td>YES</td><td><span class="badge badge-new">Epic 4</span> Fan-out tracking, per-file results (JSONB)</td></tr>
+        <tr><td>LlmModelEntity</td><td><code>llm_models</code></td><td>9</td><td>NO</td><td>Global registry, cost tracking</td></tr>
+        <tr><td><strong>LlmProviderConfigEntity</strong></td><td><code>llm_provider_configs</code></td><td><strong>7</strong></td><td>NO</td><td><span class="badge badge-new">Epic 4</span> AES-256-GCM encrypted credentials</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Multi-Tenancy &amp; RLS Architecture</h3>
+    <pre>HTTP Request
+  &rarr; JwtAuthGuard (extracts user from JWT)
+  &rarr; TenantContextInterceptor (AsyncLocalStorage context)
+    &rarr; { tenantId: user.tenant_id, bypassRls: role === 'bubble_admin' }
+  &rarr; TenantStatusGuard (checks tenant not suspended)
+  &rarr; Controller &rarr; Service &rarr; TransactionManager.run()
+    &rarr; SET LOCAL app.current_tenant = $tenantId
+    &rarr; RLS policies automatically filter all queries</pre>
+
+    <div class="flag flag-security">
+      <strong>CRITICAL SECURITY FINDING:</strong> The database user <code>bubble_user</code> has <code>SUPERUSER</code> privileges, which means <strong>ALL RLS policies are decorative</strong> &mdash; PostgreSQL silently bypasses RLS for superusers. The only active security layer is WHERE clauses in application code (Rule 2c). <strong>Story 4-RLS</strong> will fix this by creating a non-superuser <code>bubble_app</code> role with dual DataSource configuration. This is the single most important security story remaining.
+    </div>
+
+    <h3>Catalog Access (New in Epic 4)</h3>
+    <p>Published workflow templates are visible across tenants via dual RLS policies:</p>
+    <ul>
+      <li><code>catalog_read_published</code> &mdash; published templates visible to all tenants</li>
+      <li><code>catalog_read_published_versions</code> &mdash; versions of published templates accessible</li>
+      <li><code>findPublishedOne(id, requestingTenantId)</code> &mdash; documented Rule 2c exception (no tenantId in WHERE for cross-tenant catalog reads)</li>
+    </ul>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 6 — API ROUTES                                          -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s6">
+    <h2><span class="section-num">06.</span> API Route Inventory</h2>
+
+    <p>18 controllers, ~70 endpoints across 3 route groups. Routes marked <span class="badge badge-new">New</span> were added in Epic 4.</p>
+
+    <h3>Authentication (Public)</h3>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Guard Chain</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/auth/login</code></td><td>None</td><td>Throttle(5/60s)</td><td>User login</td></tr>
+        <tr><td>POST</td><td><code>/api/auth/set-password</code></td><td>None</td><td>Throttle(5/60s)</td><td>Accept invitation</td></tr>
+        <tr><td>GET</td><td><code>/api/auth/me</code></td><td>JWT</td><td>JwtAuthGuard</td><td>Current user info</td></tr>
+        <tr><td>GET</td><td><code>/api/</code></td><td>None</td><td>None</td><td>Health check</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Admin Routes (<code>/api/admin/*</code>) &mdash; Bubble Admin Only</h3>
+    <p>Guard chain: <code>OptionalJwtAuthGuard &rarr; AdminApiKeyGuard &rarr; RolesGuard(BUBBLE_ADMIN)</code></p>
+    <p>Two auth paths: (1) JWT with <code>bubble_admin</code> role, or (2) <code>x-admin-api-key</code> header.</p>
+
+    <h4>Tenants</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/admin/tenants</code></td><td>Create tenant</td></tr>
+        <tr><td>GET</td><td><code>/api/admin/tenants</code></td><td>List all tenants</td></tr>
+        <tr><td>GET</td><td><code>/api/admin/tenants/:id</code></td><td>Get tenant detail</td></tr>
+        <tr><td>PATCH</td><td><code>/api/admin/tenants/:id</code></td><td>Update tenant</td></tr>
+        <tr><td>POST</td><td><code>/api/admin/tenants/:id/impersonate</code></td><td>Impersonate tenant</td></tr>
+        <tr><td>GET</td><td><code>/api/admin/tenants/:id/accessible-workflows</code></td><td>List tenant's accessible workflows</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Users (Admin Context)</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/admin/tenants/:tenantId/users</code></td><td>Create user in tenant</td></tr>
+        <tr><td>GET</td><td><code>/api/admin/tenants/:tenantId/users</code></td><td>List tenant users</td></tr>
+        <tr><td>PATCH</td><td><code>/api/admin/tenants/:tenantId/users/:id</code></td><td>Update user</td></tr>
+        <tr><td>DELETE</td><td><code>/api/admin/tenants/:tenantId/users/:id</code></td><td>Deactivate user</td></tr>
+        <tr><td>POST</td><td><code>/api/admin/tenants/:tenantId/users/:id/reset-password</code></td><td>Reset password</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Invitations (Admin Context)</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/admin/tenants/:tenantId/invitations</code></td><td>Create invitation</td></tr>
+        <tr><td>GET</td><td><code>/api/admin/tenants/:tenantId/invitations</code></td><td>List invitations</td></tr>
+        <tr><td>POST</td><td><code>/api/admin/tenants/:tenantId/invitations/:id/resend</code></td><td>Resend invitation</td></tr>
+        <tr><td>DELETE</td><td><code>/api/admin/tenants/:tenantId/invitations/:id</code></td><td>Revoke invitation</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Workflow Templates</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/admin/workflow-templates</code></td><td>Create template</td></tr>
+        <tr><td>GET</td><td><code>/api/admin/workflow-templates</code></td><td>List templates (filterable)</td></tr>
+        <tr><td>GET</td><td><code>/api/admin/workflow-templates/:id</code></td><td>Get template + current version</td></tr>
+        <tr><td>PATCH</td><td><code>/api/admin/workflow-templates/:id</code></td><td>Update template</td></tr>
+        <tr><td>DELETE</td><td><code>/api/admin/workflow-templates/:id</code></td><td>Soft-delete template</td></tr>
+        <tr><td>POST</td><td><code>/api/admin/workflow-templates/:id/restore</code></td><td>Restore template</td></tr>
+        <tr><td>POST</td><td><code>/api/admin/workflow-templates/:id/publish</code></td><td>Publish version</td></tr>
+        <tr><td>POST</td><td><code>/api/admin/workflow-templates/:id/rollback/:versionId</code></td><td>Rollback to version</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Workflow Versions</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/admin/workflow-templates/:templateId/versions</code></td><td>Create version</td></tr>
+        <tr><td>GET</td><td><code>/api/admin/workflow-templates/:templateId/versions</code></td><td>List versions</td></tr>
+        <tr><td>GET</td><td><code>/api/admin/workflow-templates/:templateId/versions/:versionId</code></td><td>Get version</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Workflow Chains</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/admin/workflow-chains</code></td><td>Create chain</td></tr>
+        <tr><td>GET</td><td><code>/api/admin/workflow-chains</code></td><td>List chains (filterable)</td></tr>
+        <tr><td>GET</td><td><code>/api/admin/workflow-chains/:id</code></td><td>Get chain</td></tr>
+        <tr><td>PUT</td><td><code>/api/admin/workflow-chains/:id</code></td><td>Update chain</td></tr>
+        <tr><td>DELETE</td><td><code>/api/admin/workflow-chains/:id</code></td><td>Soft-delete chain</td></tr>
+        <tr><td>PATCH</td><td><code>/api/admin/workflow-chains/:id/restore</code></td><td>Restore chain</td></tr>
+        <tr><td>PATCH</td><td><code>/api/admin/workflow-chains/:id/publish</code></td><td>Publish chain</td></tr>
+      </tbody>
+    </table>
+
+    <h4>LLM Models</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/admin/llm-models</code></td><td>List all LLM models</td></tr>
+        <tr><td>POST</td><td><code>/api/admin/llm-models</code></td><td>Create LLM model</td></tr>
+        <tr><td>PATCH</td><td><code>/api/admin/llm-models/:id</code></td><td>Update LLM model</td></tr>
+      </tbody>
+    </table>
+
+    <h4>LLM Provider Configs <span class="badge badge-new">New in Epic 4</span></h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/admin/settings/llm-providers</code></td><td>List provider configs (credentials masked)</td></tr>
+        <tr><td>POST</td><td><code>/api/admin/settings/llm-providers</code></td><td>Create provider config (credentials encrypted AES-256-GCM)</td></tr>
+        <tr><td>PATCH</td><td><code>/api/admin/settings/llm-providers/:id</code></td><td>Update provider config</td></tr>
+      </tbody>
+    </table>
+
+    <h3>App Routes (<code>/api/app/*</code>) &mdash; All Authenticated Users</h3>
+    <p>Guard chain: <code>JwtAuthGuard &rarr; TenantStatusGuard &rarr; RolesGuard(BUBBLE_ADMIN, CUSTOMER_ADMIN, CREATOR)</code></p>
+
+    <h4>Users (Tenant-Scoped)</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/app/users</code></td><td>Create user (tenant-scoped)</td></tr>
+        <tr><td>GET</td><td><code>/api/app/users</code></td><td>List users (tenant-scoped)</td></tr>
+        <tr><td>PATCH</td><td><code>/api/app/users/:id</code></td><td>Update user</td></tr>
+        <tr><td>DELETE</td><td><code>/api/app/users/:id</code></td><td>Deactivate user</td></tr>
+        <tr><td>POST</td><td><code>/api/app/users/:id/reset-password</code></td><td>Reset password</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Invitations (Tenant-Scoped)</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/app/invitations</code></td><td>Create invitation</td></tr>
+        <tr><td>GET</td><td><code>/api/app/invitations</code></td><td>List invitations</td></tr>
+        <tr><td>POST</td><td><code>/api/app/invitations/:id/resend</code></td><td>Resend invitation</td></tr>
+        <tr><td>DELETE</td><td><code>/api/app/invitations/:id</code></td><td>Revoke invitation</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Assets &amp; Folders</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/app/assets</code></td><td>Upload file (multipart, 10MB limit)</td></tr>
+        <tr><td>GET</td><td><code>/api/app/assets</code></td><td>List assets (filterable by folder, status)</td></tr>
+        <tr><td>GET</td><td><code>/api/app/assets/:id</code></td><td>Get asset</td></tr>
+        <tr><td>PATCH</td><td><code>/api/app/assets/:id</code></td><td>Update asset</td></tr>
+        <tr><td>DELETE</td><td><code>/api/app/assets/:id</code></td><td>Archive asset</td></tr>
+        <tr><td>POST</td><td><code>/api/app/assets/:id/restore</code></td><td>Restore asset</td></tr>
+        <tr><td>POST</td><td><code>/api/app/assets/:id/index</code></td><td>Queue for knowledge indexing (202)</td></tr>
+        <tr><td>DELETE</td><td><code>/api/app/assets/:id/index</code></td><td>Remove from knowledge index</td></tr>
+        <tr><td>POST</td><td><code>/api/app/folders</code></td><td>Create folder</td></tr>
+        <tr><td>GET</td><td><code>/api/app/folders</code></td><td>List folders</td></tr>
+        <tr><td>PATCH</td><td><code>/api/app/folders/:id</code></td><td>Update folder</td></tr>
+        <tr><td>DELETE</td><td><code>/api/app/folders/:id</code></td><td>Delete folder</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Knowledge Base</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/api/app/knowledge/search</code></td><td>Semantic search (pgvector cosine similarity)</td></tr>
+        <tr><td>POST</td><td><code>/api/app/knowledge/insights</code></td><td>Store validated insight</td></tr>
+        <tr><td>GET</td><td><code>/api/app/knowledge/insights</code></td><td>List insights</td></tr>
+        <tr><td>GET</td><td><code>/api/app/knowledge/insights/run/:runId</code></td><td>Get insights by run</td></tr>
+        <tr><td>DELETE</td><td><code>/api/app/knowledge/insights/:id</code></td><td>Delete insight</td></tr>
+      </tbody>
+    </table>
+
+    <h4>LLM Models (Read-Only for Tenants)</h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/app/llm-models</code></td><td>List active LLM models</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Workflow Catalog &amp; Runs <span class="badge badge-new">New in Epic 4</span></h4>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/api/app/workflow-templates</code></td><td>Browse published workflow catalog (paginated, cross-tenant visibility)</td></tr>
+        <tr><td>GET</td><td><code>/api/app/workflow-templates/:id</code></td><td>Get single published template detail</td></tr>
+        <tr><td>POST</td><td><code>/api/app/workflow-runs</code></td><td>Initiate workflow run (returns 201, dispatches BullMQ jobs)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Rate Limiting (2-Layer Strategy)</h3>
+    <table>
+      <thead><tr><th>Layer</th><th>Scope</th><th>Config</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>HTTP API</td><td>All endpoints</td><td><code>THROTTLE_LIMIT</code> env (default 100/min)</td><td>ThrottlerModule; raised from 10 after E2E discovered silent 429s</td></tr>
+        <tr><td>Login/set-password</td><td>Auth endpoints</td><td>5 requests per 60 seconds</td><td>Additional throttle on top of global</td></tr>
+        <tr><td>LLM Provider</td><td>Execution queue</td><td><code>rate_limit_rpm</code> per provider config</td><td>BullMQ RateLimiter prevents exceeding provider quotas</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 7 — TECH STACK                                          -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s7">
+    <h2><span class="section-num">07.</span> Tech Stack &amp; Infrastructure</h2>
+
+    <h3>Core Runtime</h3>
+    <table>
+      <thead><tr><th>Layer</th><th>Technology</th><th>Version</th></tr></thead>
+      <tbody>
+        <tr><td>Frontend</td><td>Angular (Signals, Zoneless)</td><td><code>~21.0.0</code></td></tr>
+        <tr><td>Backend</td><td>NestJS</td><td><code>^11.0.0</code></td></tr>
+        <tr><td>Language</td><td>TypeScript</td><td><code>~5.9.2</code></td></tr>
+        <tr><td>Monorepo</td><td>Nx</td><td><code>22.3.3</code></td></tr>
+        <tr><td>Database</td><td>PostgreSQL + pgvector</td><td><code>pgvector/pgvector:pg16</code></td></tr>
+        <tr><td>Queue</td><td>BullMQ + Redis</td><td><code>^5.66.5</code> / <code>redis:alpine</code></td></tr>
+        <tr><td>ORM</td><td>TypeORM</td><td><code>^0.3.28</code></td></tr>
+        <tr><td>LLM SDK</td><td>Google Generative AI</td><td><code>^0.24.1</code></td></tr>
+        <tr><td>Auth</td><td>Passport + JWT</td><td><code>^0.7.0</code> / <code>^11.0.2</code></td></tr>
+        <tr><td>Icons</td><td>Lucide Angular</td><td><code>^0.563.0</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Testing Stack</h3>
+    <table>
+      <thead><tr><th>Tool</th><th>Version</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>Jest</td><td><code>^30.0.2</code></td><td>Unit tests (backend + frontend) &mdash; 1,100+ tests</td></tr>
+        <tr><td>Playwright</td><td><code>^1.58.2</code></td><td>E2E browser tests &mdash; 46 tests across 15 specs</td></tr>
+        <tr><td>ESLint (v9 flat config)</td><td><code>^9.8.0</code></td><td>Linting + custom rules (RxJS subscription leak prevention)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Infrastructure (Docker Compose &mdash; Development Only)</h3>
+    <pre>services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    ports: ["5432:5432"]
+    healthcheck: pg_isready -U bubble_user -d bubble_db
+
+  redis:
+    image: redis:alpine
+    ports: ["6379:6379"]</pre>
+    <p>No application Dockerfiles exist. No production deployment configured. See Section 10 for operational gaps.</p>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 8 — QUALITY                                             -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s8">
+    <h2><span class="section-num">08.</span> Quality &amp; Testing</h2>
+
+    <h3>Test Pyramid</h3>
+    <div class="stats-row" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="stat-card green">
+        <div class="stat-number">1,100+</div>
+        <div class="stat-label">Unit Tests (Jest)</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-number">40</div>
+        <div class="stat-label">Wiring Tests</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-number">46</div>
+        <div class="stat-label">E2E Tests (Playwright)</div>
+      </div>
+    </div>
+
+    <h3>Test Infrastructure</h3>
+    <table>
+      <thead><tr><th>Tier</th><th>Database</th><th>What It Tests</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Tier 1</strong> (Unit)</td><td>Mocked</td><td>Business logic, service methods, DTOs</td><td>170 spec files across api-gateway + web + libs</td></tr>
+        <tr><td><strong>Tier 1 DB</strong> (Wiring)</td><td><code>project_bubble_wiring_test</code></td><td>DI resolution, module compilation, guard registration</td><td>13 tests verifying NestJS module wiring</td></tr>
+        <tr><td><strong>Tier 2</strong> (Integration)</td><td><code>project_bubble_wiring_integ_test</code></td><td>Real PostgreSQL queries, RLS, RETURNING shapes</td><td>22 tests including 10 new RETURNING wiring tests</td></tr>
+        <tr><td><strong>Tier 3</strong> (E2E)</td><td><code>project_bubble_test</code></td><td>Full browser flows: auth &rarr; CRUD &rarr; verify</td><td>46 Playwright tests across 3 auth states</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Quality Enforcement</h3>
+    <ul>
+      <li><strong>ESLint v9 flat config</strong> with custom rules: <code>takeUntilDestroyed</code> for all RxJS subscriptions (Rule 13)</li>
+      <li><strong>3-pass code review</strong> mandatory for every story (see Section 0)</li>
+      <li><strong>Zoneless testing</strong>: <code>async/await</code> + <code>fixture.whenStable()</code> instead of <code>fakeAsync/tick</code></li>
+      <li><strong>No SQLite</strong>: All test tiers use real PostgreSQL (separate databases)</li>
+      <li><strong>Rule 31</strong>: Any <code>manager.query()</code> with RETURNING requires a Tier 2 wiring test</li>
+      <li><strong>Rule 26</strong>: Browser smoke test required for every UI story</li>
+    </ul>
+
+    <h3>E2E Test Coverage</h3>
+    <table>
+      <thead><tr><th>Suite</th><th>Tests</th><th>Coverage</th></tr></thead>
+      <tbody>
+        <tr><td>Story 1E</td><td>13</td><td>Smoke tests + tenant management + RBAC</td></tr>
+        <tr><td>Story 2E</td><td>13</td><td>Folders, files, isolation, LLM admin, invitations</td></tr>
+        <tr><td>Story 3E</td><td>17</td><td>Navigation, wizard, chain builder, settings, template library</td></tr>
+        <tr><td><em>Story 4E</em></td><td><em>Planned</em></td><td><em>Catalog, run initiation, execution results</em></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 9 — TECH DEBT                                           -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="group-header">Issues &amp; Gaps</div>
+
+  <div class="section" id="s9">
+    <h2><span class="section-num">09.</span> Technical Debt &amp; Known Issues</h2>
+
+    <h3>Resolved Since v1 (Feb 5)</h3>
+    <div class="flag flag-resolved">
+      <strong>RESOLVED:</strong> The following critical items from v1 have been addressed:
+    </div>
+    <ul>
+      <li><span class="resolved">E2E Test Coverage is Zero</span> <span class="resolved-tag">FIXED &mdash; 46 E2E tests across 15 specs</span></li>
+      <li><span class="resolved">Worker Engine is Empty Shell</span> <span class="resolved-tag">FIXED &mdash; WorkflowExecutionProcessor in api-gateway</span></li>
+      <li><span class="resolved">No Provider Credential Storage</span> <span class="resolved-tag">FIXED &mdash; LlmProviderConfigEntity with AES-256-GCM</span></li>
+      <li><span class="resolved">JWT Claims Missing User Info</span> <span class="resolved-tag">FIXED &mdash; /api/auth/me endpoint</span></li>
+      <li><span class="resolved">Hexagonal LLM Provider interface</span> <span class="resolved-tag">FIXED &mdash; LlmProviderFactory + 2 adapters</span></li>
+      <li><span class="resolved">No DLQ, no idempotency, no execution queue</span> <span class="resolved-tag">FIXED &mdash; Story 4-0</span></li>
+    </ul>
+
+    <h3>Critical Issues (Remaining)</h3>
+
+    <h4>1. RLS Bypass &mdash; Superuser Database Role</h4>
+    <p><code>bubble_user</code> has SUPERUSER privileges. All RLS policies are decorative. WHERE clauses are the only active security layer.</p>
+    <div class="flag flag-critical">
+      <strong>Fix:</strong> Story 4-RLS will create non-superuser <code>bubble_app</code> role with dual DataSource. This is the single most important security story remaining.
+    </div>
+
+    <h4>2. No CI/CD Pipeline</h4>
+    <p>No GitHub Actions. BMAD enforces lint/test/build per story, but no automated pipeline prevents regressions between stories.</p>
+
+    <h4>3. No Production Deployment</h4>
+    <p>No Dockerfiles, no cloud deployment, no secrets manager, no backups. See Section 10.</p>
+
+    <h3>High Priority</h3>
+    <table>
+      <thead><tr><th>Item</th><th>Status</th><th>Tracked In</th></tr></thead>
+      <tbody>
+        <tr><td>Refresh Token Rotation</td><td>JWT has 7-day expiry</td><td>Epic 7 Story 7.5</td></tr>
+        <tr><td>Audit Logging</td><td>Only <code>logger.warn</code> for impersonation</td><td>Epic 7 Story 7.2</td></tr>
+        <tr><td>Health Check Endpoint</td><td>No <code>/health</code> endpoint</td><td>Epic 7 Story 7.3</td></tr>
+        <tr><td>Swagger @ApiResponse Gaps</td><td>Error responses not documented</td><td>Backlog</td></tr>
+        <tr><td>Circuit Breaker (LLM)</td><td>Designed but not implemented</td><td>Story 7P-5</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Medium Priority</h3>
+    <table>
+      <thead><tr><th>Item</th><th>Status</th><th>Tracked In</th></tr></thead>
+      <tbody>
+        <tr><td>Credits not deducted</td><td><code>creditsConsumed</code> column exists but not updated</td><td>Story 4-4</td></tr>
+        <tr><td>Per-run concurrency not enforced</td><td><code>max_concurrency</code> preserved but ignored</td><td>Requires BullMQ Pro</td></tr>
+        <tr><td>Log Sanitization for PII</td><td>Document content may appear in logs</td><td>Story 2.1 AC</td></tr>
+        <tr><td>Provider types hardcoded</td><td>Frontend has static list</td><td>Story 4-PR</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 10 — DEPLOYMENT & OPS                                   -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="section" id="s10">
+    <h2><span class="section-num">10.</span> Deployment &amp; Operational Gaps</h2>
+
+    <h3>Current State: Development Only</h3>
+    <p>No production deployment exists. Docker Compose provides PostgreSQL + Redis for local development. No application Dockerfiles. No CI/CD pipeline.</p>
+
+    <h3>Production Readiness Roadmap (Epic 7P)</h3>
+    <table>
+      <thead><tr><th>Story</th><th>Title</th><th>Blocking</th></tr></thead>
+      <tbody>
+        <tr><td>7P-1</td><td>Deployment target + Dockerfiles</td><td>Everything below</td></tr>
+        <tr><td>7P-2</td><td>Cloud object storage migration</td><td>File persistence</td></tr>
+        <tr><td>7P-3</td><td>Secrets management</td><td>Security posture</td></tr>
+        <tr><td>7P-4</td><td>Database backups + disaster recovery</td><td>Data safety</td></tr>
+        <tr><td>7P-5</td><td>BullMQ worker extraction + circuit breaker</td><td>Scalability</td></tr>
+        <tr><td>4-RLS</td><td>Full RLS enablement (absorbed from 7P-6)</td><td>Security</td></tr>
+        <tr><td>7P-7</td><td>Load testing against NFRs</td><td>Performance validation</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Deployment Target Decision Needed</h3>
+    <table>
+      <thead><tr><th>Option</th><th>Compute</th><th>Database</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><strong>GCP</strong></td><td>Cloud Run</td><td>Cloud SQL + Memorystore</td><td>Natural Gemini affinity; EU regions available</td></tr>
+        <tr><td><strong>AWS</strong></td><td>App Runner / ECS</td><td>RDS + ElastiCache</td><td>Broader ecosystem; well-documented NestJS deployment</td></tr>
+        <tr><td><strong>Railway / Render</strong></td><td>Managed containers</td><td>Managed PostgreSQL</td><td>Fastest to deploy; may have scaling limitations</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Gaps That Must Be Closed Before Launch</h3>
+    <table>
+      <thead><tr><th>#</th><th>Item</th><th>Severity</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Fix RLS bypass (Story 4-RLS)</td><td><span class="badge badge-critical">Critical</span></td></tr>
+        <tr><td>2</td><td>Choose deployment target + create Dockerfiles</td><td><span class="badge badge-critical">Critical</span></td></tr>
+        <tr><td>3</td><td>Migrate file storage to cloud object storage</td><td><span class="badge badge-critical">Critical</span></td></tr>
+        <tr><td>4</td><td>Implement secrets management</td><td><span class="badge badge-critical">Critical</span></td></tr>
+        <tr><td>5</td><td>Automated database backups</td><td><span class="badge badge-critical">Critical</span></td></tr>
+        <tr><td>6</td><td>Circuit breaker for LLM providers</td><td><span class="badge badge-high">High</span></td></tr>
+        <tr><td>7</td><td>CI/CD pipeline</td><td><span class="badge badge-high">High</span></td></tr>
+        <tr><td>8</td><td>Load test against performance NFRs</td><td><span class="badge badge-high">High</span></td></tr>
+        <tr><td>9</td><td>Monitoring + observability stack</td><td><span class="badge badge-medium">Medium</span></td></tr>
+        <tr><td>10</td><td>Health check endpoint</td><td><span class="badge badge-medium">Medium</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 11 — SUMMARY                                            -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div class="group-header">Conclusion</div>
+
+  <div class="section" id="s11">
+    <h2><span class="section-num">11.</span> Summary &amp; Architect Decisions</h2>
+
+    <div class="summary-grid">
+      <div class="summary-card good">
+        <h3>What's Working Well</h3>
+        <ul>
+          <li>RLS architecture enforces tenant isolation at DB level</li>
+          <li>Hexagonal LLM provider pattern with encrypted credential storage</li>
+          <li>Fan-out/fan-in execution engine with per-file results</li>
+          <li>1,200+ tests across 3 tiers (unit, wiring, E2E)</li>
+          <li>BMAD 3-pass code review with 100% fix rate</li>
+          <li>BullMQ pipeline with DLQ + idempotency</li>
+          <li>Shared DTO library prevents frontend/backend drift</li>
+          <li>32 enforced process rules from real failure patterns</li>
+        </ul>
+      </div>
+      <div class="summary-card risk">
+        <h3>Key Risks</h3>
+        <ul>
+          <li>RLS is decorative (superuser bypass) &mdash; 4-RLS is critical</li>
+          <li>No production deployment or CI/CD</li>
+          <li>No circuit breaker for LLM provider failures</li>
+          <li>Credit deduction not yet implemented</li>
+          <li>Worker runs in-process (not horizontally scalable)</li>
+          <li>No monitoring or observability</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Decisions Needed from Architect</h3>
+    <table>
+      <thead><tr><th>Decision</th><th>Options</th><th>Blocking</th></tr></thead>
+      <tbody>
+        <tr><td>Deployment target</td><td>GCP (Cloud Run) vs AWS (App Runner) vs Railway</td><td>All production readiness</td></tr>
+        <tr><td>File storage backend</td><td>GCS vs S3 vs R2</td><td>Production readiness</td></tr>
+        <tr><td>Secrets management</td><td>GCP Secret Manager vs AWS Secrets Manager vs Vault</td><td>Security posture</td></tr>
+        <tr><td>Database hosting</td><td>Cloud SQL vs RDS vs Supabase</td><td>Backup/DR strategy</td></tr>
+        <tr><td>Monitoring stack</td><td>DataDog vs Prometheus+Grafana vs cloud-native</td><td>Observability</td></tr>
+        <tr><td>CI/CD platform</td><td>GitHub Actions vs Cloud Build vs other</td><td>Deployment automation</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Remaining Work to Production</h3>
+    <div class="progress-bar-container">
+      <div class="progress-label"><span>Epic 4 (Execution Engine)</span><span>~70% complete</span></div>
+      <div class="progress-track"><div class="progress-fill purple" style="width: 70%"></div></div>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-label"><span>Epic 5 (Reports &amp; Output)</span><span>Not started</span></div>
+      <div class="progress-track"><div class="progress-fill blue" style="width: 0%"></div></div>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-label"><span>Epic 7P (Production Readiness)</span><span>Not started</span></div>
+      <div class="progress-track"><div class="progress-fill yellow" style="width: 0%"></div></div>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-label"><span>Security (Story 4-RLS)</span><span>Planned, not started</span></div>
+      <div class="progress-track"><div class="progress-fill green" style="width: 0%"></div></div>
+    </div>
+
+    <div style="margin-top: 32px; padding: 20px; background: var(--accent-glow); border: 1px solid rgba(99,102,241,0.2); border-radius: 10px; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+        <strong style="color: var(--accent-light);">Bottom line:</strong> The platform has a solid architectural foundation with production-grade patterns (RLS, hexagonal LLM, fan-out execution, 3-tier testing). The critical path to production is: finish Epic 4 &rarr; Story 4-RLS (security) &rarr; Epic 5 (reports) &rarr; Epic 7P (deployment). The BMAD framework provides the process discipline to execute this reliably.
+      </p>
+    </div>
+  </div>
+
+  <div style="text-align: center; padding: 32px 0; color: var(--text-muted); font-size: 12px;">
+    Generated 2026-02-13 &bull; Bubble Architect Review Package v2 &bull; Built with BMAD Framework
+  </div>
+
+</div>
+</body>
+</html>
