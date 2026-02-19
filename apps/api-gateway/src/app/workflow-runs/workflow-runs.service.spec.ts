@@ -13,6 +13,7 @@ import {
 import { WorkflowRunsService } from './workflow-runs.service';
 import { AssetsService } from '../assets/assets.service';
 import { WorkflowExecutionService } from '../workflow-execution/workflow-execution.service';
+import { WorkflowTemplatesService } from '../workflows/workflow-templates.service';
 import { PreFlightValidationService } from './pre-flight-validation.service';
 
 describe('WorkflowRunsService [P0]', () => {
@@ -20,6 +21,9 @@ describe('WorkflowRunsService [P0]', () => {
   let txManager: jest.Mocked<TransactionManager>;
   let assetsService: jest.Mocked<Pick<AssetsService, 'findOne' | 'findEntityById'>>;
   let executionService: jest.Mocked<Pick<WorkflowExecutionService, 'enqueueRun'>>;
+  let templatesService: {
+    findPublishedOneEntity: jest.Mock;
+  };
   let preFlightService: {
     validateModelAvailability: jest.Mock;
     checkAndDeductCredits: jest.Mock;
@@ -164,6 +168,13 @@ describe('WorkflowRunsService [P0]', () => {
       enqueueRun: jest.fn().mockResolvedValue({ jobId: runId }),
     };
 
+    templatesService = {
+      findPublishedOneEntity: jest.fn().mockResolvedValue({
+        template: mockTemplate,
+        version: mockVersion,
+      }),
+    };
+
     preFlightService = {
       validateModelAvailability: jest.fn().mockResolvedValue(undefined),
       checkAndDeductCredits: jest.fn().mockResolvedValue({ creditsFromMonthly: 0, creditsFromPurchased: 0 }),
@@ -174,16 +185,14 @@ describe('WorkflowRunsService [P0]', () => {
       txManager,
       assetsService as unknown as AssetsService,
       executionService as unknown as WorkflowExecutionService,
+      templatesService as unknown as WorkflowTemplatesService,
       preFlightService as unknown as PreFlightValidationService,
     );
   });
 
   describe('initiateRun — happy path', () => {
     it('[4.1-UNIT-001] [P0] Given valid published template and valid inputs, when initiateRun is called, then creates run entity with QUEUED status and enqueues job', async () => {
-      // Given
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)   // template lookup
-        .mockResolvedValueOnce(mockVersion);    // version lookup
+      // Given — templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       mockManager.create.mockReturnValue(mockRunEntity);
       mockManager.save.mockResolvedValue(mockRunEntity);
 
@@ -223,9 +232,7 @@ describe('WorkflowRunsService [P0]', () => {
 
     it('[4.1-UNIT-002] [P0] Given text input for context role, when initiateRun is called, then builds payload with text contextInput', async () => {
       // Given
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       mockManager.create.mockReturnValue(mockRunEntity);
       mockManager.save.mockResolvedValue(mockRunEntity);
 
@@ -253,9 +260,7 @@ describe('WorkflowRunsService [P0]', () => {
 
     it('[4.1-UNIT-003] [P0] Given asset input for context role, when initiateRun is called, then translates asset type to file type in payload', async () => {
       // Given
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       mockManager.create.mockReturnValue(mockRunEntity);
       mockManager.save.mockResolvedValue(mockRunEntity);
 
@@ -324,9 +329,7 @@ describe('WorkflowRunsService [P0]', () => {
       const assetId2 = 'ffffffff-ffff-ffff-ffff-fffffffffff2';
       const assetId3 = 'ffffffff-ffff-ffff-ffff-fffffffffff3';
 
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       mockManager.find.mockResolvedValueOnce([
         { id: assetId, originalName: 'a.pdf', storagePath: '/uploads/a.pdf' },
         { id: assetId2, originalName: 'b.pdf', storagePath: '/uploads/b.pdf' },
@@ -363,9 +366,7 @@ describe('WorkflowRunsService [P0]', () => {
 
     it('[4.3-UNIT-059] [P0] Given subject file asset not found, when initiateRun is called, then throws BadRequestException listing missing asset ID', async () => {
       // Given — bulk lookup returns fewer assets than requested
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       mockManager.find.mockResolvedValueOnce([]); // no assets found
 
       const dto = {
@@ -383,10 +384,12 @@ describe('WorkflowRunsService [P0]', () => {
     });
   });
 
-  describe('initiateRun — template validation', () => {
-    it('[4.1-UNIT-005] [P0] Given template not found, when initiateRun is called, then throws NotFoundException', async () => {
-      // Given
-      mockManager.findOne.mockResolvedValue(null);
+  describe('initiateRun — template validation (delegated to findPublishedOneEntity)', () => {
+    it('[4.1-UNIT-005] [P0] Given template not found, when initiateRun is called, then propagates NotFoundException from findPublishedOneEntity', async () => {
+      // Given — findPublishedOneEntity throws NotFoundException for missing/non-published/invisible templates
+      templatesService.findPublishedOneEntity.mockRejectedValue(
+        new NotFoundException('Published workflow template with id "00000000-0000-0000-0000-000000000000" not found'),
+      );
 
       const dto = {
         templateId: '00000000-0000-0000-0000-000000000000',
@@ -399,12 +402,25 @@ describe('WorkflowRunsService [P0]', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('[4.1-UNIT-006] [P0] Given template is not published (draft), when initiateRun is called, then throws BadRequestException', async () => {
-      // Given
-      mockManager.findOne.mockResolvedValue({
-        ...mockTemplate,
-        status: WorkflowTemplateStatus.DRAFT,
-      });
+    it('[4.1-UNIT-006] [P0] Given template is not published (draft), when initiateRun is called, then propagates NotFoundException (non-published not found)', async () => {
+      // Given — findPublishedOneEntity queries { status: PUBLISHED }, so drafts return NotFoundException
+      templatesService.findPublishedOneEntity.mockRejectedValue(
+        new NotFoundException('Published workflow template with id "..." not found'),
+      );
+
+      const dto = { templateId, inputs: {} };
+
+      // When/Then
+      await expect(
+        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('[4.1-UNIT-007] [P0] Given template has no currentVersionId, when initiateRun is called, then propagates BadRequestException', async () => {
+      // Given — findPublishedOneEntity throws BadRequestException for missing currentVersionId
+      templatesService.findPublishedOneEntity.mockRejectedValue(
+        new BadRequestException('Template does not have a published version'),
+      );
 
       const dto = { templateId, inputs: {} };
 
@@ -414,12 +430,11 @@ describe('WorkflowRunsService [P0]', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('[4.1-UNIT-007] [P0] Given template has no currentVersionId, when initiateRun is called, then throws BadRequestException', async () => {
-      // Given
-      mockManager.findOne.mockResolvedValue({
-        ...mockTemplate,
-        currentVersionId: null,
-      });
+    it('[4.1-UNIT-008] [P0] Given version not found, when initiateRun is called, then propagates BadRequestException', async () => {
+      // Given — findPublishedOneEntity throws BadRequestException for missing version
+      templatesService.findPublishedOneEntity.mockRejectedValue(
+        new BadRequestException('Template version not found'),
+      );
 
       const dto = { templateId, inputs: {} };
 
@@ -429,27 +444,32 @@ describe('WorkflowRunsService [P0]', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('[4.1-UNIT-008] [P0] Given version not found or has no definition, when initiateRun is called, then throws BadRequestException', async () => {
-      // Given
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(null); // version not found
+    it('[4-LT4-3-UNIT-009] [P0] Given cross-tenant scenario (different tenantIds), when initiateRun is called, then passes requesting tenantId to findPublishedOneEntity', async () => {
+      // Given — tenant B tries to run admin-created template
+      const tenantBId = '11111111-1111-1111-1111-111111111111';
+      mockManager.create.mockReturnValue(mockRunEntity);
+      mockManager.save.mockResolvedValue(mockRunEntity);
 
-      const dto = { templateId, inputs: {} };
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
 
-      // When/Then
-      await expect(
-        service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
-      ).rejects.toThrow(BadRequestException);
+      // When
+      await service.initiateRun(dto, tenantBId, userId, UserRole.CUSTOMER_ADMIN);
+
+      // Then — findPublishedOneEntity called with requesting tenant, not admin tenant
+      expect(templatesService.findPublishedOneEntity).toHaveBeenCalledWith(
+        templateId,
+        tenantBId,
+      );
     });
   });
 
   describe('initiateRun — input validation', () => {
     it('[4.1-UNIT-009] [P0] Given required input is missing, when initiateRun is called, then throws BadRequestException', async () => {
       // Given
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
 
       // context_doc is required but not provided
       const dto = { templateId, inputs: {} };
@@ -462,9 +482,7 @@ describe('WorkflowRunsService [P0]', () => {
 
     it('[4.1-UNIT-010] [P0] Given required asset input has empty assetIds, when initiateRun is called, then throws BadRequestException', async () => {
       // Given
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
 
       const dto = {
         templateId,
@@ -481,9 +499,7 @@ describe('WorkflowRunsService [P0]', () => {
 
     it('[4.1-UNIT-011] [P0] Given required text input has empty text, when initiateRun is called, then throws BadRequestException', async () => {
       // Given
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
 
       const dto = {
         templateId,
@@ -500,9 +516,7 @@ describe('WorkflowRunsService [P0]', () => {
 
     it('[4.1-UNIT-012] [P0] Given unknown input name not in definition, when initiateRun is called, then throws BadRequestException', async () => {
       // Given
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
 
       const dto = {
         templateId,
@@ -520,9 +534,7 @@ describe('WorkflowRunsService [P0]', () => {
 
     it('[4.1-UNIT-013] [P0] Given input type does not match allowed sources, when initiateRun is called, then throws BadRequestException', async () => {
       // Given — subject_files only allows 'upload', not 'text'
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
 
       const dto = {
         templateId,
@@ -542,9 +554,7 @@ describe('WorkflowRunsService [P0]', () => {
   describe('initiateRun — asset validation', () => {
     it('[4.1-UNIT-014] [P0] Given asset ID not found in tenant vault, when initiateRun is called, then throws BadRequestException', async () => {
       // Given
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       assetsService.findOne.mockRejectedValue(
         new NotFoundException('Asset not found'),
       );
@@ -569,9 +579,7 @@ describe('WorkflowRunsService [P0]', () => {
   describe('initiateRun — inputSnapshot', () => {
     it('[4.1-UNIT-015] [P0] Given valid run, when entity is created, then inputSnapshot contains templateId, templateName, versionId, versionNumber, definition, userInputs', async () => {
       // Given
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       mockManager.create.mockReturnValue(mockRunEntity);
       mockManager.save.mockResolvedValue(mockRunEntity);
 
@@ -612,9 +620,7 @@ describe('WorkflowRunsService [P0]', () => {
 
   describe('initiateRun — pre-flight and credit checks', () => {
     it('[4.4-UNIT-018] [AC8] should call validateModelAvailability with definition.execution.model', async () => {
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       mockManager.create.mockReturnValue(mockRunEntity);
       mockManager.save.mockResolvedValue(mockRunEntity);
 
@@ -629,9 +635,7 @@ describe('WorkflowRunsService [P0]', () => {
     });
 
     it('[4.4-UNIT-019] [AC8] should propagate BadRequestException from model validation', async () => {
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       preFlightService.validateModelAvailability.mockRejectedValue(
         new BadRequestException('Model is inactive'),
       );
@@ -647,9 +651,7 @@ describe('WorkflowRunsService [P0]', () => {
     });
 
     it('[4.4-UNIT-020] [AC5] should call checkAndDeductCredits within credit transaction', async () => {
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       preFlightService.checkAndDeductCredits.mockResolvedValue({
         creditsFromMonthly: 1, creditsFromPurchased: 0,
       });
@@ -672,9 +674,7 @@ describe('WorkflowRunsService [P0]', () => {
     });
 
     it('[4.4-UNIT-021] [AC7] should set isTestRun=true for BUBBLE_ADMIN role', async () => {
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       preFlightService.checkAndDeductCredits.mockResolvedValue({
         creditsFromMonthly: 0, creditsFromPurchased: 0,
       });
@@ -701,9 +701,7 @@ describe('WorkflowRunsService [P0]', () => {
     });
 
     it('[4.4-UNIT-022] [AC7] should set isTestRun=true for IMPERSONATOR_ROLE', async () => {
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       preFlightService.checkAndDeductCredits.mockResolvedValue({
         creditsFromMonthly: 0, creditsFromPurchased: 0,
       });
@@ -726,9 +724,7 @@ describe('WorkflowRunsService [P0]', () => {
     });
 
     it('[4.4-UNIT-023] [AC7] should set isTestRun=false for CUSTOMER_ADMIN role', async () => {
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       preFlightService.checkAndDeductCredits.mockResolvedValue({
         creditsFromMonthly: 1, creditsFromPurchased: 0,
       });
@@ -751,9 +747,7 @@ describe('WorkflowRunsService [P0]', () => {
     });
 
     it('[4.4-UNIT-024] should set creditsConsumed, creditsFromMonthly, creditsFromPurchased on run entity', async () => {
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       preFlightService.checkAndDeductCredits.mockResolvedValue({
         creditsFromMonthly: 3, creditsFromPurchased: 2,
       });
@@ -778,9 +772,7 @@ describe('WorkflowRunsService [P0]', () => {
     });
 
     it('[4.4-UNIT-025] [AC5] should execute SELECT FOR UPDATE on tenant row before credit check', async () => {
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       preFlightService.checkAndDeductCredits.mockResolvedValue({
         creditsFromMonthly: 0, creditsFromPurchased: 0,
       });
@@ -810,9 +802,11 @@ describe('WorkflowRunsService [P0]', () => {
         ...mockVersion,
         definition: noModelDefinition as unknown as Record<string, unknown>,
       };
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(noModelVersion);
+      // Override default mock to return version with no model in definition
+      templatesService.findPublishedOneEntity.mockResolvedValue({
+        template: mockTemplate,
+        version: noModelVersion,
+      });
       mockManager.create.mockReturnValue(mockRunEntity);
       mockManager.save.mockResolvedValue(mockRunEntity);
 
@@ -829,9 +823,7 @@ describe('WorkflowRunsService [P0]', () => {
 
   describe('initiateRun — credit check failure propagation', () => {
     it('[4.4-UNIT-040] [AC2] should propagate insufficient credits error and NOT create run entity', async () => {
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       preFlightService.checkAndDeductCredits.mockRejectedValue(
         new BadRequestException('Insufficient credits to run this workflow. Please contact your administrator.'),
       );
@@ -862,9 +854,7 @@ describe('WorkflowRunsService [P0]', () => {
         creditsFromPurchased: 2,
       };
 
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       preFlightService.checkAndDeductCredits.mockResolvedValue({
         creditsFromMonthly: 3, creditsFromPurchased: 2,
       });
@@ -920,9 +910,7 @@ describe('WorkflowRunsService [P0]', () => {
         creditsFromPurchased: 0,
       };
 
-      mockManager.findOne
-        .mockResolvedValueOnce(mockTemplate)
-        .mockResolvedValueOnce(mockVersion);
+      // templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
       preFlightService.checkAndDeductCredits.mockResolvedValue({
         creditsFromMonthly: 0, creditsFromPurchased: 0,
       });
@@ -950,21 +938,26 @@ describe('WorkflowRunsService [P0]', () => {
   });
 
   describe('soft-delete exclusion (withDeleted:false)', () => {
-    it('[4-FIX-404-UNIT-013] [P0] initiateRun passes withDeleted:false for template lookup', async () => {
-      mockManager.findOne.mockResolvedValueOnce(null); // simulate soft-deleted template
+    it('[4-FIX-404-UNIT-013] [P0] initiateRun delegates template lookup to findPublishedOneEntity (which uses withDeleted:false)', async () => {
+      // Given — findPublishedOneEntity throws NotFoundException (e.g. soft-deleted template)
+      templatesService.findPublishedOneEntity.mockRejectedValue(
+        new NotFoundException('Published workflow template with id "..." not found'),
+      );
 
       const dto = {
         templateId,
         inputs: {},
       };
 
+      // When/Then — error propagated from findPublishedOneEntity
       await expect(
         service.initiateRun(dto, tenantId, userId, 'customer_admin'),
       ).rejects.toThrow(NotFoundException);
 
-      expect(mockManager.findOne).toHaveBeenCalledWith(
-        expect.anything(), // WorkflowTemplateEntity
-        expect.objectContaining({ withDeleted: false }),
+      // Verify findPublishedOneEntity was called with correct args
+      expect(templatesService.findPublishedOneEntity).toHaveBeenCalledWith(
+        templateId,
+        tenantId,
       );
     });
   });

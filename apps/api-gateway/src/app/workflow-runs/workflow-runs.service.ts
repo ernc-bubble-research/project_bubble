@@ -5,9 +5,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import {
-  WorkflowTemplateEntity,
-  WorkflowTemplateStatus,
-  WorkflowVersionEntity,
   WorkflowRunEntity,
   WorkflowRunStatus,
   AssetEntity,
@@ -27,6 +24,7 @@ import { WorkflowDefinition, WorkflowInput, WorkflowProcessingMode } from '@proj
 import { In } from 'typeorm';
 import { AssetsService } from '../assets/assets.service';
 import { WorkflowExecutionService } from '../workflow-execution/workflow-execution.service';
+import { WorkflowTemplatesService } from '../workflows/workflow-templates.service';
 import { PreFlightValidationService } from './pre-flight-validation.service';
 
 @Injectable()
@@ -37,6 +35,7 @@ export class WorkflowRunsService {
     private readonly txManager: TransactionManager,
     private readonly assetsService: AssetsService,
     private readonly executionService: WorkflowExecutionService,
+    private readonly templatesService: WorkflowTemplatesService,
     private readonly preFlightService: PreFlightValidationService,
   ) {}
 
@@ -50,41 +49,13 @@ export class WorkflowRunsService {
     const isTestRun =
       userRole === UserRole.BUBBLE_ADMIN || userRole === IMPERSONATOR_ROLE;
 
-    // 1. Load template + current version (read-only transaction — no lock needed)
-    const { template, version } = await this.txManager.run(
+    // 1. Load template + current version via catalog visibility check (Story 4-LT4-3)
+    // Uses findPublishedOneEntity which is a documented Rule 2c exception:
+    // no tenantId in WHERE — templates are admin-created and shared via catalog.
+    // Visibility enforced in application code (public pass, private check allowedTenants).
+    const { template, version } = await this.templatesService.findPublishedOneEntity(
+      dto.templateId,
       tenantId,
-      async (manager) => {
-        const tmpl = await manager.findOne(WorkflowTemplateEntity, {
-          where: { id: dto.templateId, tenantId },
-          withDeleted: false,
-        });
-        if (!tmpl) {
-          throw new NotFoundException(
-            `Workflow template "${dto.templateId}" not found`,
-          );
-        }
-        if (tmpl.status !== WorkflowTemplateStatus.PUBLISHED) {
-          throw new BadRequestException(
-            'Only published templates can be used to initiate runs',
-          );
-        }
-        if (!tmpl.currentVersionId) {
-          throw new BadRequestException(
-            'Template does not have a published version',
-          );
-        }
-
-        const ver = await manager.findOne(WorkflowVersionEntity, {
-          where: { id: tmpl.currentVersionId, tenantId },
-        });
-        if (!ver || !ver.definition) {
-          throw new BadRequestException(
-            'Template version or definition not found',
-          );
-        }
-
-        return { template: tmpl, version: ver };
-      },
     );
 
     // 2. Parse definition and validate inputs (outside transaction — no lock)

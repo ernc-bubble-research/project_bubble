@@ -414,13 +414,12 @@ describe('Component Wiring — Composite Renders [P0]', () => {
 
   // ── Workflow Components ─────────────────────────────────────────
 
-  it('[MW-1-CW-007] [P0] WorkflowStudioComponent renders with real TemplateListComponent and ChainListComponent', async () => {
+  it('[MW-1-CW-007] [P0] WorkflowStudioComponent renders with real TemplateListComponent (ChainListComponent hidden — Story 4-6)', async () => {
     await TestBed.configureTestingModule({
       imports: [WorkflowStudioComponent],
       providers: [
         { provide: Router, useValue: { navigate: jest.fn() } },
         { provide: WorkflowTemplateService, useValue: createMockWorkflowTemplateService() },
-        { provide: WorkflowChainService, useValue: createMockWorkflowChainService() },
         { provide: ToastService, useValue: createMockToastService() },
         provideAllIcons(),
       ],
@@ -593,7 +592,6 @@ describe('Component Wiring — Composite Renders [P0]', () => {
       providers: [
         { provide: Router, useValue: { navigate: jest.fn() } },
         { provide: WorkflowTemplateService, useValue: createMockWorkflowTemplateService() },
-        { provide: WorkflowChainService, useValue: createMockWorkflowChainService() },
         { provide: ToastService, useValue: createMockToastService() },
         provideAllIcons(),
       ],

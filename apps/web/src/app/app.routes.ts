@@ -82,22 +82,8 @@ export const appRoutes: Route[] = [
                 './admin/workflows/wizard/workflow-wizard.component'
               ).then((m) => m.WorkflowWizardComponent),
           },
-          {
-            path: 'chains/new',
-            canDeactivate: [unsavedChangesGuard],
-            loadComponent: () =>
-              import(
-                './admin/workflows/chain-builder/chain-builder.component'
-              ).then((m) => m.ChainBuilderComponent),
-          },
-          {
-            path: 'chains/:id/edit',
-            canDeactivate: [unsavedChangesGuard],
-            loadComponent: () =>
-              import(
-                './admin/workflows/chain-builder/chain-builder.component'
-              ).then((m) => m.ChainBuilderComponent),
-          },
+          // Chain routes removed for V1 — deferred to Story 4-6 (post-deployment)
+          // TODO: re-enable in Story 4-6
         ],
       },
       {

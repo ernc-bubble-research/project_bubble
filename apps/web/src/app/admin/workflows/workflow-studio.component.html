@@ -2,7 +2,7 @@
   <div class="studio-header">
     <div class="header-content">
       <h1>Workflow Studio</h1>
-      <p class="studio-subtitle">Create and manage LLM-powered workflow templates and chains</p>
+      <p class="studio-subtitle">Create and manage LLM-powered workflow templates</p>
     </div>
   </div>
 
@@ -16,15 +16,8 @@
       <lucide-icon name="file-text" [size]="16"></lucide-icon>
       Templates
     </button>
-    <button
-      class="tab-button"
-      [class.active]="activeTab() === 'chains'"
-      (click)="setActiveTab('chains')"
-      data-testid="workflow-studio-chains-tab"
-    >
-      <lucide-icon name="link" [size]="16"></lucide-icon>
-      Chains
-    </button>
+    <!-- Chain tab removed for V1 — deferred to Story 4-6 (post-deployment) -->
+    <!-- TODO: re-enable in Story 4-6 -->
   </div>
 
   <div class="studio-content">
@@ -33,10 +26,7 @@
         <app-template-list />
       </div>
     }
-    @if (activeTab() === 'chains') {
-      <div class="tab-content" data-testid="chains-content">
-        <app-chain-list />
-      </div>
-    }
+    <!-- Chain content removed for V1 — deferred to Story 4-6 (post-deployment) -->
+    <!-- TODO: re-enable in Story 4-6 -->
   </div>
 </div>

@@ -2,7 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { LucideIconProvider, LUCIDE_ICONS } from 'lucide-angular';
-import { FileText, Link, Plus, Search, X, Tag, ChevronDown, GitBranch, MoreVertical, Copy, Layers } from 'lucide-angular';
+import { FileText, Plus, Search, X, Tag, ChevronDown, GitBranch, MoreVertical, Copy, Layers } from 'lucide-angular';
+// Link icon removed — Chains tab removed for V1 (Story 4-hide-chain-ui)
 import { WorkflowStudioComponent } from './workflow-studio.component';
 
 describe('[P0] WorkflowStudioComponent', () => {
@@ -19,7 +20,7 @@ describe('[P0] WorkflowStudioComponent', () => {
         {
           provide: LUCIDE_ICONS,
           multi: true,
-          useValue: new LucideIconProvider({ FileText, Link, Plus, Search, X, Tag, ChevronDown, GitBranch, MoreVertical, Copy, Layers }),
+          useValue: new LucideIconProvider({ FileText, Plus, Search, X, Tag, ChevronDown, GitBranch, MoreVertical, Copy, Layers }),
         },
       ],
     }).compileComponents();
@@ -46,10 +47,11 @@ describe('[P0] WorkflowStudioComponent', () => {
       expect(templatesTab.classList.contains('active')).toBe(true);
     });
 
-    it('[3.7-UNIT-002] [P0] Given templates tab is active, when chains tab is clicked, then chains tab becomes active', () => {
+    // TODO: re-enable in Story 4-6 when chains tab is restored
+    xit('[3.7-UNIT-002] [P0] Given templates tab is active, when chains tab is clicked, then chains tab becomes active', () => {
       expect(component.activeTab()).toBe('templates');
 
-      component.setActiveTab('chains');
+      component.setActiveTab('chains' as never);
       fixture.detectChanges();
 
       // Chains tab now renders and fires HTTP request
@@ -70,27 +72,28 @@ describe('[P0] WorkflowStudioComponent', () => {
       expect(container).toBeTruthy();
     });
 
-    it('[3.7-UNIT-001b] [P1] Given component renders, when checking testids, then tabs have correct testids', () => {
+    it('[3.7-UNIT-001b] [P1] Given component renders, when checking testids, then templates tab is present and chains tab is absent', () => {
       const templatesTab = fixture.nativeElement.querySelector('[data-testid="workflow-studio-templates-tab"]');
       const chainsTab = fixture.nativeElement.querySelector('[data-testid="workflow-studio-chains-tab"]');
       expect(templatesTab).toBeTruthy();
-      expect(chainsTab).toBeTruthy();
+      // Chains tab removed for V1 — TODO: re-enable in Story 4-6
+      expect(chainsTab).toBeFalsy();
     });
   });
 
   describe('tab content', () => {
-    it('[3.7-UNIT-002a] [P1] Given templates tab is active, when rendered, then templates content exists and chains content does not', () => {
+    it('[3.7-UNIT-002a] [P1] Given templates tab is active, when rendered, then templates content exists', () => {
       component.setActiveTab('templates');
       fixture.detectChanges();
 
       const templatesContent = fixture.nativeElement.querySelector('[data-testid="templates-content"]');
-      const chainsContent = fixture.nativeElement.querySelector('[data-testid="chains-content"]');
       expect(templatesContent).toBeTruthy();
-      expect(chainsContent).toBeFalsy();
+      // chains-content never exists — chain tab removed for V1 (Story 4-hide-chain-ui)
     });
 
-    it('[3.7-UNIT-002b] [P1] Given chains tab is active, when rendered, then chains content exists and templates content does not', () => {
-      component.setActiveTab('chains');
+    // TODO: re-enable in Story 4-6 when chains tab is restored
+    xit('[3.7-UNIT-002b] [P1] Given chains tab is active, when rendered, then chains content exists and templates content does not', () => {
+      component.setActiveTab('chains' as never);
       fixture.detectChanges();
 
       // Chains tab renders and fires HTTP request

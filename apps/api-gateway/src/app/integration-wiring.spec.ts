@@ -34,6 +34,8 @@ import {
   FolderEntity,
   KnowledgeChunkEntity,
   WorkflowTemplateEntity,
+  WorkflowTemplateStatus,
+  WorkflowVisibility,
   WorkflowVersionEntity,
   WorkflowChainEntity,
   WorkflowRunEntity,
@@ -957,6 +959,178 @@ describe('RLS Enforcement — Tier 2 [P0]', () => {
       // Verify the system tenant template is visible
       const catalogTemplate = rows.find((r: { name: string }) => r.name === 'Catalog Template');
       expect(catalogTemplate).toBeDefined();
+    });
+  });
+
+  // ── Story 4-LT4-3: Cross-Tenant Template Read for Run Initiation ──
+
+  describe('Cross-Tenant Template + Version Read (Story 4-LT4-3)', () => {
+    let publicTemplateId: string;
+    let publicVersionId: string;
+    let privateAllowedTemplateId: string;
+    let privateAllowedVersionId: string;
+    let privateBlockedTemplateId: string;
+    let softDeletedTemplateId: string;
+
+    beforeAll(async () => {
+      const adminUserId = uuidv4();
+      // Seed admin user for created_by FK
+      await seedDs.query(
+        `INSERT INTO users (id, email, password_hash, role, tenant_id, status)
+         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (email) DO NOTHING`,
+        [adminUserId, `lt4-admin-${Date.now()}@test.io`, 'hash', 'bubble_admin', systemTenantId, 'active'],
+      );
+
+      // 1. Public published template + version (cross-tenant readable)
+      publicTemplateId = uuidv4();
+      publicVersionId = uuidv4();
+      await seedDs.query(
+        `INSERT INTO workflow_templates (id, tenant_id, name, description, visibility, status, created_by, current_version_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [publicTemplateId, systemTenantId, 'LT4-3 Public Template', 'test', 'public', 'published', adminUserId, publicVersionId],
+      );
+      await seedDs.query(
+        `INSERT INTO workflow_versions (id, tenant_id, template_id, version_number, definition, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [publicVersionId, systemTenantId, publicTemplateId, 1, JSON.stringify({ inputs: [], prompt: 'test', execution: {} }), adminUserId],
+      );
+
+      // 2. Private published template with allowedTenants containing tenantA
+      privateAllowedTemplateId = uuidv4();
+      privateAllowedVersionId = uuidv4();
+      await seedDs.query(
+        `INSERT INTO workflow_templates (id, tenant_id, name, description, visibility, status, created_by, current_version_id, allowed_tenants)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [privateAllowedTemplateId, systemTenantId, 'LT4-3 Private Allowed', 'test', 'private', 'published', adminUserId, privateAllowedVersionId, `{${tenantAId}}`],
+      );
+      await seedDs.query(
+        `INSERT INTO workflow_versions (id, tenant_id, template_id, version_number, definition, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [privateAllowedVersionId, systemTenantId, privateAllowedTemplateId, 1, JSON.stringify({ inputs: [], prompt: 'test', execution: {} }), adminUserId],
+      );
+
+      // 3. Private published template WITHOUT tenantA in allowedTenants
+      privateBlockedTemplateId = uuidv4();
+      const privateBlockedVersionId = uuidv4();
+      await seedDs.query(
+        `INSERT INTO workflow_templates (id, tenant_id, name, description, visibility, status, created_by, current_version_id, allowed_tenants)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [privateBlockedTemplateId, systemTenantId, 'LT4-3 Private Blocked', 'test', 'private', 'published', adminUserId, privateBlockedVersionId, `{${tenantBId}}`],
+      );
+      await seedDs.query(
+        `INSERT INTO workflow_versions (id, tenant_id, template_id, version_number, definition, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [privateBlockedVersionId, systemTenantId, privateBlockedTemplateId, 1, JSON.stringify({ inputs: [], prompt: 'test', execution: {} }), adminUserId],
+      );
+
+      // 4. Soft-deleted public published template
+      softDeletedTemplateId = uuidv4();
+      const softDeletedVersionId = uuidv4();
+      await seedDs.query(
+        `INSERT INTO workflow_templates (id, tenant_id, name, description, visibility, status, created_by, current_version_id, deleted_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+        [softDeletedTemplateId, systemTenantId, 'LT4-3 Soft Deleted', 'test', 'public', 'published', adminUserId, softDeletedVersionId],
+      );
+      await seedDs.query(
+        `INSERT INTO workflow_versions (id, tenant_id, template_id, version_number, definition, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [softDeletedVersionId, systemTenantId, softDeletedTemplateId, 1, JSON.stringify({ inputs: [], prompt: 'test', execution: {} }), adminUserId],
+      );
+    });
+
+    it('[4-LT4-3-INTEG-001] [P0] non-admin tenant reads public published template + version via RLS', async () => {
+      await appDs.transaction(async (manager) => {
+        await manager.query(`SET LOCAL app.current_tenant = '${tenantAId}'`);
+
+        // Template readable via template_access (visibility = 'public')
+        const templates = await manager.query(
+          `SELECT id, name, current_version_id FROM workflow_templates WHERE id = $1`,
+          [publicTemplateId],
+        );
+        expect(templates).toHaveLength(1);
+        expect(templates[0].name).toBe('LT4-3 Public Template');
+        expect(templates[0].current_version_id).toBe(publicVersionId);
+
+        // Version readable via catalog_read_published_versions policy:
+        // SELECT USING (EXISTS (SELECT 1 FROM workflow_templates wt WHERE wt.id = template_id
+        //   AND wt.status = 'published' AND wt.deleted_at IS NULL
+        //   AND (wt.visibility = 'public' OR current_tenant = ANY(wt.allowed_tenants))))
+        // This policy ORs with tenant_isolation, so cross-tenant version reads work
+        // when the parent template is published + visible.
+        const versions = await manager.query(
+          `SELECT id, template_id FROM workflow_versions WHERE id = $1`,
+          [publicVersionId],
+        );
+        expect(versions).toHaveLength(1);
+        expect(versions[0].template_id).toBe(publicTemplateId);
+      });
+    });
+
+    it('[4-LT4-3-INTEG-002] [P0] private template with allowedTenants containing requesting tenant is visible — template + version', async () => {
+      await appDs.transaction(async (manager) => {
+        await manager.query(`SET LOCAL app.current_tenant = '${tenantAId}'`);
+
+        // Template readable via catalog_read_published (current_tenant = ANY(allowed_tenants))
+        const rows = await manager.query(
+          `SELECT id, name FROM workflow_templates WHERE id = $1`,
+          [privateAllowedTemplateId],
+        );
+        expect(rows).toHaveLength(1);
+        expect(rows[0].name).toBe('LT4-3 Private Allowed');
+
+        // Version readable via catalog_read_published_versions (same allowed_tenants check):
+        // SELECT USING (EXISTS (... wt.visibility = 'public'
+        //   OR current_tenant = ANY(wt.allowed_tenants)))
+        // tenantA is in allowedTenants → version accessible in same transaction context.
+        const versions = await manager.query(
+          `SELECT id, template_id FROM workflow_versions WHERE id = $1`,
+          [privateAllowedVersionId],
+        );
+        expect(versions).toHaveLength(1);
+        expect(versions[0].template_id).toBe(privateAllowedTemplateId);
+      });
+    });
+
+    it('[4-LT4-3-INTEG-003] [P0] private template WITHOUT requesting tenant in allowedTenants is blocked', async () => {
+      await appDs.transaction(async (manager) => {
+        await manager.query(`SET LOCAL app.current_tenant = '${tenantAId}'`);
+
+        // privateBlockedTemplateId has allowedTenants = [tenantBId] — tenantA is NOT in it
+        const rows = await manager.query(
+          `SELECT id FROM workflow_templates WHERE id = $1`,
+          [privateBlockedTemplateId],
+        );
+        expect(rows).toHaveLength(0);
+      });
+    });
+
+    it('[4-LT4-3-INTEG-004] [P0] soft-deleted public template is still visible via RLS (template_access allows visibility=public)', async () => {
+      // NOTE: template_access and catalog_read_published are both SELECT policies that OR together.
+      // template_access grants access for visibility='public' regardless of deleted_at.
+      // Therefore soft-deleted public templates ARE visible via RLS.
+      // The application code's `withDeleted: false` (in findPublishedOneEntity) is the
+      // enforcement layer for soft-deletion filtering — NOT RLS.
+      await appDs.transaction(async (manager) => {
+        await manager.query(`SET LOCAL app.current_tenant = '${tenantAId}'`);
+
+        const rows = await manager.query(
+          `SELECT id FROM workflow_templates WHERE id = $1`,
+          [softDeletedTemplateId],
+        );
+        // Visible because template_access allows visibility='public'
+        expect(rows).toHaveLength(1);
+      });
+
+      // Verify that adding deleted_at IS NULL filter (what withDeleted:false does) blocks it
+      await appDs.transaction(async (manager) => {
+        await manager.query(`SET LOCAL app.current_tenant = '${tenantAId}'`);
+
+        const rows = await manager.query(
+          `SELECT id FROM workflow_templates WHERE id = $1 AND deleted_at IS NULL`,
+          [softDeletedTemplateId],
+        );
+        expect(rows).toHaveLength(0);
+      });
     });
   });
 

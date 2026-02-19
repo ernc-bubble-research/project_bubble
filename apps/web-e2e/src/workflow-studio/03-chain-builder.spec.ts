@@ -2,7 +2,8 @@ import { test, expect } from '../fixtures';
 
 // Chain Builder uses admin auth (default storageState — no override needed)
 
-test.describe('[P0] Workflow Studio — Chain Builder', () => {
+// TODO: re-enable in Story 4-6 when chain routes and UI are restored
+test.describe.skip('[P0] Workflow Studio — Chain Builder', () => {
   test('[3E-E2E-003a] create chain with 2 steps and input mapping', async ({
     page,
   }) => {

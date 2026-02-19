@@ -657,6 +657,155 @@ describe('WorkflowTemplatesService [P0]', () => {
     });
   });
 
+  describe('findPublishedOneEntity', () => {
+    it('[4-LT4-3-UNIT-001] [P0] Given published public template with version, when findPublishedOneEntity is called, then returns raw entities', async () => {
+      // Given
+      const publishedTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+        visibility: WorkflowVisibility.PUBLIC,
+        currentVersionId: versionId,
+        deletedAt: null,
+      };
+      mockManager.findOne
+        .mockResolvedValueOnce(publishedTemplate)
+        .mockResolvedValueOnce(mockVersion);
+
+      // When
+      const result = await service.findPublishedOneEntity(templateId, tenantId);
+
+      // Then
+      expect(result.template).toBe(publishedTemplate);
+      expect(result.version).toBe(mockVersion);
+      // Rule 2c exception: no tenantId in WHERE
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, status: WorkflowTemplateStatus.PUBLISHED },
+        withDeleted: false,
+      });
+    });
+
+    it('[4-LT4-3-UNIT-002] [P0] Given private template where requesting tenant is in allowedTenants, when findPublishedOneEntity is called, then returns entities', async () => {
+      // Given
+      const privateTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+        visibility: WorkflowVisibility.PRIVATE,
+        allowedTenants: [tenantId],
+        currentVersionId: versionId,
+        deletedAt: null,
+      };
+      mockManager.findOne
+        .mockResolvedValueOnce(privateTemplate)
+        .mockResolvedValueOnce(mockVersion);
+
+      // When
+      const result = await service.findPublishedOneEntity(templateId, tenantId);
+
+      // Then
+      expect(result.template).toBe(privateTemplate);
+      expect(result.version).toBe(mockVersion);
+    });
+
+    it('[4-LT4-3-UNIT-003] [P0] Given private template where requesting tenant is NOT in allowedTenants, when findPublishedOneEntity is called, then throws NotFoundException', async () => {
+      // Given
+      const otherTenantId = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
+      const privateTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+        visibility: WorkflowVisibility.PRIVATE,
+        allowedTenants: [otherTenantId],
+        currentVersionId: versionId,
+        deletedAt: null,
+      };
+      mockManager.findOne.mockResolvedValueOnce(privateTemplate);
+
+      // When/Then
+      await expect(
+        service.findPublishedOneEntity(templateId, tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('[4-LT4-3-UNIT-004] [P0] Given non-published template, when findPublishedOneEntity is called, then throws NotFoundException', async () => {
+      // Given — draft templates are not visible (findOne with status:PUBLISHED returns null)
+      mockManager.findOne.mockResolvedValue(null);
+
+      // When/Then
+      await expect(
+        service.findPublishedOneEntity(templateId, tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('[4-LT4-3-UNIT-005] [P0] Given soft-deleted published template (withDeleted:false), when findPublishedOneEntity is called, then throws NotFoundException', async () => {
+      // Given — findOne with withDeleted:false returns null for soft-deleted records
+      mockManager.findOne.mockResolvedValueOnce(null);
+
+      // When/Then
+      await expect(
+        service.findPublishedOneEntity(templateId, tenantId),
+      ).rejects.toThrow(NotFoundException);
+
+      // Verify withDeleted:false is passed
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, status: WorkflowTemplateStatus.PUBLISHED },
+        withDeleted: false,
+      });
+    });
+
+    it('[4-LT4-3-UNIT-006] [P0] Given published template with null currentVersionId, when findPublishedOneEntity is called, then throws BadRequestException', async () => {
+      // Given
+      const publishedNoVersion = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+        visibility: WorkflowVisibility.PUBLIC,
+        currentVersionId: null,
+        deletedAt: null,
+      };
+      mockManager.findOne.mockResolvedValueOnce(publishedNoVersion);
+
+      // When/Then
+      await expect(
+        service.findPublishedOneEntity(templateId, tenantId),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('[4-LT4-3-UNIT-007] [P0] Given published template where version not found, when findPublishedOneEntity is called, then throws BadRequestException', async () => {
+      // Given
+      const publishedTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+        visibility: WorkflowVisibility.PUBLIC,
+        currentVersionId: versionId,
+        deletedAt: null,
+      };
+      mockManager.findOne
+        .mockResolvedValueOnce(publishedTemplate)
+        .mockResolvedValueOnce(null); // version not found
+
+      // When/Then
+      await expect(
+        service.findPublishedOneEntity(templateId, tenantId),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('[4-LT4-3-UNIT-008] [P1] Given private template with null allowedTenants, when findPublishedOneEntity is called, then throws NotFoundException', async () => {
+      // Given
+      const privateTemplate = {
+        ...mockTemplate,
+        status: WorkflowTemplateStatus.PUBLISHED,
+        visibility: WorkflowVisibility.PRIVATE,
+        allowedTenants: null,
+        currentVersionId: versionId,
+        deletedAt: null,
+      };
+      mockManager.findOne.mockResolvedValueOnce(privateTemplate);
+
+      // When/Then
+      await expect(
+        service.findPublishedOneEntity(templateId, tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('findPublished - visibility filtering', () => {
     it('[4-FIX-A2-UNIT-006] [P0] Given findPublished is called, when query is built, then includes visibility filter', async () => {
       // Given

@@ -20,7 +20,8 @@ test.describe('[P0] Workflow Studio — Navigation', () => {
     await expect(page.getByText('E2E Seed Template')).toBeVisible();
   });
 
-  test('[3E-E2E-001b] switch to Chains tab shows seeded chain', async ({
+  // TODO: re-enable in Story 4-6 when chain routes and UI are restored
+  test.skip('[3E-E2E-001b] switch to Chains tab shows seeded chain', async ({
     page,
   }) => {
     // Given — admin is on Workflow Studio
