@@ -52,8 +52,16 @@ describe('API Contract Tests — Tier 3 [P0]', () => {
   let tenantBToken: string;
   let tenantCToken: string;
 
+  let dbAvailable = false;
+
   beforeAll(async () => {
-    await createTestDatabase(TEST_DB_NAME);
+    try {
+      await createTestDatabase(TEST_DB_NAME);
+      dbAvailable = true;
+    } catch (err) {
+      console.warn(`Tier 3 contract tests will be skipped — PostgreSQL unavailable: ${(err as Error).message}`);
+      return;
+    }
 
     const result = await createContractApp();
     app = result.app;
@@ -110,8 +118,19 @@ describe('API Contract Tests — Tier 3 [P0]', () => {
       if (app) await app.close();
     } catch { /* suppress shutdown hook errors after manual DS destruction */ }
 
-    await dropTestDatabase(TEST_DB_NAME);
+    if (dbAvailable) {
+      await dropTestDatabase(TEST_DB_NAME);
+    }
   }, 30_000);
+
+  // Guard: skip all tests when PostgreSQL is unavailable
+  beforeEach(() => {
+    if (!dbAvailable) {
+      // Jest does not have a native skip-at-runtime API.
+      // Throwing a descriptive error is the clearest signal.
+      throw new Error('SKIPPED: PostgreSQL unavailable — Tier 3 contract tests cannot run');
+    }
+  });
 
   // ── Task 2: Admin Template Endpoint Tests (P0 — these broke) ──────────
 

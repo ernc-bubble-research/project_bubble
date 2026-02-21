@@ -23,6 +23,7 @@ describe('GoogleAIStudioLlmProvider', () => {
   function mockSuccessResponse(
     text: string,
     usage?: { promptTokenCount: number; candidatesTokenCount: number; totalTokenCount: number },
+    candidates?: Array<{ finishReason?: string }>,
   ) {
     mockGenerateContent.mockResolvedValue({
       response: {
@@ -32,6 +33,7 @@ describe('GoogleAIStudioLlmProvider', () => {
           candidatesTokenCount: 200,
           totalTokenCount: 300,
         },
+        candidates: candidates ?? [{ finishReason: 'STOP' }],
       },
     });
   }
@@ -147,5 +149,38 @@ describe('GoogleAIStudioLlmProvider', () => {
         maxOutputTokens: undefined,
       },
     });
+  });
+
+  // [4-CL-UNIT-005] Extracts finishReason from candidates
+  it('should return finishReason from response candidates', async () => {
+    mockSuccessResponse('Generated content', undefined, [{ finishReason: 'MAX_TOKENS' }]);
+
+    const result = await provider.generate('Prompt', {});
+
+    expect(result.finishReason).toBe('MAX_TOKENS');
+  });
+
+  // [4-CL-UNIT-006] Returns finishReason STOP for normal completion
+  it('should return finishReason STOP on normal completion', async () => {
+    mockSuccessResponse('Generated content');
+
+    const result = await provider.generate('Prompt', {});
+
+    expect(result.finishReason).toBe('STOP');
+  });
+
+  // [4-CL-UNIT-007] Handles missing candidates gracefully
+  it('should return undefined finishReason when candidates are missing', async () => {
+    mockGenerateContent.mockResolvedValue({
+      response: {
+        text: () => 'No candidates',
+        usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 20, totalTokenCount: 30 },
+        candidates: undefined,
+      },
+    });
+
+    const result = await provider.generate('Prompt', {});
+
+    expect(result.finishReason).toBeUndefined();
   });
 });

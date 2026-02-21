@@ -18,6 +18,11 @@ const ALLOWED_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 
+const ALLOWED_OUTPUT_MIME_TYPES = [
+  'text/markdown',
+  'application/json',
+];
+
 const ALLOWED_EXTENSIONS = ['.pdf', '.txt', '.md', '.docx'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const UPLOADS_ROOT = 'uploads';
@@ -122,6 +127,12 @@ export class AssetsService {
       uploadedBy: string;
     },
   ): Promise<AssetEntity> {
+    if (!ALLOWED_OUTPUT_MIME_TYPES.includes(metadata.mimeType)) {
+      throw new BadRequestException(
+        `MIME type "${metadata.mimeType}" is not allowed for workflow output. Allowed: ${ALLOWED_OUTPUT_MIME_TYPES.join(', ')}`,
+      );
+    }
+
     const sha256Hash = createHash('sha256').update(buffer).digest('hex');
 
     // Write file to disk

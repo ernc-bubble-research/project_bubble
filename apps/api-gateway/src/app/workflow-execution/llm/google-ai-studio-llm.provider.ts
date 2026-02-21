@@ -53,6 +53,7 @@ export class GoogleAIStudioLlmProvider implements LLMProvider {
       const response = result.response;
       const text = response.text();
       const usage = response.usageMetadata ?? {};
+      const finishReason = response.candidates?.[0]?.finishReason as string | undefined;
 
       return {
         text,
@@ -61,6 +62,7 @@ export class GoogleAIStudioLlmProvider implements LLMProvider {
           outputTokens: usage.candidatesTokenCount ?? 0,
           totalTokens: usage.totalTokenCount ?? 0,
         },
+        finishReason,
       };
     } catch (error) {
       if (attempt < MAX_RETRIES) {

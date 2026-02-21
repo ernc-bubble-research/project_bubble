@@ -30,6 +30,7 @@ export interface PerFileResult {
   outputAssetId?: string;
   retryAttempt?: number;
   maxRetries?: number;
+  finishReason?: string;
 }
 
 export interface WorkflowJobPayload {

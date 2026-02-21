@@ -17,6 +17,13 @@ import { TestRunCacheService } from '../services/test-run-cache.service';
 import { TestRunGateway } from '../gateways/test-run.gateway';
 import { TestRunFileResultDto } from '@project-bubble/shared';
 
+// ── Named constants (extracted from magic numbers) ───────────────────
+const DEFAULT_WORKER_CONCURRENCY = 100;
+const BULLMQ_LOCK_DURATION_MS = 300_000;
+const DEFAULT_JOB_RETRY_ATTEMPTS = 3;
+const CHARS_PER_TOKEN_ESTIMATE = 4;
+const MAX_ERROR_MESSAGE_LENGTH = 200;
+
 /** Detect fan-out job by `:file:` segment in jobId */
 function isFanOutJob(jobId: string | undefined): boolean {
   return !!jobId && jobId.includes(':file:');
@@ -93,8 +100,8 @@ export function parseUpdateReturningRow<T>(
 }
 
 @Processor('workflow-execution', {
-  concurrency: parseInt(process.env['WORKER_CONCURRENCY'] || '100'),
-  lockDuration: 300000,
+  concurrency: parseInt(process.env['WORKER_CONCURRENCY'] || String(DEFAULT_WORKER_CONCURRENCY)),
+  lockDuration: BULLMQ_LOCK_DURATION_MS,
 })
 export class WorkflowExecutionProcessor extends WorkerHost {
   private readonly logger = new Logger(WorkflowExecutionProcessor.name);
@@ -214,7 +221,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     if (fanOut) {
       const fileIndex = extractFileIndex(job.id!);
       const fileName = job.data.subjectFile?.originalName ?? `file-${fileIndex}`;
-      const maxRetries = job.opts?.attempts ?? 3;
+      const maxRetries = job.opts?.attempts ?? DEFAULT_JOB_RETRY_ATTEMPTS;
       const attemptNumber = job.attemptsMade;
 
       await this.writePerFileStatus(tenantId, runId, fileIndex, fileName,
@@ -231,7 +238,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     const { provider, model, supportedGenerationParams } = await this.llmProviderFactory.getProvider(modelUuid);
 
     // Defense-in-depth: check assembled prompt length vs model context window
-    const estimatedTokens = Math.ceil(assemblyResult.assembledPromptLength / 4);
+    const estimatedTokens = Math.ceil(assemblyResult.assembledPromptLength / CHARS_PER_TOKEN_ESTIMATE);
     if (estimatedTokens > model.contextWindow) {
       throw new Error(
         `Assembled prompt (~${estimatedTokens} tokens) exceeds model context window (${model.contextWindow} tokens). ` +
@@ -257,6 +264,19 @@ export class WorkflowExecutionProcessor extends WorkerHost {
       inputTokens: llmResult.tokenUsage.inputTokens,
       outputTokens: llmResult.tokenUsage.outputTokens,
     });
+
+    // Warn on non-STOP finishReason (e.g., MAX_TOKENS, SAFETY truncation)
+    if (llmResult.finishReason && llmResult.finishReason !== 'STOP') {
+      this.logger.warn({
+        message: `LLM generation finished with non-STOP reason: ${llmResult.finishReason}`,
+        jobId: job.id,
+        runId,
+        tenantId,
+        modelId: model.modelId,
+        outputLength: llmResult.text.length,
+        finishReason: llmResult.finishReason,
+      });
+    }
 
     // Step 5: Store results — behavioral split based on fan-out vs single-job
     // Each path runs sanity check → persists output as AssetEntity → records result.
@@ -328,14 +348,14 @@ export class WorkflowExecutionProcessor extends WorkerHost {
   private async recordFanOutSuccess(
     job: Job<WorkflowJobPayload>,
     assemblyResult: { prompt: string; warnings: string[] },
-    llmResult: { text: string; tokenUsage: { inputTokens: number; outputTokens: number; totalTokens: number } },
+    llmResult: { text: string; tokenUsage: { inputTokens: number; outputTokens: number; totalTokens: number }; finishReason?: string },
     model: { id: string; modelId: string },
     startedBy: string,
   ): Promise<void> {
     const { runId, tenantId, definition } = job.data;
     const fileIndex = extractFileIndex(job.id!);
     const fileName = job.data.subjectFile?.originalName ?? `file-${fileIndex}`;
-    const maxRetries = job.opts?.attempts ?? 3;
+    const maxRetries = job.opts?.attempts ?? DEFAULT_JOB_RETRY_ATTEMPTS;
 
     // Sanity check: did we get usable output?
     const sanityResult = validateLlmOutput(
@@ -379,6 +399,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
       outputAssetId: asset.id,
       retryAttempt: job.attemptsMade,
       maxRetries,
+      finishReason: llmResult.finishReason,
     };
 
     // Atomic: upsert per-file result (replace by index) + increment completed_jobs + append outputAssetId + RETURNING
@@ -726,7 +747,7 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     }
 
     const attemptsMade = job.attemptsMade;
-    const maxAttempts = job.opts?.attempts ?? 3;
+    const maxAttempts = job.opts?.attempts ?? DEFAULT_JOB_RETRY_ATTEMPTS;
     const fanOut = isFanOutJob(job.id);
 
     // Intermediate failure — let BullMQ retry
@@ -815,11 +836,11 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     const fileName = job.data.subjectFile?.originalName ?? `file-${fileIndex}`;
 
     try {
-      const errorSummary = error.message.length > 200
-        ? error.message.substring(0, 200) + '...'
+      const errorSummary = error.message.length > MAX_ERROR_MESSAGE_LENGTH
+        ? error.message.substring(0, MAX_ERROR_MESSAGE_LENGTH) + '...'
         : error.message;
 
-      const maxRetries = job.opts?.attempts ?? 3;
+      const maxRetries = job.opts?.attempts ?? DEFAULT_JOB_RETRY_ATTEMPTS;
       const perFileResult: PerFileResult = {
         index: fileIndex,
         fileName,
@@ -896,8 +917,8 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     const { runId, tenantId } = job.data;
 
     try {
-      const errorSummary = error.message.length > 200
-        ? error.message.substring(0, 200) + '...'
+      const errorSummary = error.message.length > MAX_ERROR_MESSAGE_LENGTH
+        ? error.message.substring(0, MAX_ERROR_MESSAGE_LENGTH) + '...'
         : error.message;
 
       await this.txManager.run(tenantId, async (manager) => {

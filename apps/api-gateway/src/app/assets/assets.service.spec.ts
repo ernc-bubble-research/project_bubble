@@ -366,6 +366,45 @@ describe('AssetsService [P1]', () => {
     });
   });
 
+  describe('createFromBuffer', () => {
+    it('[4-CL-UNIT-001] should reject invalid MIME type with BadRequestException', async () => {
+      await expect(
+        service.createFromBuffer(Buffer.from('content'), {
+          tenantId,
+          filename: 'output.png',
+          mimeType: 'image/png',
+          sourceType: 'workflow_output',
+          workflowRunId: '11111111-1111-1111-1111-111111111111',
+          uploadedBy: userId,
+        }),
+      ).rejects.toThrow(/not allowed for workflow output/);
+
+      // Should not have written to disk or DB
+      expect(mockTxManager.run).not.toHaveBeenCalled();
+    });
+
+    it('[4-CL-UNIT-001b] should accept valid output MIME types (text/markdown, application/json)', async () => {
+      mockManager.create.mockReturnValue(mockAsset);
+      mockManager.save.mockResolvedValue(mockAsset);
+
+      for (const mimeType of ['text/markdown', 'application/json']) {
+        mockTxManager.run.mockClear();
+        mockManager.create.mockClear();
+
+        await service.createFromBuffer(Buffer.from('content'), {
+          tenantId,
+          filename: 'output.md',
+          mimeType,
+          sourceType: 'workflow_output',
+          workflowRunId: '11111111-1111-1111-1111-111111111111',
+          uploadedBy: userId,
+        });
+
+        expect(mockTxManager.run).toHaveBeenCalled();
+      }
+    });
+  });
+
   describe('log sanitization [2.1-UNIT-055] [P2]', () => {
     it('[2.1-UNIT-055] should log only metadata, never file content', async () => {
       mockManager.findOne.mockResolvedValue(null);

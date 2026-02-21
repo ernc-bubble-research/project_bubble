@@ -111,6 +111,9 @@ export class WorkflowRunEntity {
   @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
   completedAt!: Date | null;
 
+  @Column({ name: 'last_retried_at', type: 'timestamp', nullable: true })
+  lastRetriedAt!: Date | null;
+
   @Column({ name: 'duration_ms', type: 'int', nullable: true })
   durationMs!: number | null;
 

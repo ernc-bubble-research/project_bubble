@@ -593,6 +593,7 @@ export class WorkflowRunsService {
         creditsFromMonthly: run.creditsFromMonthly + creditsFromMonthly,
         creditsFromPurchased: run.creditsFromPurchased + creditsFromPurchased,
         perFileResults: updatedResults,
+        lastRetriedAt: new Date(),
       };
 
       await manager.update(

@@ -37,6 +37,7 @@ export class MockLlmProvider implements LLMProvider {
         outputTokens,
         totalTokens: inputTokens + outputTokens,
       },
+      finishReason: 'STOP',
     };
   }
 

@@ -84,13 +84,28 @@ export interface WorkflowOutputSection {
 }
 
 /**
+ * Generation-related keys of WorkflowExecution (snake_case).
+ * Excludes non-generation fields: processing, max_concurrency, model, max_retries.
+ */
+type WorkflowExecutionGenerationKey = 'temperature' | 'max_output_tokens' | 'top_p' | 'top_k' | 'stop_sequences';
+
+/**
+ * Keys of LLMGenerateOptions (camelCase).
+ * Mirrors the interface defined in api-gateway/llm/llm.provider.ts.
+ */
+type LLMGenerateOptionKey = 'temperature' | 'maxOutputTokens' | 'topP' | 'topK' | 'stopSequences';
+
+/**
  * Maps snake_case generation param keys (WorkflowExecution) → camelCase keys
  * (LLMGenerateOptions / GenerationParamSpec / model defaults).
  *
  * Single source of truth — used by both backend merge utility and frontend wizard.
  * When adding a new generation param, add ONE entry here.
+ *
+ * Type-enforced: adding a key not in WorkflowExecution generation fields or a
+ * value not in LLMGenerateOptions causes a TypeScript compilation error.
  */
-export const GENERATION_PARAM_KEY_MAP: Readonly<Record<string, string>> = Object.freeze({
+export const GENERATION_PARAM_KEY_MAP: Readonly<Record<WorkflowExecutionGenerationKey, LLMGenerateOptionKey>> = Object.freeze({
   temperature: 'temperature',
   max_output_tokens: 'maxOutputTokens',
   top_p: 'topP',

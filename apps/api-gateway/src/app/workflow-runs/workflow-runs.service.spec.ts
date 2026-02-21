@@ -1595,5 +1595,32 @@ describe('WorkflowRunsService [P0]', () => {
       expect(preFlightService.checkAndDeductCredits).not.toHaveBeenCalled();
       expect(mockExecutionQueue.add).not.toHaveBeenCalled();
     });
+
+    it('[4-CL-UNIT-008] sets lastRetriedAt timestamp in update payload', async () => {
+      const runWithFailures = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        maxRetryCount: 3,
+        inputSnapshot: { templateId, definition: mockDefinition, userInputs: {} },
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'failed' as const, retryAttempt: 0 },
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValueOnce(runWithFailures);
+      mockManager.findOne.mockResolvedValueOnce(mockTemplate);
+      mockManager.findOne.mockResolvedValueOnce({ ...runWithFailures, status: WorkflowRunStatus.RUNNING });
+      assetsService.findEntityById.mockResolvedValue({ id: assetId, originalName: 'test.pdf', storagePath: '/path' } as never);
+
+      await service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      expect(mockManager.update).toHaveBeenCalledWith(
+        WorkflowRunEntity,
+        { id: runId, tenantId },
+        expect.objectContaining({
+          lastRetriedAt: expect.any(Date),
+        }),
+      );
+    });
   });
 });

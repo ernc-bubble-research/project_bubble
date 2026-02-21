@@ -3,6 +3,25 @@ import { test, expect } from '../fixtures';
 // Workflow Wizard uses admin auth (default storageState — no override needed)
 
 test.describe('[P0] Workflow Studio — Wizard', () => {
+  // [4-CL-E2E-001] Capture console.error during wizard E2E tests
+  let consoleErrors: string[];
+
+  test.beforeEach(async ({ page }) => {
+    consoleErrors = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+  });
+
+  test.afterEach(async () => {
+    expect(
+      consoleErrors,
+      `Unexpected console.error(s) during wizard test:\n${consoleErrors.join('\n')}`,
+    ).toHaveLength(0);
+  });
+
   test('[3E-E2E-002a] North Star: create workflow through all 4 steps', async ({
     page,
   }) => {

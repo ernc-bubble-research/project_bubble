@@ -21,6 +21,7 @@ export interface LLMGenerateResult {
     outputTokens: number;
     totalTokens: number;
   };
+  finishReason?: string;
 }
 
 export interface LLMProvider {

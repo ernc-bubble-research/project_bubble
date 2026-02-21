@@ -46,8 +46,16 @@ describe('API Contract Tests — Tier 3 [Story B]', () => {
   let adminToken: string;
   let tenantAToken: string;
 
+  let dbAvailable = false;
+
   beforeAll(async () => {
-    await createTestDatabase(TEST_DB_NAME);
+    try {
+      await createTestDatabase(TEST_DB_NAME);
+      dbAvailable = true;
+    } catch (err) {
+      console.warn(`Tier 3 contract tests (B) will be skipped — PostgreSQL unavailable: ${(err as Error).message}`);
+      return;
+    }
 
     const result = await createContractApp();
     app = result.app;
@@ -88,8 +96,17 @@ describe('API Contract Tests — Tier 3 [Story B]', () => {
       if (app) await app.close();
     } catch { /* suppress shutdown hook errors after manual DS destruction */ }
 
-    await dropTestDatabase(TEST_DB_NAME);
+    if (dbAvailable) {
+      await dropTestDatabase(TEST_DB_NAME);
+    }
   }, 30_000);
+
+  // Guard: skip all tests when PostgreSQL is unavailable
+  beforeEach(() => {
+    if (!dbAvailable) {
+      throw new Error('SKIPPED: PostgreSQL unavailable — Tier 3 contract tests cannot run');
+    }
+  });
 
   // ── Task 2: Auth Endpoint Tests ──────────────────────────────────
 

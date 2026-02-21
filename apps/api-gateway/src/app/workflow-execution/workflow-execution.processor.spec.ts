@@ -13,6 +13,8 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PromptAssemblyService } from './prompt-assembly.service';
 import { LlmProviderFactory } from './llm/llm-provider.factory';
 import { AssetsService } from '../assets/assets.service';
+import { TestRunCacheService } from '../services/test-run-cache.service';
+import { TestRunGateway } from '../gateways/test-run.gateway';
 
 describe('WorkflowExecutionProcessor', () => {
   let processor: WorkflowExecutionProcessor;
@@ -23,6 +25,8 @@ describe('WorkflowExecutionProcessor', () => {
   let llmProviderFactory: { getProvider: jest.Mock };
   let mockLlmProvider: { generate: jest.Mock };
   let assetsService: { createFromBuffer: jest.Mock };
+  let testRunCache: { get: jest.Mock; set: jest.Mock; delete: jest.Mock };
+  let testRunGateway: { emitFileStart: jest.Mock; emitFileComplete: jest.Mock; emitComplete: jest.Mock; emitError: jest.Mock; emitRunComplete: jest.Mock };
 
   const tenantId = 'aaaaaaaa-0000-0000-0000-000000000001';
   const runId = 'bbbbbbbb-0000-0000-0000-000000000001';
@@ -52,7 +56,7 @@ describe('WorkflowExecutionProcessor', () => {
     return {
       id: runId,
       data: basePayload,
-      attemptsMade: 3,
+      attemptsMade: 0,
       opts: { attempts: 3 },
       ...overrides,
     } as unknown as Job<WorkflowJobPayload>;
@@ -137,6 +141,20 @@ describe('WorkflowExecutionProcessor', () => {
       }),
     };
 
+    testRunCache = {
+      get: jest.fn().mockReturnValue(undefined),
+      set: jest.fn(),
+      delete: jest.fn(),
+    };
+
+    testRunGateway = {
+      emitFileStart: jest.fn(),
+      emitFileComplete: jest.fn(),
+      emitComplete: jest.fn(),
+      emitError: jest.fn(),
+      emitRunComplete: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WorkflowExecutionProcessor,
@@ -145,6 +163,8 @@ describe('WorkflowExecutionProcessor', () => {
         { provide: PromptAssemblyService, useValue: promptAssembly },
         { provide: LlmProviderFactory, useValue: llmProviderFactory },
         { provide: AssetsService, useValue: assetsService },
+        { provide: TestRunCacheService, useValue: testRunCache },
+        { provide: TestRunGateway, useValue: testRunGateway },
       ],
     }).compile();
 
@@ -387,6 +407,37 @@ describe('WorkflowExecutionProcessor', () => {
       await expect(processor.process(makeJob())).rejects.toThrow(
         'LLM API timeout',
       );
+    });
+
+    // [4-CL-UNIT-009] Logs warning when finishReason is not STOP
+    describe('finishReason warning', () => {
+      let logWarnSpy: jest.SpyInstance;
+
+      beforeEach(() => {
+        logWarnSpy = jest.spyOn(processor['logger'], 'warn').mockImplementation();
+      });
+
+      afterEach(() => {
+        logWarnSpy.mockRestore();
+      });
+
+      it('[4-CL-UNIT-009] should log warning when finishReason is not STOP', async () => {
+        mockManager.findOne.mockResolvedValue(makeRun());
+        mockLlmProvider.generate.mockResolvedValue({
+          text: 'This is a valid LLM response that is long enough to pass the sanity check minimum length requirement of fifty characters.',
+          tokenUsage: { inputTokens: 50, outputTokens: 8192, totalTokens: 8242 },
+          finishReason: 'MAX_TOKENS',
+        });
+
+        await processor.process(makeJob());
+
+        expect(logWarnSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining('non-STOP'),
+            finishReason: 'MAX_TOKENS',
+          }),
+        );
+      });
     });
 
     // [4-5-UNIT-050] M3-2: sanity check failure in fan-out throws for BullMQ retry
@@ -1235,6 +1286,88 @@ describe('WorkflowExecutionProcessor', () => {
       const queryTexts = mockManager.query.mock.calls.map((c: unknown[]) => (c[0] as string));
       const refundCalls = queryTexts.filter((q: string) => q.includes('purchased_credits + $1'));
       expect(refundCalls).toHaveLength(0);
+    });
+  });
+
+  // ── onFailed catch block coverage (AC5) ─────────────────────────
+  describe('onFailed() — catch block error paths', () => {
+    let loggerErrorSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      loggerErrorSpy = jest.spyOn(processor['logger'], 'error').mockImplementation();
+    });
+
+    afterEach(() => {
+      loggerErrorSpy.mockRestore();
+    });
+
+    it('[4-CL-UNIT-002] writePerFileStatus catch: logs error, does NOT rethrow when status write fails during intermediate retry', async () => {
+      const error = new Error('transient LLM error');
+      const fanOutJob = makeJob({
+        id: `${runId}:file:0`,
+        data: { ...basePayload, subjectFile: { originalName: 'a.pdf', storagePath: '/uploads/a.pdf' } },
+        attemptsMade: 1,
+        opts: { attempts: 3 },
+      });
+
+      // Make writePerFileStatus fail (txManager.run → manager.query throws)
+      txManager.run.mockRejectedValueOnce(new Error('DB connection lost'));
+
+      // Should NOT throw — catch block swallows the error
+      await expect(processor.onFailed(fanOutJob, error)).resolves.toBeUndefined();
+
+      // Logger should have been called with the swallowed error
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Failed to write retrying status',
+        }),
+      );
+    });
+
+    it('[4-CL-UNIT-003] recordFanOutFailure catch: logs error, does NOT rethrow when fan-out failure recording fails', async () => {
+      const error = new Error('LLM timeout');
+      const fanOutJob = makeJob({
+        id: `${runId}:file:1`,
+        data: { ...basePayload, subjectFile: { originalName: 'doc.pdf', storagePath: '/uploads/doc.pdf' } },
+        attemptsMade: 3,
+      });
+
+      // txManager.run will be called for recordFanOutFailure — make it throw
+      txManager.run.mockRejectedValueOnce(new Error('DB unavailable'));
+
+      // Should NOT throw — catch block swallows the error
+      await expect(processor.onFailed(fanOutJob, error)).resolves.toBeUndefined();
+
+      // DLQ should have been attempted before recordFanOutFailure
+      expect(dlqQueue.add).toHaveBeenCalledTimes(1);
+
+      // Logger should have been called with the swallowed error
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Failed to record fan-out job failure',
+        }),
+      );
+    });
+
+    it('[4-CL-UNIT-004] markRunFailed catch: logs error, does NOT rethrow when single-job failure recording fails', async () => {
+      const error = new Error('LLM timeout');
+      const job = makeJob({ attemptsMade: 3 });
+
+      // txManager.run will be called for markRunFailed — make it throw
+      txManager.run.mockRejectedValueOnce(new Error('Connection reset'));
+
+      // Should NOT throw — catch block swallows the error
+      await expect(processor.onFailed(job, error)).resolves.toBeUndefined();
+
+      // DLQ should have been attempted
+      expect(dlqQueue.add).toHaveBeenCalledTimes(1);
+
+      // Logger should have been called with the swallowed error
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Failed to update entity status after DLQ routing',
+        }),
+      );
     });
   });
 

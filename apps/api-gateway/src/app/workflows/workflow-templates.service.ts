@@ -10,6 +10,7 @@ import {
   WorkflowVersionEntity,
   TransactionManager,
 } from '@project-bubble/db-layer';
+import { EntityManager } from 'typeorm';
 import {
   CreateWorkflowTemplateDto,
   UpdateWorkflowTemplateDto,
@@ -329,42 +330,51 @@ export class WorkflowTemplatesService {
   }
 
   /**
+   * Shared helper: find a published template by ID with visibility check.
+   * Rule 2c exception — no tenantId in WHERE because templates are admin-created
+   * and shared with tenants via catalog. Visibility enforced in application code.
+   */
+  private async findPublishedTemplateWithVisibilityCheck(
+    id: string,
+    requestingTenantId: string,
+    manager: EntityManager,
+  ): Promise<WorkflowTemplateEntity> {
+    const template = await manager.findOne(WorkflowTemplateEntity, {
+      where: { id, status: WorkflowTemplateStatus.PUBLISHED },
+      withDeleted: false,
+    });
+
+    if (!template) {
+      throw new NotFoundException(
+        `Published workflow template with id "${id}" not found`,
+      );
+    }
+
+    // Security: same "not found" message for missing AND visibility failures
+    // to avoid leaking existence of private templates to unauthorized tenants.
+    if (
+      template.visibility === WorkflowVisibility.PRIVATE &&
+      (!template.allowedTenants || !template.allowedTenants.includes(requestingTenantId))
+    ) {
+      throw new NotFoundException(
+        `Published workflow template with id "${id}" not found`,
+      );
+    }
+
+    return template;
+  }
+
+  /**
    * Catalog endpoint: find a single published template by ID, with visibility check.
-   * This is a documented Rule 2c exception — no tenantId in WHERE because templates
-   * are created by bubble_admin and shared with tenants via catalog.
-   * Visibility is enforced in application code: PRIVATE templates check allowedTenants.
-   *
-   * KEEP IN SYNC with findPublishedOneEntity() below — same visibility logic,
-   * different return type (DTO vs raw entities). If visibility rules change, update BOTH.
+   * Documented Rule 2c exception — uses shared visibility helper.
    */
   async findPublishedOne(
     id: string,
     requestingTenantId: string,
   ): Promise<WorkflowTemplateResponseDto> {
     return this.txManager.run(requestingTenantId, async (manager) => {
-      // Rule 2c exception: no tenantId in WHERE — admin-created templates are cross-tenant.
-      const template = await manager.findOne(WorkflowTemplateEntity, {
-        where: { id, status: WorkflowTemplateStatus.PUBLISHED },
-        withDeleted: false,
-      });
+      const template = await this.findPublishedTemplateWithVisibilityCheck(id, requestingTenantId, manager);
 
-      if (!template) {
-        throw new NotFoundException(
-          `Published workflow template with id "${id}" not found`,
-        );
-      }
-
-      // Visibility check: PRIVATE templates restricted to allowedTenants
-      if (
-        template.visibility === WorkflowVisibility.PRIVATE &&
-        (!template.allowedTenants || !template.allowedTenants.includes(requestingTenantId))
-      ) {
-        throw new NotFoundException(
-          `Published workflow template with id "${id}" not found`,
-        );
-      }
-
-      // Load current version if exists
       let currentVersion: WorkflowVersionEntity | null = null;
       if (template.currentVersionId) {
         currentVersion = await manager.findOne(WorkflowVersionEntity, {
@@ -378,39 +388,14 @@ export class WorkflowTemplatesService {
 
   /**
    * Entity version of findPublishedOne — returns raw entities instead of DTOs.
-   * Used by WorkflowRunsService.initiateRun() which needs the raw entities for
-   * credit check, BullMQ payload, etc.
-   *
-   * Documented Rule 2c exception — same visibility logic as findPublishedOne().
-   * KEEP IN SYNC with findPublishedOne() above — same visibility logic,
-   * different return type (raw entities vs DTO). If visibility rules change, update BOTH.
+   * Documented Rule 2c exception — uses shared visibility helper.
    */
   async findPublishedOneEntity(
     id: string,
     requestingTenantId: string,
   ): Promise<{ template: WorkflowTemplateEntity; version: WorkflowVersionEntity }> {
     return this.txManager.run(requestingTenantId, async (manager) => {
-      // Rule 2c exception: no tenantId in WHERE — admin-created templates are cross-tenant.
-      const template = await manager.findOne(WorkflowTemplateEntity, {
-        where: { id, status: WorkflowTemplateStatus.PUBLISHED },
-        withDeleted: false,
-      });
-
-      if (!template) {
-        throw new NotFoundException(
-          `Published workflow template with id "${id}" not found`,
-        );
-      }
-
-      // Visibility check: PRIVATE templates restricted to allowedTenants
-      if (
-        template.visibility === WorkflowVisibility.PRIVATE &&
-        (!template.allowedTenants || !template.allowedTenants.includes(requestingTenantId))
-      ) {
-        throw new NotFoundException(
-          `Published workflow template with id "${id}" not found`,
-        );
-      }
+      const template = await this.findPublishedTemplateWithVisibilityCheck(id, requestingTenantId, manager);
 
       if (!template.currentVersionId) {
         throw new BadRequestException(

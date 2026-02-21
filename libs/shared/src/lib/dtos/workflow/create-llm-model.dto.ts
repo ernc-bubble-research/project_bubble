@@ -15,7 +15,7 @@ import {
 } from 'class-validator';
 import { GENERATION_PARAM_KEY_MAP } from '../../types/workflow-definition.interface';
 
-const VALID_CAMEL_KEYS = new Set(Object.values(GENERATION_PARAM_KEY_MAP));
+const VALID_CAMEL_KEYS: Set<string> = new Set(Object.values(GENERATION_PARAM_KEY_MAP));
 
 @ValidatorConstraint({ name: 'isValidGenerationDefaults', async: false })
 export class IsValidGenerationDefaultsConstraint implements ValidatorConstraintInterface {
