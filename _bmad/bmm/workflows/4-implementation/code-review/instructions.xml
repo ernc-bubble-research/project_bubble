@@ -31,9 +31,9 @@
       <warning>Context usage high ({token_usage} tokens). Compacting now BEFORE starting review to prevent mid-process data loss.</warning>
       <action>Trigger context compaction</action>
       <action>Wait for compaction to complete</action>
-      <check if="token_usage > 180000 after compaction">
-        <error>Still high after compaction ({token_usage} tokens). User should start fresh session for this review to avoid mid-review compaction that loses critical findings.</error>
-        <action>Ask user: "Context is very full even after compaction. Recommend starting fresh session for clean review. Proceed anyway or start fresh?"</action>
+      <check if="token_usage > 150000 after compaction">
+        <error>Still above 150k after compaction ({token_usage} tokens). Session exhausted. User should start fresh session for this review to avoid mid-review compaction that loses critical findings.</error>
+        <action>Ask user: "Context still above 150k after compaction. Session exhausted. Recommend starting fresh session for clean review. Proceed anyway or start fresh?"</action>
       </check>
     </check>
     <action>Proceed to story loading</action>

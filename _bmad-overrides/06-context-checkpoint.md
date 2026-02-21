@@ -38,9 +38,9 @@ Add **Step 0: Pre-flight Context Check** to all major multi-step workflows:
       <warning>Context usage high ({token_usage} tokens). Compacting now BEFORE starting review to prevent mid-process data loss.</warning>
       <action>Trigger context compaction</action>
       <action>Wait for compaction to complete</action>
-      <check if="token_usage > 180000 after compaction">
-        <error>Still high after compaction ({token_usage} tokens). User should start fresh session for this review to avoid mid-review compaction that loses critical findings.</error>
-        <action>Ask user: "Context is very full even after compaction. Recommend starting fresh session for clean review. Proceed anyway or start fresh?"</action>
+      <check if="token_usage > 150000 after compaction">
+        <error>Still above 150k after compaction ({token_usage} tokens). Session exhausted. User should start fresh session for this review to avoid mid-review compaction that loses critical findings.</error>
+        <action>Ask user: "Context still above 150k after compaction. Session exhausted. Recommend starting fresh session for clean review. Proceed anyway or start fresh?"</action>
       </check>
     </check>
     <action>Proceed to story loading</action>
@@ -67,9 +67,9 @@ Before starting party mode, verify context is healthy to prevent mid-discussion 
    - **CRITICAL:** Party mode discussions generate significant context - compacting now BEFORE starting
    - Trigger context compaction immediately
    - Wait for compaction to complete
-3. **Post-Compaction Verification:** If usage still > 180,000 tokens after compaction:
-   - **ERROR:** Context too full even after compaction
-   - Present user choice: "Context is very full ({token_usage} tokens). Party mode may trigger mid-discussion compaction that loses critical decisions. Recommend: (A) Start fresh session, or (B) Proceed with risk. Which do you prefer?"
+3. **Post-Compaction Verification:** If usage STILL > 150,000 tokens after compaction:
+   - **ERROR:** Session exhausted - compaction didn't get under 150k
+   - Present user choice: "Context still above 150k after compaction ({token_usage} tokens). Session exhausted. Party mode may trigger mid-discussion compaction that loses critical decisions. Recommend: (A) Start fresh session, or (B) Proceed with risk. Which do you prefer?"
    - If user chooses (A), gracefully exit and suggest restarting
    - If user chooses (B), document risk and proceed
 4. **Proceed:** If usage < 150,000 tokens OR user accepts risk, continue to party mode activation
@@ -94,9 +94,9 @@ Before starting party mode, verify context is healthy to prevent mid-discussion 
       <warning>Context usage high ({token_usage} tokens). Compacting now BEFORE starting story creation to prevent mid-process data loss.</warning>
       <action>Trigger context compaction</action>
       <action>Wait for compaction to complete</action>
-      <check if="token_usage > 180000 after compaction">
-        <error>Still high after compaction ({token_usage} tokens). User should start fresh session for story creation to avoid mid-creation compaction that loses requirements.</error>
-        <action>Ask user: "Context is very full even after compaction. Recommend starting fresh session for clean story creation. Proceed anyway or start fresh?"</action>
+      <check if="token_usage > 150000 after compaction">
+        <error>Still above 150k after compaction ({token_usage} tokens). Session exhausted. User should start fresh session for story creation to avoid mid-creation compaction that loses requirements.</error>
+        <action>Ask user: "Context still above 150k after compaction. Session exhausted. Recommend starting fresh session for clean story creation. Proceed anyway or start fresh?"</action>
       </check>
     </check>
     <action>Proceed to story determination</action>
@@ -118,9 +118,9 @@ Before starting party mode, verify context is healthy to prevent mid-discussion 
       <warning>Context usage high ({token_usage} tokens). Compacting now BEFORE starting story implementation to prevent mid-process data loss.</warning>
       <action>Trigger context compaction</action>
       <action>Wait for compaction to complete</action>
-      <check if="token_usage > 180000 after compaction">
-        <error>Still high after compaction ({token_usage} tokens). User should start fresh session for story implementation to avoid mid-implementation compaction that loses task state.</error>
-        <action>Ask user: "Context is very full even after compaction. Recommend starting fresh session for clean story implementation. Proceed anyway or start fresh?"</action>
+      <check if="token_usage > 150000 after compaction">
+        <error>Still above 150k after compaction ({token_usage} tokens). Session exhausted. User should start fresh session for story implementation to avoid mid-implementation compaction that loses task state.</error>
+        <action>Ask user: "Context still above 150k after compaction. Session exhausted. Recommend starting fresh session for clean story implementation. Proceed anyway or start fresh?"</action>
       </check>
     </check>
     <action>Proceed to story loading</action>

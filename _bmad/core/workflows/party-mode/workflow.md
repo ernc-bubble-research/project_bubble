@@ -76,9 +76,9 @@ Before starting party mode, verify context is healthy to prevent mid-discussion 
    - **CRITICAL:** Party mode discussions generate significant context - compacting now BEFORE starting
    - Trigger context compaction immediately
    - Wait for compaction to complete
-3. **Post-Compaction Verification:** If usage still > 180,000 tokens after compaction:
-   - **ERROR:** Context too full even after compaction
-   - Present user choice: "Context is very full ({token_usage} tokens). Party mode may trigger mid-discussion compaction that loses critical decisions. Recommend: (A) Start fresh session, or (B) Proceed with risk. Which do you prefer?"
+3. **Post-Compaction Verification:** If usage STILL > 150,000 tokens after compaction:
+   - **ERROR:** Session exhausted - compaction didn't get under 150k
+   - Present user choice: "Context still above 150k after compaction ({token_usage} tokens). Session exhausted. Party mode may trigger mid-discussion compaction that loses critical decisions. Recommend: (A) Start fresh session, or (B) Proceed with risk. Which do you prefer?"
    - If user chooses (A), gracefully exit and suggest restarting
    - If user chooses (B), document risk and proceed
 4. **Proceed:** If usage < 150,000 tokens OR user accepts risk, continue to party mode activation
