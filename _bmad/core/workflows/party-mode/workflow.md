@@ -65,6 +65,28 @@ Build complete agent roster with merged personalities for conversation orchestra
 
 ---
 
+## PRE-FLIGHT CHECKS
+
+**Context Management Checkpoint (Rule 41):**
+
+Before starting party mode, verify context is healthy to prevent mid-discussion compaction:
+
+1. **Check Token Usage:** Measure current session token usage
+2. **Threshold Check:** If usage > 150,000 tokens:
+   - **CRITICAL:** Party mode discussions generate significant context - compacting now BEFORE starting
+   - Trigger context compaction immediately
+   - Wait for compaction to complete
+3. **Post-Compaction Verification:** If usage still > 180,000 tokens after compaction:
+   - **ERROR:** Context too full even after compaction
+   - Present user choice: "Context is very full ({token_usage} tokens). Party mode may trigger mid-discussion compaction that loses critical decisions. Recommend: (A) Start fresh session, or (B) Proceed with risk. Which do you prefer?"
+   - If user chooses (A), gracefully exit and suggest restarting
+   - If user chooses (B), document risk and proceed
+4. **Proceed:** If usage < 150,000 tokens OR user accepts risk, continue to party mode activation
+
+**Rationale:** Context compaction DURING party mode loses team decisions user never saw (Story 4-RLS-B). Compacting BEFORE ensures clean slate for multi-agent discussion.
+
+---
+
 ## EXECUTION
 
 Execute party mode activation and conversation orchestration:

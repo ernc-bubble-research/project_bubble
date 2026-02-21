@@ -23,6 +23,21 @@
   <critical>Check KNOWN VIOLATION PATTERNS first: (1) tenantId missing in WHERE clauses (Rule 2c), (2) Story file not updated, (3) Undocumented deferrals, (4) N+1 query patterns. These have historically been missed — they are priority #1.</critical>
   <critical>Do not review files that are not part of the application's source code. Always exclude the _bmad/ and _bmad-output/ folders from the review. Always exclude IDE and CLI configuration folders like .cursor/ and .windsurf/ and .claude/</critical>
 
+  <!-- Context Management Checkpoint (Rule 41) -->
+  <step n="0" goal="Pre-flight context check">
+    <critical>NEVER allow context compaction DURING review. Compact BEFORE starting if needed.</critical>
+    <action>Check current token usage in this session</action>
+    <check if="token_usage > 150000">
+      <warning>Context usage high ({token_usage} tokens). Compacting now BEFORE starting review to prevent mid-process data loss.</warning>
+      <action>Trigger context compaction</action>
+      <action>Wait for compaction to complete</action>
+      <check if="token_usage > 180000 after compaction">
+        <error>Still high after compaction ({token_usage} tokens). User should start fresh session for this review to avoid mid-review compaction that loses critical findings.</error>
+        <action>Ask user: "Context is very full even after compaction. Recommend starting fresh session for clean review. Proceed anyway or start fresh?"</action>
+      </check>
+    </check>
+    <action>Proceed to story loading</action>
+  </step>
 
   <step n="1" goal="Load story and discover changes">
     <action>Use provided {{story_path}} or ask user which story file to review</action>

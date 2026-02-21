@@ -12,6 +12,22 @@
   <critical>Do NOT schedule a "next session" or request review pauses unless a HALT condition applies. Only Step 6 decides completion.</critical>
   <critical>User skill level ({user_skill_level}) affects conversation style ONLY, not code updates.</critical>
 
+  <!-- Context Management Checkpoint (Rule 41) -->
+  <step n="0" goal="Pre-flight context check">
+    <critical>NEVER allow context compaction DURING story implementation. Compact BEFORE starting if needed.</critical>
+    <action>Check current token usage in this session</action>
+    <check if="token_usage > 150000">
+      <warning>Context usage high ({token_usage} tokens). Compacting now BEFORE starting story implementation to prevent mid-process data loss.</warning>
+      <action>Trigger context compaction</action>
+      <action>Wait for compaction to complete</action>
+      <check if="token_usage > 180000 after compaction">
+        <error>Still high after compaction ({token_usage} tokens). User should start fresh session for story implementation to avoid mid-implementation compaction that loses task state.</error>
+        <action>Ask user: "Context is very full even after compaction. Recommend starting fresh session for clean story implementation. Proceed anyway or start fresh?"</action>
+      </check>
+    </check>
+    <action>Proceed to story loading</action>
+  </step>
+
   <step n="1" goal="Find next ready story and load it" tag="sprint-status">
     <check if="{{story_path}} is provided">
       <action>Use {{story_path}} directly</action>
