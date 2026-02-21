@@ -120,6 +120,16 @@
       Back
     </button>
     <div class="actions-right">
+      <button
+        class="btn btn-outline"
+        data-testid="wizard-test-btn"
+        [disabled]="!canTest()"
+        [title]="testTooltip()"
+        (click)="onTest()"
+      >
+        <lucide-icon name="flask-conical" [size]="16"></lucide-icon>
+        Test Run
+      </button>
       @if (isLastStep()) {
         <button
           class="btn btn-primary"
@@ -147,4 +157,6 @@
       }
     </div>
   </div>
+
+  <app-test-run-modal #testModal [template]="selectedTemplate()"></app-test-run-modal>
 </div>

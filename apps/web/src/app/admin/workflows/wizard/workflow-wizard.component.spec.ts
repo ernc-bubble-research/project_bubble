@@ -6,7 +6,7 @@ import { LucideIconProvider, LUCIDE_ICONS } from 'lucide-angular';
 import {
   Check, ArrowLeft, Save, ChevronRight, AlertCircle, AlertTriangle,
   RefreshCw, FileText, Layers, Zap, Brain, MessageSquare, FileOutput,
-  Info, Plus, Trash2, ChevronDown, ChevronUp,
+  Info, Plus, Trash2, ChevronDown, ChevronUp, FlaskConical,
 } from 'lucide-angular';
 import { WorkflowWizardComponent } from './workflow-wizard.component';
 
@@ -30,7 +30,7 @@ describe('[P0] WorkflowWizardComponent', () => {
           useValue: new LucideIconProvider({
             Check, ArrowLeft, Save, ChevronRight, AlertCircle, AlertTriangle,
             RefreshCw, FileText, Layers, Zap, Brain, MessageSquare, FileOutput,
-            Info, Plus, Trash2, ChevronDown, ChevronUp,
+            Info, Plus, Trash2, ChevronDown, ChevronUp, FlaskConical,
           }),
         },
       ],
@@ -139,5 +139,80 @@ describe('[P0] WorkflowWizardComponent', () => {
     component.save();
     // Then it should navigate back to step 0 (metadata errors)
     expect(component.currentStep()).toBe(0);
+  });
+
+  describe('Test Button (AC2) - Pass 3 H2', () => {
+    it('should disable test button when no inputs defined', () => {
+      // Given wizard state has model but no inputs
+      component.wizardState.set({
+        ...component.wizardState(),
+        inputs: [],
+        execution: { ...component.wizardState().execution, model: 'gemini-2.0-flash' },
+      });
+
+      expect(component.canTest()).toBe(false);
+    });
+
+    it('should disable test button when no model selected', () => {
+      // Given wizard state has inputs but no model
+      component.wizardState.set({
+        ...component.wizardState(),
+        inputs: [{ name: 'test', label: 'Test', role: 'context', source: ['text'], required: true }],
+        execution: { ...component.wizardState().execution, model: '' },
+      });
+
+      expect(component.canTest()).toBe(false);
+    });
+
+    it('should enable test button when both inputs and model are present', () => {
+      // Given wizard state has both inputs and model
+      component.wizardState.set({
+        ...component.wizardState(),
+        inputs: [{ name: 'test', label: 'Test', role: 'context', source: ['text'], required: true }],
+        execution: { ...component.wizardState().execution, model: 'gemini-2.0-flash' },
+      });
+
+      expect(component.canTest()).toBe(true);
+    });
+
+    it('should return correct tooltip when missing inputs only', () => {
+      component.wizardState.set({
+        ...component.wizardState(),
+        inputs: [],
+        execution: { ...component.wizardState().execution, model: 'gemini-2.0-flash' },
+      });
+
+      expect(component.testTooltip()).toBe('Add at least one input to test');
+    });
+
+    it('should return correct tooltip when missing model only', () => {
+      component.wizardState.set({
+        ...component.wizardState(),
+        inputs: [{ name: 'test', label: 'Test', role: 'context', source: ['text'], required: true }],
+        execution: { ...component.wizardState().execution, model: '' },
+      });
+
+      expect(component.testTooltip()).toBe('Select an LLM model to test');
+    });
+
+    it('should return correct tooltip when missing both inputs and model', () => {
+      component.wizardState.set({
+        ...component.wizardState(),
+        inputs: [],
+        execution: { ...component.wizardState().execution, model: '' },
+      });
+
+      expect(component.testTooltip()).toBe('Add inputs and select a model to test');
+    });
+
+    it('should return empty tooltip when test button is enabled', () => {
+      component.wizardState.set({
+        ...component.wizardState(),
+        inputs: [{ name: 'test', label: 'Test', role: 'context', source: ['text'], required: true }],
+        execution: { ...component.wizardState().execution, model: 'gemini-2.0-flash' },
+      });
+
+      expect(component.testTooltip()).toBe('');
+    });
   });
 });

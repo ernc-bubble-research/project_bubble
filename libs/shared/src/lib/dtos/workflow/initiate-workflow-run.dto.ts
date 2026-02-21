@@ -5,6 +5,9 @@ import {
   IsOptional,
   IsArray,
   IsEnum,
+  IsInt,
+  Min,
+  Max,
   Matches,
   ValidatorConstraint,
   ValidatorConstraintInterface,
@@ -36,7 +39,7 @@ export class WorkflowRunInputValueDto {
 // class-validator's @ValidateNested({ each: true }) only iterates Arrays/Sets/Maps,
 // not plain-object Records. This custom constraint validates each value explicitly.
 @ValidatorConstraint({ name: 'validateRecordValues', async: false })
-class ValidateInputRecordConstraint implements ValidatorConstraintInterface {
+export class ValidateInputRecordConstraint implements ValidatorConstraintInterface {
   validate(value: unknown): boolean {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
     for (const val of Object.values(value)) {
@@ -67,4 +70,17 @@ export class InitiateWorkflowRunDto {
   @Validate(ValidateInputRecordConstraint)
   @Type(() => WorkflowRunInputValueDto)
   inputs!: Record<string, WorkflowRunInputValueDto>;
+
+  @ApiProperty({
+    description: 'Maximum number of retry attempts per file (default: 3, range: 1-10)',
+    required: false,
+    minimum: 1,
+    maximum: 10,
+    default: 3,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  maxRetryCount?: number;
 }

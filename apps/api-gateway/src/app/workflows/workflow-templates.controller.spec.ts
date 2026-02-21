@@ -1,14 +1,17 @@
-import { WorkflowTemplateResponseDto } from '@project-bubble/shared';
+import { WorkflowTemplateResponseDto, TestRunResultDto } from '@project-bubble/shared';
 import { WorkflowTemplatesController } from './workflow-templates.controller';
 import { WorkflowTemplatesService } from './workflow-templates.service';
+import { WorkflowTestService } from './workflow-test.service';
 
 describe('WorkflowTemplatesController [P1]', () => {
   let controller: WorkflowTemplatesController;
   let service: jest.Mocked<WorkflowTemplatesService>;
+  let testService: jest.Mocked<WorkflowTestService>;
 
   const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   const userId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
   const templateId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  const sessionId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
   const mockRequest = { user: { userId, tenantId: tenantId } };
 
   const mockResponse: WorkflowTemplateResponseDto = {
@@ -38,7 +41,19 @@ describe('WorkflowTemplatesController [P1]', () => {
       rollback: jest.fn().mockResolvedValue(mockResponse),
     } as unknown as jest.Mocked<WorkflowTemplatesService>;
 
-    controller = new WorkflowTemplatesController(service);
+    testService = {
+      executeTest: jest.fn().mockResolvedValue({ sessionId }),
+      exportResults: jest.fn().mockResolvedValue({
+        sessionId,
+        templateId,
+        templateName: 'Test Template',
+        inputs: {},
+        results: [],
+        executedAt: new Date(),
+      } as TestRunResultDto),
+    } as unknown as jest.Mocked<WorkflowTestService>;
+
+    controller = new WorkflowTemplatesController(service, testService);
   });
 
   it('[3.3-UNIT-025] [P0] POST / — delegates to service.create with correct args', async () => {
@@ -135,5 +150,57 @@ describe('WorkflowTemplatesController [P1]', () => {
 
     // Then
     expect(service.rollback).toHaveBeenCalledWith(templateId, tenantId, versionId);
+  });
+
+  it('[4-7a-UNIT-025] [P0] POST /:id/test-run — delegates to testService.executeTest with correct args', async () => {
+    // Given
+    const dto = { templateId, inputs: { subject: { type: 'asset' as const, assetIds: ['asset-1'] } } };
+
+    // When
+    const result = await controller.testRun(templateId, dto, mockRequest);
+
+    // Then
+    expect(testService.executeTest).toHaveBeenCalledWith(templateId, dto.inputs, userId, tenantId);
+    expect(result).toEqual({ sessionId });
+  });
+
+  it('[4-7a-UNIT-026] [P0] POST /:id/test-run — returns 202 status code (HTTP_CODE decorator)', async () => {
+    // Given
+    const dto = { templateId, inputs: {} };
+
+    // When
+    const result = await controller.testRun(templateId, dto, mockRequest);
+
+    // Then
+    // Note: @HttpCode(202) is a decorator — actual status code set by NestJS at runtime.
+    // This test verifies the service call and response shape.
+    expect(result).toHaveProperty('sessionId');
+    expect(result.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  });
+
+  it('[4-7a-UNIT-027] [P0] GET /test-runs/:sessionId/export — delegates to testService.exportResults', async () => {
+    // When
+    const result = await controller.exportTestRun(sessionId);
+
+    // Then
+    expect(testService.exportResults).toHaveBeenCalledWith(sessionId);
+    expect(result).toHaveProperty('sessionId', sessionId);
+    expect(result).toHaveProperty('templateId');
+    expect(result).toHaveProperty('results');
+  });
+
+  it('[4-7a-UNIT-028] [P0] GET /test-runs/:sessionId/export — returns TestRunResultDto shape', async () => {
+    // When
+    const result = await controller.exportTestRun(sessionId);
+
+    // Then
+    expect(result).toMatchObject({
+      sessionId,
+      templateId,
+      templateName: expect.any(String),
+      inputs: expect.any(Object),
+      results: expect.any(Array),
+      executedAt: expect.any(Date),
+    });
   });
 });

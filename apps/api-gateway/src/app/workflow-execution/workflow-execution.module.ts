@@ -12,6 +12,8 @@ import { WorkflowExecutionService } from './workflow-execution.service';
 import { LlmProviderFactory } from './llm/llm-provider.factory';
 import { ProviderRegistryModule } from './llm/provider-registry.module';
 import { PromptAssemblyService } from './prompt-assembly.service';
+import { TestRunCacheService } from '../services/test-run-cache.service';
+import { TestRunGateway } from '../gateways/test-run.gateway';
 import { SettingsModule } from '../settings/settings.module';
 import { IngestionModule } from '../ingestion/ingestion.module';
 import { AssetsModule } from '../assets/assets.module';
@@ -50,7 +52,9 @@ import { AssetsModule } from '../assets/assets.module';
     WorkflowExecutionService,
     LlmProviderFactory,
     PromptAssemblyService,
+    TestRunCacheService,
+    TestRunGateway,
   ],
-  exports: [WorkflowExecutionService, ProviderRegistryModule],
+  exports: [WorkflowExecutionService, ProviderRegistryModule, BullModule],
 })
 export class WorkflowExecutionModule {}

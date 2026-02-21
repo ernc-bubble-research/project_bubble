@@ -20,11 +20,14 @@ import {
   WorkflowTemplateResponseDto,
   ListWorkflowTemplatesQueryDto,
   PublishWorkflowTemplateDto,
+  ExecuteTestRunDto,
+  TestRunResultDto,
 } from '@project-bubble/shared';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { WorkflowTemplatesService } from './workflow-templates.service';
+import { WorkflowTestService } from './workflow-test.service';
 
 @ApiTags('Admin - Workflow Templates')
 @ApiBearerAuth()
@@ -34,6 +37,7 @@ import { WorkflowTemplatesService } from './workflow-templates.service';
 export class WorkflowTemplatesController {
   constructor(
     private readonly workflowTemplatesService: WorkflowTemplatesService,
+    private readonly workflowTestService: WorkflowTestService,
   ) {}
 
   @Post()
@@ -169,5 +173,40 @@ export class WorkflowTemplatesController {
       req.user.tenantId,
       versionId,
     );
+  }
+
+  @Post(':id/test-run')
+  @HttpCode(202)
+  @ApiOperation({ summary: 'Execute a test run of a workflow template (ephemeral, no credit deduction)' })
+  @ApiResponse({
+    status: 202,
+    description: 'Test run initiated — returns sessionId for WebSocket tracking',
+    schema: { type: 'object', properties: { sessionId: { type: 'string', format: 'uuid' } } },
+  })
+  @ApiResponse({ status: 400, description: 'Template incomplete (missing LLM provider, model, or inputs)' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Template not found' })
+  testRun(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ExecuteTestRunDto,
+    @Request() req: { user: { userId: string; tenantId: string } },
+  ) {
+    return this.workflowTestService.executeTest(
+      id,
+      dto.inputs,
+      req.user.userId,
+      req.user.tenantId,
+    );
+  }
+
+  @Get('test-runs/:sessionId/export')
+  @ApiOperation({ summary: 'Export test run results as JSON (from in-memory cache)' })
+  @ApiResponse({ status: 200, description: 'Test run results with Content-Disposition header', type: TestRunResultDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role' })
+  @ApiResponse({ status: 404, description: 'Test run not found or expired (5-minute TTL)' })
+  exportTestRun(@Param('sessionId', ParseUUIDPipe) sessionId: string) {
+    return this.workflowTestService.exportResults(sessionId);
   }
 }

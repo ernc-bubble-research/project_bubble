@@ -1,15 +1,16 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideAngularModule } from 'lucide-angular';
 import type { WorkflowTemplateResponseDto } from '@project-bubble/shared';
 import { WorkflowCatalogService } from '../../core/services/workflow-catalog.service';
+import { TestRunModalComponent } from './test-run-modal.component';
 
 @Component({
   selector: 'app-workflow-catalog',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, TestRunModalComponent],
   template: `
     <div class="catalog-container">
       <div class="catalog-header">
@@ -58,6 +59,14 @@ import { WorkflowCatalogService } from '../../core/services/workflow-catalog.ser
               </div>
               <div class="card-footer">
                 <button
+                  class="test-button"
+                  (click)="onTest(wf)"
+                  [attr.data-testid]="'test-button-' + wf.id"
+                >
+                  <lucide-icon name="flask-conical" [size]="16"></lucide-icon>
+                  Test
+                </button>
+                <button
                   class="run-button"
                   (click)="onRun(wf)"
                   [attr.data-testid]="'run-button-' + wf.id"
@@ -71,6 +80,8 @@ import { WorkflowCatalogService } from '../../core/services/workflow-catalog.ser
         </div>
       }
     </div>
+
+    <app-test-run-modal #testModal [template]="selectedTemplate()"></app-test-run-modal>
   `,
   styles: [`
     .catalog-container {
@@ -187,6 +198,28 @@ import { WorkflowCatalogService } from '../../core/services/workflow-catalog.ser
       border-top: 1px solid var(--border-color);
       display: flex;
       justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .test-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.15s;
+
+      &:hover {
+        background: var(--bg-hover);
+        border-color: var(--primary-600);
+        color: var(--primary-600);
+      }
     }
 
     .run-button {
@@ -256,9 +289,11 @@ export class WorkflowCatalogComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
+  readonly testModal = viewChild<TestRunModalComponent>('testModal');
   readonly workflows = signal<WorkflowTemplateResponseDto[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+  readonly selectedTemplate = signal<WorkflowTemplateResponseDto | null>(null);
 
   constructor() {
     this.loadWorkflows();
@@ -288,5 +323,10 @@ export class WorkflowCatalogComponent {
 
   onRun(wf: WorkflowTemplateResponseDto): void {
     this.router.navigate(['/app/workflows/run', wf.id]);
+  }
+
+  onTest(wf: WorkflowTemplateResponseDto): void {
+    this.selectedTemplate.set(wf);
+    this.testModal()?.open();
   }
 }

@@ -22,3 +22,6 @@ export {
   AffectedWorkflowDto,
   DeactivateModelResponseDto,
 } from './deactivate-model.dto';
+export { ExecuteTestRunDto } from './execute-test-run.dto';
+export { TestRunFileResultDto } from './test-run-file-result.dto';
+export { TestRunResultDto } from './test-run-result.dto';

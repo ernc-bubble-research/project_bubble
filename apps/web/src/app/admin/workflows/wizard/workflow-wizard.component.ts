@@ -25,6 +25,8 @@ import { WizardExecutionStepComponent } from './steps/wizard-execution-step.comp
 // Knowledge step deferred to Phase 2 (see Epic 3 retrospective discussion item #8)
 import { WizardPromptStepComponent } from './steps/wizard-prompt-step.component';
 // Output step removed — prompt defines output structure, LLM returns markdown, report UI renders it (party mode decision 2026-02-08)
+import { TestRunModalComponent } from '../../../app/workflows/test-run-modal.component';
+import type { WorkflowTemplateResponseDto } from '@project-bubble/shared';
 
 export interface WizardStep {
   label: string;
@@ -40,6 +42,7 @@ export interface WizardStep {
     WizardInputsStepComponent,
     WizardExecutionStepComponent,
     WizardPromptStepComponent,
+    TestRunModalComponent,
   ],
   selector: 'app-workflow-wizard',
   templateUrl: './workflow-wizard.component.html',
@@ -57,6 +60,7 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
   private readonly inputsStep = viewChild(WizardInputsStepComponent);
   private readonly executionStep = viewChild(WizardExecutionStepComponent);
   private readonly promptStep = viewChild(WizardPromptStepComponent);
+  readonly testModal = viewChild<TestRunModalComponent>('testModal');
 
   // Knowledge step deferred to Phase 2 (see Epic 3 retrospective item #8)
   steps: WizardStep[] = [
@@ -98,6 +102,28 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
 
   isFirstStep = computed(() => this.currentStep() === 0);
   isLastStep = computed(() => this.currentStep() === this.steps.length - 1);
+
+  // AC2: Test button enabled only if inputs defined AND model selected
+  canTest = computed(() => {
+    const state = this.wizardState();
+    const hasInputs = (state.inputs?.length ?? 0) > 0;
+    const hasModel = !!state.execution?.model;
+    return hasInputs && hasModel;
+  });
+
+  // AC2: Conditional tooltip for disabled test button
+  testTooltip = computed(() => {
+    const state = this.wizardState();
+    const hasInputs = (state.inputs?.length ?? 0) > 0;
+    const hasModel = !!state.execution?.model;
+
+    if (!hasInputs && !hasModel) return 'Add inputs and select a model to test';
+    if (!hasInputs) return 'Add at least one input to test';
+    if (!hasModel) return 'Select an LLM model to test';
+    return '';
+  });
+
+  selectedTemplate = signal<WorkflowTemplateResponseDto | null>(null);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -303,5 +329,37 @@ export class WorkflowWizardComponent implements OnInit, HasUnsavedChanges {
 
   cancel(): void {
     this.router.navigate(['/admin/workflows']);
+  }
+
+  onTest(): void {
+    // For test run, we need a WorkflowTemplateResponseDto with the current draft definition
+    // Create a mock template object with the current wizard state
+    const mockTemplate: WorkflowTemplateResponseDto = {
+      id: this.templateId() || 'draft',
+      name: this.wizardState().metadata?.name || 'Untitled Workflow',
+      description: this.wizardState().metadata?.description || '',
+      visibility: 'public',
+      status: 'draft',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      tenantId: '',
+      createdBy: '',
+      creditsPerRun: this.creditsPerRun(),
+      allowedTenants: [],
+      currentVersionId: 'draft-version',
+      currentVersion: {
+        id: 'draft-version',
+        templateId: this.templateId() || 'draft',
+        tenantId: '',
+        versionNumber: 1,
+        definition: this.wizardState() as unknown as Record<string, unknown>,
+        previousGenerationConfig: null,
+        createdAt: new Date(),
+        createdBy: '',
+      },
+    };
+
+    this.selectedTemplate.set(mockTemplate);
+    this.testModal()?.open();
   }
 }

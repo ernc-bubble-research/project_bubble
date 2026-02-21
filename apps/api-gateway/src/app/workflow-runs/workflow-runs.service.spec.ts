@@ -46,6 +46,9 @@ describe('WorkflowRunsService [P0]', () => {
     update: jest.Mock;
     createQueryBuilder: jest.Mock;
   };
+  let mockExecutionQueue: {
+    add: jest.Mock;
+  };
 
   const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   const userId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -181,12 +184,17 @@ describe('WorkflowRunsService [P0]', () => {
       refundCredits: jest.fn().mockResolvedValue(undefined),
     };
 
+    mockExecutionQueue = {
+      add: jest.fn().mockResolvedValue({ id: 'job-123' }),
+    };
+
     service = new WorkflowRunsService(
       txManager,
       assetsService as unknown as AssetsService,
       executionService as unknown as WorkflowExecutionService,
       templatesService as unknown as WorkflowTemplatesService,
       preFlightService as unknown as PreFlightValidationService,
+      mockExecutionQueue as any,
     );
   });
 
@@ -381,6 +389,47 @@ describe('WorkflowRunsService [P0]', () => {
       await expect(
         service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('[4-5b-UNIT-011] [P0] Given maxRetryCount in DTO, when initiateRun is called, then sets maxRetryCount on run entity; when omitted, defaults to 3', async () => {
+      // Given — templatesService.findPublishedOneEntity default mock returns mockTemplate+mockVersion
+      mockManager.create.mockReturnValue(mockRunEntity);
+      mockManager.save.mockResolvedValue(mockRunEntity);
+
+      const dtoWithMaxRetry = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Context' } },
+        maxRetryCount: 5,
+      };
+
+      const dtoWithoutMaxRetry = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Context' } },
+      };
+
+      // When — call with maxRetryCount
+      await service.initiateRun(dtoWithMaxRetry, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      // Then — maxRetryCount is set to 5
+      expect(mockManager.create).toHaveBeenCalledWith(
+        WorkflowRunEntity,
+        expect.objectContaining({ maxRetryCount: 5 }),
+      );
+
+      // Reset mocks
+      mockManager.create.mockClear();
+      mockManager.save.mockClear();
+      mockManager.create.mockReturnValue(mockRunEntity);
+      mockManager.save.mockResolvedValue(mockRunEntity);
+
+      // When — call without maxRetryCount
+      await service.initiateRun(dtoWithoutMaxRetry, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      // Then — maxRetryCount defaults to 3
+      expect(mockManager.create).toHaveBeenCalledWith(
+        WorkflowRunEntity,
+        expect.objectContaining({ maxRetryCount: 3 }),
+      );
     });
   });
 
@@ -1128,6 +1177,423 @@ describe('WorkflowRunsService [P0]', () => {
         WorkflowRunEntity,
         { where: { id: runId, tenantId } },
       );
+    });
+  });
+
+  describe('retryFailed', () => {
+    beforeEach(() => {
+      mockExecutionQueue.add.mockClear();
+      // Mock the FOR UPDATE lock query for run row
+      mockManager.query.mockImplementation((sql: string) => {
+        if (sql.includes('FOR UPDATE')) {
+          return Promise.resolve([{ id: runId }]);
+        }
+        return Promise.resolve([]);
+      });
+    });
+
+    it('[4-5b-UNIT-001] [P0] Happy path: retries 3 FAILED files with credits available', async () => {
+      const runWithFailures = {
+        ...mockRunEntity,
+        id: runId,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        versionId,
+        maxRetryCount: 3,
+        creditsConsumed: 3,
+        creditsFromMonthly: 3,
+        creditsFromPurchased: 0,
+        totalJobs: 3,
+        completedJobs: 0,
+        failedJobs: 3,
+        inputSnapshot: {
+          templateId,
+          definition: mockDefinition,
+          userInputs: {
+            context_doc: { type: 'asset', assetIds: [assetId] },
+            subject_files: { type: 'asset', assetIds: [assetId, assetId, assetId] },
+          },
+        },
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'failed' as const, retryAttempt: 0 },
+          { index: 1, fileName: 'file2.pdf', status: 'failed' as const, retryAttempt: 0 },
+          { index: 2, fileName: 'file3.pdf', status: 'failed' as const, retryAttempt: 0 },
+        ],
+      };
+
+      // Three findOne calls: (1) initial run load, (2) template, (3) final run load
+      mockManager.findOne.mockResolvedValueOnce(runWithFailures);
+      mockManager.findOne.mockResolvedValueOnce(mockTemplate);
+      mockManager.findOne.mockResolvedValueOnce({ ...runWithFailures, status: WorkflowRunStatus.RUNNING });
+      preFlightService.checkAndDeductCredits.mockResolvedValue({ creditsFromMonthly: 3, creditsFromPurchased: 0 });
+      assetsService.findEntityById.mockResolvedValue({ id: assetId, originalName: 'test.pdf', storagePath: '/path' } as never);
+
+      const result = await service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      expect(result.status).toBe(WorkflowRunStatus.RUNNING);
+      expect(preFlightService.checkAndDeductCredits).toHaveBeenCalledWith(tenantId, 3, false, mockManager);
+      expect(mockManager.update).toHaveBeenCalledWith(
+        WorkflowRunEntity,
+        { id: runId, tenantId },
+        expect.objectContaining({
+          status: WorkflowRunStatus.RUNNING,
+          completedJobs: 0,
+          failedJobs: 0,
+        }),
+      );
+      expect(mockExecutionQueue.add).toHaveBeenCalledTimes(3);
+    });
+
+    it('[4-5b-UNIT-002] throws PaymentRequiredException (402) when insufficient credits', async () => {
+      const runWithFailures = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        maxRetryCount: 3,
+        inputSnapshot: { templateId, definition: mockDefinition, userInputs: {} },
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'failed' as const, retryAttempt: 0 },
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValue(runWithFailures);
+      preFlightService.checkAndDeductCredits.mockRejectedValue(
+        new BadRequestException('Insufficient credits'),
+      );
+
+      await expect(
+        service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN),
+      ).rejects.toThrow();
+    });
+
+    it('[4-5b-UNIT-003] throws BadRequestException (409) when run status is RUNNING', async () => {
+      const runningRun = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.RUNNING,
+      };
+
+      mockManager.findOne.mockResolvedValue(runningRun);
+
+      await expect(
+        service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN),
+      ).rejects.toThrow('Workflow run is already in progress');
+    });
+
+    it('[4-5b-UNIT-004] throws BadRequestException (400) when run status is COMPLETED (no errors)', async () => {
+      const completedRun = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED,
+      };
+
+      mockManager.findOne.mockResolvedValue(completedRun);
+
+      await expect(
+        service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN),
+      ).rejects.toThrow('completed successfully with no errors');
+    });
+
+    it('[4-5b-UNIT-005] retries template that is soft-deleted (withDeleted: true)', async () => {
+      const runWithFailures = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        maxRetryCount: 3,
+        inputSnapshot: { templateId, definition: mockDefinition, userInputs: {} },
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'failed' as const, retryAttempt: 0 },
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValueOnce(runWithFailures);
+      mockManager.findOne.mockResolvedValueOnce(mockTemplate);
+      mockManager.findOne.mockResolvedValueOnce({ ...runWithFailures, status: WorkflowRunStatus.RUNNING });
+      assetsService.findEntityById.mockResolvedValue({ id: assetId, originalName: 'test.pdf', storagePath: '/path' } as never);
+
+      await service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      // Verify template was fetched with withDeleted: true
+      expect(mockManager.findOne).toHaveBeenCalledWith(
+        WorkflowTemplateEntity,
+        expect.objectContaining({ withDeleted: true }),
+      );
+    });
+
+    it('[4-5b-UNIT-006] retries PENDING-only files with zero credits charged', async () => {
+      const runWithPending = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        maxRetryCount: 3,
+        inputSnapshot: { templateId, definition: mockDefinition, userInputs: {} },
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'pending' as const, retryAttempt: 0 },
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValueOnce(runWithPending);
+      mockManager.findOne.mockResolvedValueOnce(mockTemplate);
+      mockManager.findOne.mockResolvedValueOnce({ ...runWithPending, status: WorkflowRunStatus.RUNNING });
+      assetsService.findEntityById.mockResolvedValue({ id: assetId, originalName: 'test.pdf', storagePath: '/path' } as never);
+
+      await service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      expect(preFlightService.checkAndDeductCredits).not.toHaveBeenCalled();
+      expect(mockExecutionQueue.add).toHaveBeenCalledTimes(1);
+    });
+
+    it('[4-5b-UNIT-007] retries mixed FAILED+PENDING files, charges only for FAILED', async () => {
+      const runWithMixed = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        maxRetryCount: 3,
+        inputSnapshot: {
+          templateId,
+          definition: mockDefinition,
+          userInputs: {
+            subject_files: { type: 'asset', assetIds: [assetId, assetId, assetId] },
+          },
+        },
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'failed' as const, retryAttempt: 0 },
+          { index: 1, fileName: 'file2.pdf', status: 'pending' as const, retryAttempt: 0 },
+          { index: 2, fileName: 'file3.pdf', status: 'failed' as const, retryAttempt: 0 },
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValueOnce(runWithMixed);
+      mockManager.findOne.mockResolvedValueOnce(mockTemplate);
+      mockManager.findOne.mockResolvedValueOnce({ ...runWithMixed, status: WorkflowRunStatus.RUNNING });
+      assetsService.findEntityById.mockResolvedValue({ id: assetId, originalName: 'test.pdf', storagePath: '/path' } as never);
+
+      await service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      expect(preFlightService.checkAndDeductCredits).toHaveBeenCalledWith(tenantId, 2, false, mockManager);
+      expect(mockExecutionQueue.add).toHaveBeenCalledTimes(3);
+    });
+
+    it('[4-5b-UNIT-008] throws BadRequestException (400) when no FAILED or PENDING files exist', async () => {
+      const runAllCompleted = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'completed' as const },
+          { index: 1, fileName: 'file2.pdf', status: 'completed' as const },
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValue(runAllCompleted);
+
+      await expect(
+        service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN),
+      ).rejects.toThrow('No failed or pending files to retry');
+    });
+
+    it('[4-5b-UNIT-009] throws BadRequestException (400) when max retry count exceeded', async () => {
+      const runMaxedOut = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        maxRetryCount: 3,
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'failed' as const, retryAttempt: 3 },
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValue(runMaxedOut);
+
+      await expect(
+        service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN),
+      ).rejects.toThrow('Max retry count (3) exceeded');
+    });
+
+    it('[4-5b-UNIT-010] includes tenantId in WHERE clause (Rule 2c)', async () => {
+      const runWithFailures = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        maxRetryCount: 3,
+        inputSnapshot: { templateId, definition: mockDefinition, userInputs: {} },
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'failed' as const, retryAttempt: 0 },
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValue(runWithFailures);
+
+      try {
+        await service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+      } catch {
+        // Expected to fail due to incomplete mocks
+      }
+
+      expect(mockManager.findOne).toHaveBeenCalledWith(
+        WorkflowRunEntity,
+        { where: { id: runId, tenantId } },
+      );
+    });
+
+    it('[4-5b-UNIT-012] [P0] retries batch mode (fan-in): enqueues 1 job with all subject files', async () => {
+      const batchDefinition = {
+        ...mockDefinition,
+        execution: { processing: 'batch' as const },
+      };
+
+      const runWithFailures = {
+        ...mockRunEntity,
+        id: runId,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        versionId,
+        maxRetryCount: 3,
+        creditsConsumed: 3,
+        creditsFromMonthly: 3,
+        creditsFromPurchased: 0,
+        totalJobs: 1,
+        completedJobs: 0,
+        failedJobs: 1,
+        inputSnapshot: {
+          templateId,
+          definition: batchDefinition,
+          userInputs: {
+            context_doc: { type: 'asset', assetIds: [assetId] },
+            subject_files: { type: 'asset', assetIds: [assetId, assetId, assetId] },
+          },
+        },
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'failed' as const, retryAttempt: 0 },
+          { index: 1, fileName: 'file2.pdf', status: 'failed' as const, retryAttempt: 0 },
+          { index: 2, fileName: 'file3.pdf', status: 'failed' as const, retryAttempt: 0 },
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValueOnce(runWithFailures);
+      mockManager.findOne.mockResolvedValueOnce(mockTemplate);
+      mockManager.findOne.mockResolvedValueOnce({ ...runWithFailures, status: WorkflowRunStatus.RUNNING });
+      preFlightService.checkAndDeductCredits.mockResolvedValue({ creditsFromMonthly: 3, creditsFromPurchased: 0 });
+      assetsService.findEntityById.mockResolvedValue({ id: assetId, originalName: 'test.pdf', storagePath: '/path' } as never);
+
+      await service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      // Batch mode should enqueue 1 job with jobId = runId (not per-file IDs)
+      expect(mockExecutionQueue.add).toHaveBeenCalledTimes(1);
+      expect(mockExecutionQueue.add).toHaveBeenCalledWith(
+        'execute-workflow',
+        expect.objectContaining({
+          runId,
+          tenantId,
+          versionId,
+          subjectFiles: expect.arrayContaining([
+            expect.objectContaining({ assetId }),
+          ]),
+        }),
+        expect.objectContaining({
+          jobId: runId, // Batch uses runId, not per-file IDs
+        }),
+      );
+    });
+
+    it('[4-5b-UNIT-013] [P1] when enqueue fails AND refund also fails, logs error and re-throws enqueue error', async () => {
+      const runWithFailures = {
+        ...mockRunEntity,
+        id: runId,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        versionId,
+        maxRetryCount: 3,
+        creditsConsumed: 3,
+        creditsFromMonthly: 2,
+        creditsFromPurchased: 1,
+        inputSnapshot: {
+          templateId,
+          definition: mockDefinition,
+          userInputs: {
+            context_doc: { type: 'asset', assetIds: [assetId] },
+            subject_files: { type: 'asset', assetIds: [assetId] },
+          },
+        },
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'failed' as const, retryAttempt: 0 },
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValueOnce(runWithFailures);
+      mockManager.findOne.mockResolvedValueOnce(mockTemplate);
+      mockManager.findOne.mockResolvedValueOnce({ ...runWithFailures, status: WorkflowRunStatus.RUNNING });
+      preFlightService.checkAndDeductCredits.mockResolvedValue({ creditsFromMonthly: 1, creditsFromPurchased: 0 });
+      assetsService.findEntityById.mockResolvedValue({ id: assetId, originalName: 'test.pdf', storagePath: '/path' } as never);
+
+      // Enqueue fails (e.g., Redis down)
+      mockExecutionQueue.add.mockRejectedValue(new Error('Redis connection refused'));
+      // Refund ALSO fails (e.g., DB connection lost)
+      preFlightService.refundCredits.mockRejectedValue(new Error('DB connection lost'));
+
+      // Should re-throw the enqueue error, not the refund error
+      await expect(
+        service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN),
+      ).rejects.toThrow('Redis connection refused');
+
+      // Should have attempted to refund
+      expect(preFlightService.refundCredits).toHaveBeenCalled();
+
+      // M3-004: Verify tenant FOR UPDATE lock was acquired before refund attempt
+      const forUpdateCalls = mockManager.query.mock.calls.filter(
+        (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('FOR UPDATE'),
+      );
+      // Should have 2 FOR UPDATE calls:
+      // 1. Initial run row lock (line 592 in service.ts)
+      // 2. Tenant lock for compensating refund (line 740 in service.ts)
+      expect(forUpdateCalls.length).toBeGreaterThanOrEqual(2);
+      const tenantLockCall = forUpdateCalls.find(
+        (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).includes('tenants'),
+      );
+      expect(tenantLockCall).toBeDefined();
+      expect(tenantLockCall![1]).toEqual([tenantId]);
+    });
+
+    it('[4-5b-UNIT-014] [P0] excludes ERROR status files from retry', async () => {
+      const runWithError = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        maxRetryCount: 3,
+        inputSnapshot: {
+          templateId,
+          definition: mockDefinition,
+          userInputs: {
+            subject_files: { type: 'asset', assetIds: [assetId, assetId] },
+          },
+        },
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'failed' as const, retryAttempt: 0 },
+          { index: 1, fileName: 'file2.pdf', status: 'error' as const, errorMessage: 'Invalid file format' },
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValueOnce(runWithError);
+      mockManager.findOne.mockResolvedValueOnce(mockTemplate);
+      mockManager.findOne.mockResolvedValueOnce({ ...runWithError, status: WorkflowRunStatus.RUNNING });
+      preFlightService.checkAndDeductCredits.mockResolvedValue({ creditsFromMonthly: 1, creditsFromPurchased: 0 });
+      assetsService.findEntityById.mockResolvedValue({ id: assetId, originalName: 'test.pdf', storagePath: '/path' } as never);
+
+      await service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      // Should charge for 1 file only (the FAILED one, not the ERROR)
+      expect(preFlightService.checkAndDeductCredits).toHaveBeenCalledWith(tenantId, 1, false, mockManager);
+      // Should enqueue 1 job only (ERROR file excluded)
+      expect(mockExecutionQueue.add).toHaveBeenCalledTimes(1);
+    });
+
+    it('[4-5b-UNIT-015] [P1] rejects retry when ANY file exceeds max count (not just all)', async () => {
+      const runPartialMaxed = {
+        ...mockRunEntity,
+        status: WorkflowRunStatus.COMPLETED_WITH_ERRORS,
+        maxRetryCount: 3,
+        perFileResults: [
+          { index: 0, fileName: 'file1.pdf', status: 'failed' as const, retryAttempt: 2 }, // OK (2 < 3)
+          { index: 1, fileName: 'file2.pdf', status: 'failed' as const, retryAttempt: 3 }, // MAXED OUT (3 >= 3)
+        ],
+      };
+
+      mockManager.findOne.mockResolvedValue(runPartialMaxed);
+
+      await expect(
+        service.retryFailed(runId, tenantId, userId, UserRole.CUSTOMER_ADMIN),
+      ).rejects.toThrow('Max retry count (3) exceeded');
+
+      // Should NOT have attempted credit check or enqueue
+      expect(preFlightService.checkAndDeductCredits).not.toHaveBeenCalled();
+      expect(mockExecutionQueue.add).not.toHaveBeenCalled();
     });
   });
 });

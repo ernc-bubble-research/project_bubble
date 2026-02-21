@@ -431,6 +431,47 @@ export class WorkflowTemplatesService {
     });
   }
 
+  /**
+   * Load template with current version (for test runs and internal use).
+   * Requires tenantId match (unlike findPublishedOneEntity which is cross-tenant).
+   * Throws if template not found or has no current version.
+   */
+  async findOneWithVersion(
+    id: string,
+    tenantId: string,
+  ): Promise<{ template: WorkflowTemplateEntity; version: WorkflowVersionEntity }> {
+    return this.txManager.run(tenantId, async (manager) => {
+      const template = await manager.findOne(WorkflowTemplateEntity, {
+        where: { id, tenantId },
+        withDeleted: false,
+      });
+
+      if (!template) {
+        throw new NotFoundException(
+          `Workflow template with id "${id}" not found`,
+        );
+      }
+
+      if (!template.currentVersionId) {
+        throw new BadRequestException(
+          'Template does not have a current version',
+        );
+      }
+
+      const version = await manager.findOne(WorkflowVersionEntity, {
+        where: { id: template.currentVersionId },
+      });
+
+      if (!version) {
+        throw new BadRequestException(
+          'Template version not found',
+        );
+      }
+
+      return { template, version };
+    });
+  }
+
   async findPublished(
     tenantId: string,
     query: Pick<ListWorkflowTemplatesQuery, 'limit' | 'offset'>,

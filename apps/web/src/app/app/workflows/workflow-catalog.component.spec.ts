@@ -7,6 +7,7 @@ import {
   Zap,
   Loader2,
   AlertCircle,
+  FlaskConical,
 } from 'lucide-angular';
 import { WorkflowCatalogComponent } from './workflow-catalog.component';
 import { WorkflowCatalogService } from '../../core/services/workflow-catalog.service';
@@ -65,7 +66,7 @@ describe('WorkflowCatalogComponent [P1]', () => {
         {
           provide: LUCIDE_ICONS,
           multi: true,
-          useValue: new LucideIconProvider({ Zap, Loader2, AlertCircle }),
+          useValue: new LucideIconProvider({ Zap, Loader2, AlertCircle, FlaskConical }),
         },
       ],
     });
@@ -160,5 +161,51 @@ describe('WorkflowCatalogComponent [P1]', () => {
 
     const tags = component.getDefinitionTags(mockWorkflows[1] as any);
     expect(tags).toEqual([]);
+  });
+
+  describe('Test Button (AC1) - Pass 3 H2', () => {
+    it('should render test button for each workflow card', async () => {
+      const fixture = setup();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const testBtn = el.querySelector('[data-testid="test-button-aaaa-1111"]') as HTMLButtonElement;
+      expect(testBtn).toBeTruthy();
+      expect(testBtn.textContent?.trim()).toContain('Test');
+    });
+
+    it('should call onTest when test button clicked', async () => {
+      const fixture = setup();
+      const component = fixture.componentInstance;
+      const onTestSpy = jest.spyOn(component, 'onTest');
+
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      const testBtn = el.querySelector('[data-testid="test-button-aaaa-1111"]') as HTMLButtonElement;
+      testBtn.click();
+
+      expect(onTestSpy).toHaveBeenCalledWith(mockWorkflows[0]);
+    });
+
+    it('should open test modal when onTest called', async () => {
+      const fixture = setup();
+      const component = fixture.componentInstance;
+
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      // Get modal reference
+      const modal = component.testModal();
+      expect(modal).toBeTruthy();
+
+      const openSpy = jest.spyOn(modal!, 'open');
+      component.onTest(mockWorkflows[0] as any);
+
+      expect(component.selectedTemplate()).toEqual(mockWorkflows[0]);
+      expect(openSpy).toHaveBeenCalled();
+    });
   });
 });

@@ -13,6 +13,9 @@ import { mergeGenerationParams } from './llm/generation-params.util';
 import { validateLlmOutput } from './output-sanity-check.util';
 import { generateOutputFilename } from './output-filename.util';
 import { AssetsService } from '../assets/assets.service';
+import { TestRunCacheService } from '../services/test-run-cache.service';
+import { TestRunGateway } from '../gateways/test-run.gateway';
+import { TestRunFileResultDto } from '@project-bubble/shared';
 
 /** Detect fan-out job by `:file:` segment in jobId */
 function isFanOutJob(jobId: string | undefined): boolean {
@@ -103,19 +106,45 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     private readonly promptAssembly: PromptAssemblyService,
     private readonly llmProviderFactory: LlmProviderFactory,
     private readonly assetsService: AssetsService,
+    private readonly testRunCache: TestRunCacheService,
+    private readonly testRunGateway: TestRunGateway,
   ) {
     super();
   }
 
   async process(job: Job<WorkflowJobPayload>): Promise<void> {
-    const { runId, tenantId } = job.data;
+    const { runId, sessionId, isTestRun, tenantId } = job.data;
 
     // Defensive: fail fast on missing tenantId (N4 from party mode review)
     if (!tenantId || typeof tenantId !== 'string' || tenantId.trim() === '') {
       throw new Error(
         `Job ${job.id} has invalid tenantId (${JSON.stringify(tenantId)}) — ` +
-        `cannot process workflow run ${runId} without tenant context`,
+        `cannot process workflow run ${runId || sessionId} without tenant context`,
       );
+    }
+
+    // Payload validation for test runs (AC2 - Defense-in-Depth)
+    if (sessionId && !isTestRun) {
+      throw new Error(
+        `Corrupted test run payload: job ${job.id} has sessionId but isTestRun is false/missing`,
+      );
+    }
+
+    if (sessionId && runId) {
+      throw new Error(
+        `Invalid job payload: job ${job.id} has both sessionId and runId — expected exactly one`,
+      );
+    }
+
+    if (!sessionId && !runId) {
+      throw new Error(
+        `Invalid job payload: job ${job.id} has neither sessionId nor runId — expected exactly one`,
+      );
+    }
+
+    // Fork execution path: test runs vs production runs (AC3, AC4)
+    if (isTestRun && sessionId) {
+      return this.processTestRun(job, sessionId, tenantId);
     }
 
     const fanOut = isFanOutJob(job.id);
@@ -537,9 +566,150 @@ export class WorkflowExecutionProcessor extends WorkerHost {
     });
   }
 
+  /**
+   * Process a test run (ephemeral, no DB persistence, WebSocket updates).
+   * Executes full fan-out for all subject files (AC3).
+   */
+  private async processTestRun(
+    job: Job<WorkflowJobPayload>,
+    sessionId: string,
+    tenantId: string,
+  ): Promise<void> {
+    this.logger.log({
+      message: 'Processing test run',
+      sessionId,
+      tenantId,
+      jobId: job.id,
+    });
+
+    const results: TestRunFileResultDto[] = [];
+    const subjectFiles = job.data.subjectFiles || (job.data.subjectFile ? [job.data.subjectFile] : []);
+
+    // Execute ALL subject files (AC3 - full fan-out)
+    for (let i = 0; i < subjectFiles.length; i++) {
+      const file = subjectFiles[i];
+      const fileName = file.originalName;
+
+      try {
+        // Emit file start event (AC4)
+        this.testRunGateway.emitFileStart({
+          sessionId,
+          fileIndex: i,
+          fileName,
+        });
+
+        // Step 1: Assemble prompt for this file
+        const fileJobData = {
+          ...job.data,
+          subjectFile: file,
+          subjectFiles: undefined, // Use single file for assembly
+        };
+        const assemblyResult = await this.promptAssembly.assemble(fileJobData);
+
+        // Step 2: Resolve LLM provider
+        const modelUuid = job.data.definition.execution.model;
+        const { provider, model, supportedGenerationParams } = await this.llmProviderFactory.getProvider(modelUuid);
+
+        // Step 3: Merge generation params
+        const generationOptions = mergeGenerationParams(
+          supportedGenerationParams,
+          model.generationDefaults,
+          job.data.definition.execution,
+        );
+
+        // Step 4: Call LLM
+        const llmResult = await provider.generate(assemblyResult.prompt, generationOptions);
+
+        // Step 5: Validate output
+        const sanityResult = validateLlmOutput(
+          llmResult.text,
+          job.data.definition.execution.max_output_tokens,
+        );
+
+        const result: TestRunFileResultDto = {
+          fileIndex: i,
+          fileName,
+          assembledPrompt: assemblyResult.prompt,
+          llmResponse: llmResult.text,
+          status: sanityResult.valid ? 'success' : 'failed',
+          errorMessage: sanityResult.valid ? undefined : `Output validation failed: ${sanityResult.reason}`,
+        };
+
+        results.push(result);
+
+        // Emit file complete event (AC4)
+        this.testRunGateway.emitFileComplete({
+          sessionId,
+          ...result,
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const result: TestRunFileResultDto = {
+          fileIndex: i,
+          fileName,
+          assembledPrompt: '',
+          llmResponse: '',
+          status: 'error',
+          errorMessage,
+        };
+
+        results.push(result);
+
+        // Emit file complete with error (AC4)
+        this.testRunGateway.emitFileComplete({
+          sessionId,
+          ...result,
+        });
+      }
+    }
+
+    // Store results in cache (AC5)
+    const templateName = (job.data.definition as { name?: string }).name || 'Unnamed Template';
+    this.testRunCache.set(sessionId, {
+      sessionId,
+      templateId: job.data.versionId, // Using versionId as templateId for test runs
+      templateName,
+      inputs: job.data.contextInputs,
+      results,
+      createdAt: new Date(),
+    });
+
+    // Emit completion event (AC4)
+    const successCount = results.filter(r => r.status === 'success').length;
+    const failedCount = results.length - successCount;
+    this.testRunGateway.emitComplete({
+      sessionId,
+      totalFiles: results.length,
+      successCount,
+      failedCount,
+    });
+
+    this.logger.log({
+      message: 'Test run completed',
+      sessionId,
+      totalFiles: results.length,
+      successCount,
+      failedCount,
+    });
+  }
+
   @OnWorkerEvent('failed')
   async onFailed(job: Job<WorkflowJobPayload>, error: Error): Promise<void> {
-    const { runId, tenantId } = job.data;
+    const { runId, sessionId, isTestRun, tenantId } = job.data;
+
+    // Test run failure: emit WebSocket error and return (AC9)
+    if (isTestRun && sessionId) {
+      this.logger.error({
+        message: 'Test run job failed',
+        sessionId,
+        error: error.message,
+      });
+      this.testRunGateway.emitError({
+        sessionId,
+        errorMessage: error.message,
+      });
+      return;
+    }
 
     // Defensive: skip DB update on missing tenantId.
     // ASYMMETRY with process(): process() THROWS (BullMQ retries/DLQ the job),

@@ -126,6 +126,9 @@ export class WorkflowRunEntity {
   @Column({ name: 'per_file_results', type: 'jsonb', nullable: true })
   perFileResults!: PerFileResult[] | null;
 
+  @Column({ name: 'max_retry_count', type: 'int', default: 3 })
+  maxRetryCount!: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 }

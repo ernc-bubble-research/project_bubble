@@ -92,6 +92,29 @@ export class WorkflowRunsController {
     return this.workflowRunsService.findOneByTenant(id, req.user.tenantId);
   }
 
+  @Post(':id/retry-failed')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Retry failed or pending files in a workflow run' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid', description: 'Workflow run ID' })
+  @ApiResponse({ status: 200, description: 'Retry initiated — jobs re-enqueued and credits deducted for failed files', type: WorkflowRunResponseDto })
+  @ApiResponse({ status: 400, description: 'Cannot retry — run is COMPLETED with no errors, all files succeeded, or max retry count exceeded' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — invalid or missing JWT' })
+  @ApiResponse({ status: 402, description: 'Payment Required — insufficient credits to retry failed files' })
+  @ApiResponse({ status: 403, description: 'Forbidden — insufficient role or tenant suspended' })
+  @ApiResponse({ status: 404, description: 'Run not found' })
+  @ApiResponse({ status: 409, description: 'Conflict — run is already in RUNNING state' })
+  retryFailed(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: { user: { tenantId: string; userId: string; role: string } },
+  ): Promise<WorkflowRunResponseDto> {
+    return this.workflowRunsService.retryFailed(
+      id,
+      req.user.tenantId,
+      req.user.userId,
+      req.user.role,
+    );
+  }
+
   @Get(':id/outputs/:fileIndex')
   @ApiOperation({ summary: 'Download output file by index' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })

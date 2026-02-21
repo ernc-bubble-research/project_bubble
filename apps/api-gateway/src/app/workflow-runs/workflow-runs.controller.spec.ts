@@ -15,7 +15,7 @@ jest.mock('fs', () => ({
 
 describe('WorkflowRunsController [P0]', () => {
   let controller: WorkflowRunsController;
-  let service: jest.Mocked<Pick<WorkflowRunsService, 'initiateRun' | 'findAllByTenant' | 'findOneByTenant' | 'getOutputFile'>>;
+  let service: jest.Mocked<Pick<WorkflowRunsService, 'initiateRun' | 'findAllByTenant' | 'findOneByTenant' | 'getOutputFile' | 'retryFailed'>>;
 
   const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   const userId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -42,6 +42,7 @@ describe('WorkflowRunsController [P0]', () => {
       findAllByTenant: jest.fn(),
       findOneByTenant: jest.fn(),
       getOutputFile: jest.fn(),
+      retryFailed: jest.fn(),
     };
 
     controller = new WorkflowRunsController(
@@ -294,6 +295,88 @@ describe('WorkflowRunsController [P0]', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.json).toHaveBeenCalledWith({ message: 'Failed to read output file' });
+    });
+  });
+
+  describe('retryFailed (POST /:id/retry-failed)', () => {
+    it('[4-5b-CONTRACT-001] [P0] Given successful retry, when POST /:id/retry-failed is called, then returns 200 with updated run response', async () => {
+      // Given
+      const updatedRun = {
+        ...mockRunResponse,
+        status: WorkflowRunStatus.RUNNING,
+        creditsConsumed: 300,
+        creditsFromMonthly: 200,
+        creditsFromPurchased: 100,
+      };
+      service.retryFailed.mockResolvedValue(updatedRun);
+      const req = { user: { tenantId, userId, role: 'customer_admin' } };
+
+      // When
+      const result = await controller.retryFailed(runId, req);
+
+      // Then
+      expect(result).toEqual(updatedRun);
+      expect(service.retryFailed).toHaveBeenCalledWith(runId, tenantId, userId, 'customer_admin');
+    });
+
+    it('[4-5b-CONTRACT-002] [P0] Given insufficient credits, when POST /:id/retry-failed is called, then propagates 402 PaymentRequiredException', async () => {
+      // Given
+      const error = new Error('Insufficient credits');
+      error.name = 'PaymentRequiredException';
+      service.retryFailed.mockRejectedValue(error);
+      const req = { user: { tenantId, userId, role: 'customer_admin' } };
+
+      // When/Then
+      await expect(controller.retryFailed(runId, req)).rejects.toThrow('Insufficient credits');
+      expect(service.retryFailed).toHaveBeenCalledWith(runId, tenantId, userId, 'customer_admin');
+    });
+
+    it('[4-5b-CONTRACT-003] [P0] Given run already RUNNING, when POST /:id/retry-failed is called, then propagates 409 ConflictException', async () => {
+      // Given
+      const error = new Error('Run is already RUNNING');
+      error.name = 'ConflictException';
+      service.retryFailed.mockRejectedValue(error);
+      const req = { user: { tenantId, userId, role: 'customer_admin' } };
+
+      // When/Then
+      await expect(controller.retryFailed(runId, req)).rejects.toThrow('Run is already RUNNING');
+      expect(service.retryFailed).toHaveBeenCalledWith(runId, tenantId, userId, 'customer_admin');
+    });
+
+    it('[4-5b-CONTRACT-004] [P0] Given no errors to retry, when POST /:id/retry-failed is called, then propagates 400 BadRequestException', async () => {
+      // Given
+      const error = new Error('Run status is COMPLETED with no errors to retry');
+      error.name = 'BadRequestException';
+      service.retryFailed.mockRejectedValue(error);
+      const req = { user: { tenantId, userId, role: 'customer_admin' } };
+
+      // When/Then
+      await expect(controller.retryFailed(runId, req)).rejects.toThrow('Run status is COMPLETED with no errors to retry');
+      expect(service.retryFailed).toHaveBeenCalledWith(runId, tenantId, userId, 'customer_admin');
+    });
+
+    it('[4-5b-CONTRACT-005] [P0] Given run not found, when POST /:id/retry-failed is called, then propagates 404 NotFoundException', async () => {
+      // Given
+      const error = new Error('Workflow run not found');
+      error.name = 'NotFoundException';
+      service.retryFailed.mockRejectedValue(error);
+      const req = { user: { tenantId, userId, role: 'customer_admin' } };
+
+      // When/Then
+      await expect(controller.retryFailed(runId, req)).rejects.toThrow('Workflow run not found');
+      expect(service.retryFailed).toHaveBeenCalledWith(runId, tenantId, userId, 'customer_admin');
+    });
+
+    it('[4-5b-CONTRACT-006] [P0] Given cross-tenant access, when POST /:id/retry-failed is called, then propagates 403 ForbiddenException', async () => {
+      // Given — service.retryFailed enforces tenantId in WHERE clause (Rule 2c)
+      const error = new Error('Workflow run not found');
+      error.name = 'NotFoundException';
+      service.retryFailed.mockRejectedValue(error);
+      const req = { user: { tenantId: 'different-tenant-id', userId, role: 'customer_admin' } };
+
+      // When/Then
+      await expect(controller.retryFailed(runId, req)).rejects.toThrow('Workflow run not found');
+      expect(service.retryFailed).toHaveBeenCalledWith(runId, 'different-tenant-id', userId, 'customer_admin');
     });
   });
 });

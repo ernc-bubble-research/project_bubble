@@ -82,6 +82,7 @@ import {
   LayoutGrid,
   Undo2,
   RotateCcw,
+  FlaskConical,
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
@@ -161,6 +162,7 @@ export const appConfig: ApplicationConfig = {
         LayoutGrid,
         Undo2,
         RotateCcw,
+        FlaskConical,
       }),
     },
   ],

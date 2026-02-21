@@ -995,6 +995,63 @@ describe('WorkflowTemplatesService [P0]', () => {
     });
   });
 
+  describe('findOneWithVersion', () => {
+    it('[4-7a-UNIT-021] [P0] Given template with current version, when findOneWithVersion is called, then returns both entities', async () => {
+      // Given
+      const templateWithVersion = { ...mockTemplate, currentVersionId: versionId };
+      mockManager.findOne
+        .mockResolvedValueOnce(templateWithVersion)
+        .mockResolvedValueOnce(mockVersion);
+
+      // When
+      const result = await service.findOneWithVersion(templateId, tenantId);
+
+      // Then
+      expect(result.template).toEqual(templateWithVersion);
+      expect(result.version).toEqual(mockVersion);
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowTemplateEntity, {
+        where: { id: templateId, tenantId },
+        withDeleted: false,
+      });
+      expect(mockManager.findOne).toHaveBeenCalledWith(WorkflowVersionEntity, {
+        where: { id: versionId },
+      });
+    });
+
+    it('[4-7a-UNIT-022] [P0] Given template not found, when findOneWithVersion is called, then throws NotFoundException', async () => {
+      // Given
+      mockManager.findOne.mockResolvedValueOnce(null);
+
+      // When/Then
+      await expect(
+        service.findOneWithVersion(templateId, tenantId),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('[4-7a-UNIT-023] [P0] Given template without currentVersionId, when findOneWithVersion is called, then throws BadRequestException', async () => {
+      // Given
+      mockManager.findOne.mockResolvedValueOnce({ ...mockTemplate, currentVersionId: null });
+
+      // When/Then
+      await expect(
+        service.findOneWithVersion(templateId, tenantId),
+      ).rejects.toThrow('Template does not have a current version');
+    });
+
+    it('[4-7a-UNIT-024] [P0] Given version not found, when findOneWithVersion is called, then throws BadRequestException', async () => {
+      // Given
+      const templateWithVersion = { ...mockTemplate, currentVersionId: versionId };
+      mockManager.findOne
+        .mockResolvedValueOnce(templateWithVersion)
+        .mockResolvedValueOnce(null); // version not found
+
+      // When/Then
+      await expect(
+        service.findOneWithVersion(templateId, tenantId),
+      ).rejects.toThrow('Template version not found');
+    });
+  });
+
   describe('soft-delete exclusion (withDeleted:false)', () => {
     it('[4-FIX-404-UNIT-001] [P0] findOne passes withDeleted:false', async () => {
       mockManager.findOne.mockResolvedValueOnce({ ...mockTemplate });

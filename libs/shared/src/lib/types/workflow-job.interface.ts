@@ -33,7 +33,9 @@ export interface PerFileResult {
 }
 
 export interface WorkflowJobPayload {
-  runId: string;
+  runId?: string; // Optional for test runs (test runs use sessionId instead)
+  sessionId?: string; // Present only for test runs
+  isTestRun?: boolean; // Flag to indicate test run (ephemeral, no credit deduction)
   tenantId: string;
   versionId: string;
   definition: WorkflowDefinition;

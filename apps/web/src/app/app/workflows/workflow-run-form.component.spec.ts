@@ -261,4 +261,119 @@ describe('WorkflowRunFormComponent [P1]', () => {
       expect(component.getAcceptString(input)).toBe('');
     });
   });
+
+  describe('@Input Mode (Pass 3 H1) - Modal Integration', () => {
+    it('should accept template via templateInput signal', () => {
+      const fixture = setup();
+      const component = fixture.componentInstance;
+
+      // Set template via @Input signal
+      fixture.componentRef.setInput('templateInput', mockTemplate);
+      fixture.detectChanges();
+
+      expect(component.template()).toEqual(mockTemplate);
+      expect(component.loading()).toBe(false);
+    });
+
+    it('should initialize formValid signal to false when no inputs filled', () => {
+      const fixture = setup();
+      const component = fixture.componentInstance;
+
+      fixture.componentRef.setInput('templateInput', mockTemplate);
+      fixture.detectChanges();
+
+      expect(component.formValid()).toBe(false);
+    });
+
+    it('should update formValid signal to true when all required inputs filled', () => {
+      const fixture = setup();
+      const component = fixture.componentInstance;
+
+      fixture.componentRef.setInput('templateInput', mockTemplate);
+      fixture.detectChanges();
+
+      // Fill required inputs - switch to text mode first
+      const inputStates = component.inputStates();
+      inputStates[0].sourceMode = 'text';
+      inputStates[0].text = 'Some context document';
+      inputStates[1].text = 'Additional notes';
+      component.inputStates.set([...inputStates]);
+
+      expect(component.formValid()).toBe(true);
+    });
+
+    it('should return correct shape from getFormValues()', () => {
+      const fixture = setup();
+      const component = fixture.componentInstance;
+
+      fixture.componentRef.setInput('templateInput', mockTemplate);
+      fixture.detectChanges();
+
+      // Fill inputs - switch to text mode first
+      const inputStates = component.inputStates();
+      inputStates[0].sourceMode = 'text';
+      inputStates[0].text = 'Context text';
+      inputStates[1].text = 'Notes text';
+      component.inputStates.set([...inputStates]);
+
+      const values = component.getFormValues();
+
+      expect(values).toEqual({
+        context_doc: {
+          type: 'text',
+          text: 'Context text',
+        },
+        notes: {
+          type: 'text',
+          text: 'Notes text',
+        },
+      });
+    });
+
+    it('should handle template with asset inputs via @Input mode', () => {
+      const fixture = setup();
+      const component = fixture.componentInstance;
+
+      const assetTemplate = {
+        ...mockTemplate,
+        currentVersion: {
+          ...mockTemplate.currentVersion,
+          definition: {
+            ...mockTemplate.currentVersion.definition,
+            inputs: [
+              {
+                name: 'file_input',
+                label: 'File Upload',
+                role: 'subject' as const,
+                source: ['asset' as const],
+                required: true,
+              },
+            ],
+          },
+        },
+      };
+
+      fixture.componentRef.setInput('templateInput', assetTemplate);
+      fixture.detectChanges();
+
+      const inputStates = component.inputStates();
+      expect(inputStates.length).toBe(1);
+      expect(inputStates[0].sourceMode).toBe('asset');
+    });
+
+    it('should initialize with empty form values via @Input mode', () => {
+      const fixture = setup();
+      const component = fixture.componentInstance;
+
+      fixture.componentRef.setInput('templateInput', mockTemplate);
+      fixture.detectChanges();
+
+      const inputStates = component.inputStates();
+      inputStates.forEach((state) => {
+        expect(state.text).toBe('');
+        expect(state.selectedAssetIds).toEqual([]);
+        expect(state.uploadedAssetId).toBeNull();
+      });
+    });
+  });
 });

@@ -22,6 +22,8 @@ import { WorkflowRunsModule } from './workflow-runs/workflow-runs.module';
 import { SupportAccessModule } from './support-access/support-access.module';
 import { SupportMutationInterceptor } from './interceptors/support-mutation.interceptor';
 import { MigrationDatabaseModule, MIGRATION_DB_READY } from './migration-database.module';
+import { TestRunCacheService } from './services/test-run-cache.service';
+import { TestRunGateway } from './gateways/test-run.gateway';
 
 @Module({
   imports: [
@@ -83,6 +85,8 @@ import { MigrationDatabaseModule, MIGRATION_DB_READY } from './migration-databas
   controllers: [AppController],
   providers: [
     AppService,
+    TestRunCacheService,
+    TestRunGateway,
     { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },
     { provide: APP_INTERCEPTOR, useClass: SupportMutationInterceptor },
     { provide: APP_GUARD, useClass: ThrottlerGuard },

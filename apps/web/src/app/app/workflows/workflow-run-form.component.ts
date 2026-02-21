@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal, computed } from '@angular/core';
+import { Component, DestroyRef, inject, signal, computed, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,6 +7,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import type {
   WorkflowTemplateResponseDto,
   WorkflowRunResponseDto,
+  WorkflowRunInputValueDto,
 } from '@project-bubble/shared';
 import type {
   WorkflowInput,
@@ -531,6 +532,9 @@ export class WorkflowRunFormComponent {
   private readonly assetService = inject(AssetService);
   private readonly destroyRef = inject(DestroyRef);
 
+  // Signal input for modal-based usage (Task 2.1)
+  readonly templateInput = input<WorkflowTemplateResponseDto | null>(null);
+
   readonly template = signal<WorkflowTemplateResponseDto | null>(null);
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
@@ -541,21 +545,41 @@ export class WorkflowRunFormComponent {
   readonly submitError = signal<string | null>(null);
   readonly successMessage = signal<string | null>(null);
 
-  readonly canSubmit = computed(() => {
+  // Public signal for external validity checking (Task 2.3)
+  readonly formValid = computed(() => {
     if (this.submitting() || this.successMessage()) return false;
     const states = this.inputStates();
     return states.every((s) => !s.definition.required || this.isInputFilled(s));
   });
 
+  readonly canSubmit = computed(() => this.formValid());
+
   constructor() {
+    // Effect to watch templateInput for modal-based usage (Task 2.2)
+    effect(() => {
+      const inputTemplate = this.templateInput();
+      if (inputTemplate) {
+        this.template.set(inputTemplate);
+        this.buildInputStates(inputTemplate);
+        this.loading.set(false);
+      }
+    });
+
+    // Route-based loading (existing behavior)
     const templateId = this.route.snapshot.paramMap.get('templateId');
-    if (!templateId) {
+    if (templateId) {
+      this.loadTemplate(templateId);
+      this.loadAssets();
+    } else if (!this.templateInput()) {
+      // Only error if BOTH route AND input are missing
       this.loadError.set('No template ID provided');
       this.loading.set(false);
-      return;
     }
-    this.loadTemplate(templateId);
-    this.loadAssets();
+
+    // Always load assets for modal usage
+    if (!templateId) {
+      this.loadAssets();
+    }
   }
 
   private loadTemplate(id: string): void {
@@ -742,5 +766,21 @@ export class WorkflowRunFormComponent {
 
   goBack(): void {
     this.router.navigate(['/app/workflows']);
+  }
+
+  /**
+   * Public method to extract form values for external submission (Task 2.4).
+   * Used by TestRunModalComponent to get input values for test run execution.
+   */
+  getFormValues(): Record<string, WorkflowRunInputValueDto> {
+    const inputs: Record<string, WorkflowRunInputValueDto> = {};
+    for (const state of this.inputStates()) {
+      if (state.sourceMode === 'text') {
+        inputs[state.definition.name] = { type: 'text', text: state.text };
+      } else {
+        inputs[state.definition.name] = { type: 'asset', assetIds: state.selectedAssetIds };
+      }
+    }
+    return inputs;
   }
 }
