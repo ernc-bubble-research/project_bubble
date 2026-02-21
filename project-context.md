@@ -248,6 +248,19 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **DTO Validation Tests:** Test DTO constraints using `plainToInstance` + `validate` from `class-validator`/`class-transformer`. Place in separate `*.dto.spec.ts` files when >15 validation tests.
 *   **File Size Limit:** Keep spec files under 300 lines. Split by concern (controller vs DTO, service vs integration) when approaching the limit.
 
+### WebSocket & Real-Time Features Testing Rule (from Story 4-7b — 2026-02-21)
+*   **CRITICAL:** WebSocket gateways, SSE endpoints, and real-time async features are **HARDER TO TEST** than typical UI/API code.
+*   **INTEGRATION TESTS FIRST:** For any WebSocket gateway or real-time backend feature, write **Tier 2 integration tests FIRST** (test-driven), NOT after 3 code review passes.
+*   **Unit tests are insufficient:** Mocking `socket.io-client` in unit tests will NEVER catch:
+    *   Actual WebSocket handshake failures
+    *   JWT authentication issues
+    *   Room-based isolation bugs
+    *   Event propagation errors
+    *   Connection lifecycle edge cases
+*   **Pattern:** Create a mock socket server in integration tests, instantiate the gateway directly, test event emission and room isolation.
+*   **Applies to:** WebSocket gateways (socket.io), Server-Sent Events (SSE), long-polling endpoints, any async backend integration exposed to frontend.
+*   **REASON:** Story 4-7b required 3 review passes to catch missing WebSocket integration test (C1 finding). Tests written after implementation miss critical flows. Frontend WebSocket features are backend-heavy — treat them as backend stories with frontend UI, not UI stories with backend support.
+
 ## NFR Hardening Rules (from Epic 1 NFR Assessment — 2026-01-31)
 
 ### Security Rules
@@ -304,6 +317,14 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **ALWAYS present findings to user before fixing** — even in YOLO mode.
 *   User chooses per finding: auto-fix, create action item, or show details.
 *   **NEVER auto-fix without consent.** This is a mandatory decision point.
+
+### Context Compaction Control (from Story 4-7b — 2026-02-21)
+*   **NEVER** allow context compaction to occur DURING a multi-step process (party mode, code review, planning session).
+*   **PROACTIVE COMPACTION:** If token usage approaches context limits (>150k tokens used), **STOP** and warn the user BEFORE starting the next major process step.
+*   **Safe compaction points:** BEFORE starting party mode, BEFORE launching code review, BEFORE creating a story, AFTER completing a story and updating files.
+*   **Unsafe compaction:** MID-review (loses findings), MID-party-mode (loses decisions), MID-planning (loses requirements).
+*   **REASON:** Story 4-RLS-B context compaction during review lost party mode decisions. Agent applied "decisions" user never saw. Critical context must be preserved through entire workflows.
+*   **Check token usage** before major operations: if >150k used, suggest completing current task and starting fresh in next session.
 
 ## Story & Epic Process Rules (from Epic 3 Retrospective — 2026-02-04)
 
