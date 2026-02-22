@@ -1,6 +1,25 @@
 import './env';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import {
+  SEED_SYSTEM_TENANT_ID,
+  SEED_ADMIN_USER_ID,
+  SEED_ADMIN_EMAIL,
+  SEED_ADMIN_PASSWORD,
+  SEED_TENANT_A_ID,
+  SEED_TENANT_A_USER_ID,
+  SEED_TENANT_A_EMAIL,
+  SEED_TENANT_A_PASSWORD,
+  SEED_TENANT_B_ID,
+  SEED_TENANT_B_USER_ID,
+  SEED_TENANT_B_EMAIL,
+  SEED_TENANT_B_PASSWORD,
+  SEED_PUBLISHED_TEMPLATE_ID,
+  SEED_PUBLISHED_VERSION_ID,
+  SEED_DRAFT_TEMPLATE_ID,
+  SEED_DRAFT_VERSION_ID,
+  SEED_CHAIN_ID,
+} from '../../../libs/db-layer/src/lib/test-factories/seed-constants';
 
 const TEST_DB = process.env['POSTGRES_DB'] || 'project_bubble_test';
 
@@ -14,6 +33,10 @@ const TEST_DB = process.env['POSTGRES_DB'] || 'project_bubble_test';
  * NOTE: The DB is NOT dropped+recreated here because Playwright starts
  * webServer (API) BEFORE globalSetup. Dropping would kill the API's
  * DB connections. Instead we truncate for a clean slate.
+ *
+ * NOTE: Factory build*() functions are NOT used here because they import
+ * from entity files containing TypeORM decorators, which Playwright's TS
+ * transformer cannot compile. Seed constants (pure string exports) are safe.
  */
 async function globalSetup(): Promise<void> {
   console.log('[E2E] Global setup — preparing test database…');
@@ -82,56 +105,49 @@ async function globalSetup(): Promise<void> {
     const folderRepo = testDs.getRepository(FolderEntity);
 
     // System tenant (nil UUID) + bubble_admin
-    const systemTenantId = '00000000-0000-0000-0000-000000000000';
-    const seedEmail =
-      process.env['SEED_ADMIN_EMAIL'] || 'admin@bubble.io';
-    const seedPassword = process.env['SEED_ADMIN_PASSWORD'] || 'Admin123!';
+    const seedEmail = process.env['SEED_ADMIN_EMAIL'] || SEED_ADMIN_EMAIL;
+    const seedPassword = process.env['SEED_ADMIN_PASSWORD'] || SEED_ADMIN_PASSWORD;
     const adminHash = await bcrypt.hash(seedPassword, 10);
 
-    const adminUserId = '00000000-0000-0000-0000-000000000001';
-    await tenantRepo.save({ id: systemTenantId, name: 'System' });
+    await tenantRepo.save({ id: SEED_SYSTEM_TENANT_ID, name: 'System' });
     await userRepo.save({
-      id: adminUserId,
+      id: SEED_ADMIN_USER_ID,
       email: seedEmail,
       passwordHash: adminHash,
       role: 'bubble_admin',
-      tenantId: systemTenantId,
+      tenantId: SEED_SYSTEM_TENANT_ID,
       status: 'active',
     });
     console.log(`[E2E] Admin user seeded — ${seedEmail}`);
 
     // Tenant A + customer_admin
-    const tenantAId = '11111111-0000-0000-0000-000000000000';
-    const tenantAEmail =
-      process.env['SEED_TENANT_A_EMAIL'] || 'tenant-a@test.io';
-    const tenantAPassword =
-      process.env['SEED_TENANT_A_PASSWORD'] || 'TenantA123!';
+    const tenantAEmail = process.env['SEED_TENANT_A_EMAIL'] || SEED_TENANT_A_EMAIL;
+    const tenantAPassword = process.env['SEED_TENANT_A_PASSWORD'] || SEED_TENANT_A_PASSWORD;
     const tenantAHash = await bcrypt.hash(tenantAPassword, 10);
 
-    await tenantRepo.save({ id: tenantAId, name: 'Tenant Alpha' });
+    await tenantRepo.save({ id: SEED_TENANT_A_ID, name: 'Tenant Alpha' });
     await userRepo.save({
+      id: SEED_TENANT_A_USER_ID,
       email: tenantAEmail,
       passwordHash: tenantAHash,
       role: 'customer_admin',
-      tenantId: tenantAId,
+      tenantId: SEED_TENANT_A_ID,
       status: 'active',
     });
     console.log(`[E2E] Tenant A user seeded — ${tenantAEmail}`);
 
     // Tenant B + customer_admin
-    const tenantBId = '22222222-0000-0000-0000-000000000000';
-    const tenantBEmail =
-      process.env['SEED_TENANT_B_EMAIL'] || 'tenant-b@test.io';
-    const tenantBPassword =
-      process.env['SEED_TENANT_B_PASSWORD'] || 'TenantB123!';
+    const tenantBEmail = process.env['SEED_TENANT_B_EMAIL'] || SEED_TENANT_B_EMAIL;
+    const tenantBPassword = process.env['SEED_TENANT_B_PASSWORD'] || SEED_TENANT_B_PASSWORD;
     const tenantBHash = await bcrypt.hash(tenantBPassword, 10);
 
-    await tenantRepo.save({ id: tenantBId, name: 'Tenant Beta' });
+    await tenantRepo.save({ id: SEED_TENANT_B_ID, name: 'Tenant Beta' });
     await userRepo.save({
+      id: SEED_TENANT_B_USER_ID,
       email: tenantBEmail,
       passwordHash: tenantBHash,
       role: 'customer_admin',
-      tenantId: tenantBId,
+      tenantId: SEED_TENANT_B_ID,
       status: 'active',
     });
     console.log(`[E2E] Tenant B user seeded — ${tenantBEmail}`);
@@ -140,12 +156,12 @@ async function globalSetup(): Promise<void> {
     // Unique names retained for clarity in test assertions.
     // RLS is now enforced via bubble_app (non-superuser) — tenant isolation is real.
     await folderRepo.save({
-      tenantId: tenantAId,
+      tenantId: SEED_TENANT_A_ID,
       name: 'Folder Alpha',
       parentId: null,
     });
     await folderRepo.save({
-      tenantId: tenantBId,
+      tenantId: SEED_TENANT_B_ID,
       name: 'Folder Beta',
       parentId: null,
     });
@@ -157,18 +173,18 @@ async function globalSetup(): Promise<void> {
     const chainRepo = testDs.getRepository(WorkflowChainEntity);
 
     const seedTemplate = await templateRepo.save({
-      id: '33333333-0000-0000-0000-000000000001',
-      tenantId: systemTenantId,
+      id: SEED_PUBLISHED_TEMPLATE_ID,
+      tenantId: SEED_SYSTEM_TENANT_ID,
       name: 'E2E Seed Template',
       description: 'Seeded template for E2E tests',
       visibility: 'public',
       status: 'published',
-      createdBy: adminUserId,
+      createdBy: SEED_ADMIN_USER_ID,
     });
 
     const seedVersion = await versionRepo.save({
-      id: '33333333-0000-0000-0000-000000000002',
-      tenantId: systemTenantId,
+      id: SEED_PUBLISHED_VERSION_ID,
+      tenantId: SEED_SYSTEM_TENANT_ID,
       templateId: seedTemplate.id,
       versionNumber: 1,
       definition: {
@@ -179,25 +195,25 @@ async function globalSetup(): Promise<void> {
         prompt: 'Analyze {subject}',
         output: { format: 'markdown', filename_template: 'output-{subject}', sections: [{ name: 'analysis', label: 'Analysis', required: true }] },
       },
-      createdBy: adminUserId,
+      createdBy: SEED_ADMIN_USER_ID,
     });
 
     await templateRepo.update(seedTemplate.id, { currentVersionId: seedVersion.id });
 
     // Draft template for edit tests (002b) — separate from published template
     const draftTemplate = await templateRepo.save({
-      id: '33333333-0000-0000-0000-000000000010',
-      tenantId: systemTenantId,
+      id: SEED_DRAFT_TEMPLATE_ID,
+      tenantId: SEED_SYSTEM_TENANT_ID,
       name: 'E2E Draft Template',
       description: 'Draft template for edit E2E tests',
       visibility: 'public',
       status: 'draft',
-      createdBy: adminUserId,
+      createdBy: SEED_ADMIN_USER_ID,
     });
 
     const draftVersion = await versionRepo.save({
-      id: '33333333-0000-0000-0000-000000000011',
-      tenantId: systemTenantId,
+      id: SEED_DRAFT_VERSION_ID,
+      tenantId: SEED_SYSTEM_TENANT_ID,
       templateId: draftTemplate.id,
       versionNumber: 1,
       definition: {
@@ -208,14 +224,14 @@ async function globalSetup(): Promise<void> {
         prompt: 'Analyze {subject}',
         output: { format: 'markdown', filename_template: 'output-{subject}', sections: [{ name: 'analysis', label: 'Analysis', required: true }] },
       },
-      createdBy: adminUserId,
+      createdBy: SEED_ADMIN_USER_ID,
     });
 
     await templateRepo.update(draftTemplate.id, { currentVersionId: draftVersion.id });
 
     await chainRepo.save({
-      id: '33333333-0000-0000-0000-000000000003',
-      tenantId: systemTenantId,
+      id: SEED_CHAIN_ID,
+      tenantId: SEED_SYSTEM_TENANT_ID,
       name: 'E2E Seed Chain',
       description: 'Seeded chain for E2E tests',
       visibility: 'public',
@@ -227,7 +243,7 @@ async function globalSetup(): Promise<void> {
           { workflow_id: seedTemplate.id, alias: 'Step 2', input_mapping: {} },
         ],
       },
-      createdBy: adminUserId,
+      createdBy: SEED_ADMIN_USER_ID,
     });
 
     console.log('[E2E] Workflow data seeded — 2 templates + 2 versions + 1 chain');

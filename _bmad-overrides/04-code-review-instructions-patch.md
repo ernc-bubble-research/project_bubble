@@ -17,9 +17,10 @@ The code-review workflow instructions need explicit constraints for the mandator
 ```xml
 <critical>MANDATORY 3-PASS CODE REVIEW:
     Pass 1 — Amelia (Dev Agent): Self-review in the same session. Catches obvious gaps, updates story file, verifies her own work.
-    Pass 2 — Naz (Reviewer Agent): MUST be a FRESH CONTEXT with a DIFFERENT LLM than Pass 1. Adversarial review. Trusts nothing from Pass 1.
-    Pass 3 — Murat (Test Architect): MUST be a FRESH CONTEXT with a DIFFERENT LLM than Pass 1. Focuses on test quality, coverage, architecture patterns, and risk.
+    Pass 2 — Naz (Reviewer Agent): MUST be launched VIA PARTY MODE (invoke party-mode skill). FRESH CONTEXT with a DIFFERENT LLM than Pass 1. Adversarial review. Trusts nothing from Pass 1. NEVER launch as a Task agent — ALWAYS party mode.
+    Pass 3 — Murat (Test Architect): MUST be launched VIA PARTY MODE (invoke party-mode skill). FRESH CONTEXT with a DIFFERENT LLM than Pass 1. Focuses on test quality, coverage, architecture patterns, and risk. NEVER launch as a Task agent — ALWAYS party mode.
     ALL THREE PASSES ARE MANDATORY. A story is NOT done until all 3 passes complete and all HIGH/MEDIUM findings are fixed.
+    Pass 2 and Pass 3 are ALWAYS executed via party mode — the reviewer presents findings directly to the team. The dev agent (Amelia) is the REVIEWEE, not the presenter. She has NO role in presenting findings.
     If you are running Pass 2 or Pass 3 and you are the same agent/session that implemented the code, STOP IMMEDIATELY and inform the user.</critical>
 ```
 
