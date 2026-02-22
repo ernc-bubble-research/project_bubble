@@ -85,6 +85,8 @@ import {
   LayoutGrid,
   List,
   FlaskConical,
+  ListChecks,
+  Download,
 } from 'lucide-angular';
 
 // Services to mock
@@ -143,6 +145,7 @@ const ALL_ICONS = {
   FolderPlus, Link, Search, MoreVertical, Tag, ArrowDown, LogIn,
   ArrowRightLeft, HelpCircle, UploadCloud, Loader, Files, Folder,
   Archive, Globe, Shield, Database, LayoutGrid, List, FlaskConical,
+  ListChecks, Download,
 };
 
 function provideAllIcons() {

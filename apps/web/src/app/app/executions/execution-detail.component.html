@@ -1,0 +1,186 @@
+<div class="detail-page">
+  @if (isLoading()) {
+    <div class="loading-state" data-testid="detail-loading">
+      <lucide-icon name="loader-2" [size]="24" class="spinner"></lucide-icon>
+      <span>Loading execution details...</span>
+    </div>
+  } @else if (!run()) {
+    <div class="empty-state" data-testid="detail-not-found">
+      <lucide-icon name="alert-circle" [size]="48" class="empty-icon"></lucide-icon>
+      <p>Execution not found.</p>
+      <button class="btn-secondary" (click)="goBack()">Back to Executions</button>
+    </div>
+  } @else {
+    <div class="detail-content">
+      <!-- Header -->
+      <div class="detail-header">
+        <button class="btn-back" (click)="goBack()" data-testid="back-btn">
+          <lucide-icon name="arrow-left" [size]="16"></lucide-icon>
+          Back to Executions
+        </button>
+
+        <div class="header-row">
+          <h1 class="run-title">{{ run()!.templateName ?? 'Workflow Run' }}</h1>
+          <span class="badge" [class]="getStatusClass(run()!.status)" data-testid="detail-status-badge">
+            {{ getStatusLabel(run()!.status) }}
+          </span>
+        </div>
+
+        <div class="meta-row" data-testid="detail-meta">
+          <span><strong>Created:</strong> {{ formatDate(run()!.createdAt) }}</span>
+          @if (run()!.startedAt) {
+            <span><strong>Started:</strong> {{ formatDate(run()!.startedAt) }}</span>
+          }
+          @if (run()!.completedAt) {
+            <span><strong>Completed:</strong> {{ formatDate(run()!.completedAt) }}</span>
+          }
+          <span><strong>Duration:</strong> {{ formatDuration(run()!.durationMs) }}</span>
+          <span><strong>Credits:</strong> {{ run()!.creditsConsumed }}</span>
+        </div>
+      </div>
+
+      <!-- Error Banner -->
+      @if (run()!.errorMessage) {
+        <div class="error-banner" data-testid="error-banner">
+          <lucide-icon name="alert-triangle" [size]="18"></lucide-icon>
+          <span>{{ run()!.errorMessage }}</span>
+        </div>
+      }
+
+      <!-- Queued State -->
+      @if (run()!.status === 'queued') {
+        <div class="queued-state" data-testid="queued-state">
+          <lucide-icon name="clock" [size]="24"></lucide-icon>
+          <p>Run is queued, waiting to start...</p>
+        </div>
+      } @else {
+        <!-- Action Buttons -->
+        <div class="action-bar" data-testid="action-bar">
+          @if (run()!.status === 'completed_with_errors') {
+            @if (allFailedAtMax()) {
+              <button
+                class="btn-primary"
+                disabled
+                [title]="'All failed files have reached the maximum retry limit (' + (run()!.maxRetryCount ?? 3) + ' attempts)'"
+                data-testid="retry-btn-disabled"
+              >
+                <lucide-icon name="refresh-cw" [size]="16"></lucide-icon>
+                Retry Failed Files
+              </button>
+            } @else {
+              <button class="btn-primary" (click)="openRetryDialog()" data-testid="retry-btn">
+                <lucide-icon name="refresh-cw" [size]="16"></lucide-icon>
+                Retry {{ retryableFiles().length }} Failed Files
+              </button>
+            }
+          }
+
+          @if (completedFiles().length > 1) {
+            <button
+              class="btn-secondary"
+              (click)="downloadAll()"
+              [disabled]="isDownloadingAll()"
+              data-testid="download-all-btn"
+            >
+              <lucide-icon name="download" [size]="16"></lucide-icon>
+              @if (isDownloadingAll()) {
+                {{ downloadProgress() }}
+              } @else {
+                Download All
+              }
+            </button>
+          }
+        </div>
+
+        <!-- Per-File Results Table -->
+        @if (run()!.perFileResults && run()!.perFileResults!.length > 0) {
+          <div class="table-container" data-testid="per-file-table">
+            <table class="files-table">
+              <thead>
+                <tr>
+                  <th>File Name</th>
+                  <th>Status</th>
+                  <th>Tokens (In/Out)</th>
+                  <th>Retry</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (file of run()!.perFileResults!; track file.index) {
+                  <tr data-testid="file-row">
+                    <td class="file-name">{{ file.fileName }}</td>
+                    <td>
+                      <span class="badge" [class]="getStatusClass(file.status)" data-testid="file-status-badge">
+                        {{ getStatusLabel(file.status) }}
+                      </span>
+                    </td>
+                    <td>{{ getTokenDisplay(file) }}</td>
+                    <td>{{ getRetryDisplay(file) }}</td>
+                    <td class="file-actions">
+                      @if (file.status === 'completed' && file.outputAssetId) {
+                        <button
+                          class="btn-icon"
+                          (click)="downloadFile(file.index, file.fileName)"
+                          title="Download output"
+                          data-testid="download-file-btn"
+                        >
+                          <lucide-icon name="download" [size]="16"></lucide-icon>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                  @if (file.status === 'failed' && file.errorMessage) {
+                    <tr class="error-row" data-testid="file-error-row">
+                      <td colspan="5" class="error-cell">
+                        <lucide-icon name="alert-circle" [size]="14"></lucide-icon>
+                        {{ file.errorMessage }}
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <!-- Retry Confirmation Dialog -->
+  @if (showRetryDialog()) {
+    <div class="dialog-overlay" (click)="closeRetryDialog()" data-testid="retry-dialog-overlay">
+      <div class="dialog" (click)="$event.stopPropagation()" data-testid="retry-dialog">
+        <h2>Retry Failed Files</h2>
+        <p>
+          <strong>{{ retryableFiles().length }}</strong> file{{ retryableFiles().length === 1 ? '' : 's' }} will be retried.
+        </p>
+        <p class="credit-info">
+          Retrying will deduct <strong>{{ retryCredits() }}</strong> additional credits.
+        </p>
+        <div class="dialog-actions">
+          <button
+            class="btn-secondary"
+            (click)="closeRetryDialog()"
+            [disabled]="isRetrying()"
+            data-testid="retry-cancel-btn"
+          >
+            Cancel
+          </button>
+          <button
+            class="btn-primary"
+            (click)="confirmRetry()"
+            [disabled]="isRetrying()"
+            data-testid="retry-confirm-btn"
+          >
+            @if (isRetrying()) {
+              <lucide-icon name="loader-2" [size]="16" class="spinner"></lucide-icon>
+              Retrying...
+            } @else {
+              Retry Failed Files
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

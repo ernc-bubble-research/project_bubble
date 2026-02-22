@@ -661,6 +661,7 @@ describe('WorkflowRunsService [P0]', () => {
             versionNumber: 1,
             definition: mockVersion.definition,
             userInputs: dto.inputs,
+            creditsPerRun: 1,
           },
         }),
       );
@@ -1059,6 +1060,134 @@ describe('WorkflowRunsService [P0]', () => {
 
       expect(mockQueryBuilder.take).toHaveBeenCalledWith(10);
       expect(mockQueryBuilder.skip).toHaveBeenCalledWith(20); // (3-1)*10
+    });
+
+    it('[4-RSUI-UNIT-001] applies excludeTestRuns filter when true', async () => {
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllByTenant(tenantId, { excludeTestRuns: true });
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'run.isTestRun = :isTestRun',
+        { isTestRun: false },
+      );
+    });
+
+    it('[4-RSUI-UNIT-002] does not apply excludeTestRuns filter when false or absent', async () => {
+      mockQueryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllByTenant(tenantId, { excludeTestRuns: false });
+
+      expect(mockQueryBuilder.andWhere).not.toHaveBeenCalledWith(
+        'run.isTestRun = :isTestRun',
+        expect.anything(),
+      );
+    });
+  });
+
+  describe('toResponse — expanded fields', () => {
+    it('[4-RSUI-UNIT-003] includes startedAt, completedAt, durationMs, errorMessage, maxRetryCount in response', async () => {
+      const enrichedRun = {
+        ...mockRunEntity,
+        startedAt: new Date('2026-02-22T14:00:00Z'),
+        completedAt: new Date('2026-02-22T14:05:00Z'),
+        durationMs: 300000,
+        errorMessage: 'Provider timeout',
+        maxRetryCount: 5,
+        inputSnapshot: { templateName: 'Test Workflow', creditsPerRun: 2 },
+      };
+      mockManager.findOne.mockResolvedValue(enrichedRun);
+
+      const result = await service.findOneByTenant(runId, tenantId);
+
+      expect(result.startedAt).toEqual(new Date('2026-02-22T14:00:00Z'));
+      expect(result.completedAt).toEqual(new Date('2026-02-22T14:05:00Z'));
+      expect(result.durationMs).toBe(300000);
+      expect(result.errorMessage).toBe('Provider timeout');
+      expect(result.maxRetryCount).toBe(5);
+    });
+
+    it('[4-RSUI-UNIT-004] extracts templateName from inputSnapshot', async () => {
+      const runWithSnapshot = {
+        ...mockRunEntity,
+        inputSnapshot: { templateName: 'My Analysis Workflow', creditsPerRun: 3 },
+      };
+      mockManager.findOne.mockResolvedValue(runWithSnapshot);
+
+      const result = await service.findOneByTenant(runId, tenantId);
+
+      expect(result.templateName).toBe('My Analysis Workflow');
+    });
+
+    it('[4-RSUI-UNIT-005] extracts creditsPerRun from inputSnapshot', async () => {
+      const runWithSnapshot = {
+        ...mockRunEntity,
+        inputSnapshot: { templateName: 'Workflow', creditsPerRun: 5 },
+      };
+      mockManager.findOne.mockResolvedValue(runWithSnapshot);
+
+      const result = await service.findOneByTenant(runId, tenantId);
+
+      expect(result.creditsPerRun).toBe(5);
+    });
+
+    it('[4-RSUI-UNIT-006] returns undefined for templateName and creditsPerRun when not in inputSnapshot', async () => {
+      const runWithEmptySnapshot = {
+        ...mockRunEntity,
+        inputSnapshot: {},
+      };
+      mockManager.findOne.mockResolvedValue(runWithEmptySnapshot);
+
+      const result = await service.findOneByTenant(runId, tenantId);
+
+      expect(result.templateName).toBeUndefined();
+      expect(result.creditsPerRun).toBeUndefined();
+    });
+
+    it('[4-RSUI-UNIT-008] normalizes null fields to undefined in response', async () => {
+      const runWithNulls = {
+        ...mockRunEntity,
+        perFileResults: null,
+        outputAssetIds: null,
+        startedAt: null,
+        completedAt: null,
+        durationMs: null,
+        errorMessage: null,
+        inputSnapshot: { templateName: 'Test' },
+      };
+      mockManager.findOne.mockResolvedValue(runWithNulls);
+
+      const result = await service.findOneByTenant(runId, tenantId);
+
+      expect(result.perFileResults).toBeUndefined();
+      expect(result.outputAssetIds).toBeUndefined();
+      expect(result.startedAt).toBeUndefined();
+      expect(result.completedAt).toBeUndefined();
+      expect(result.durationMs).toBeUndefined();
+      expect(result.errorMessage).toBeUndefined();
+    });
+  });
+
+  describe('initiateRun — creditsPerRun in inputSnapshot', () => {
+    it('[4-RSUI-UNIT-007] stores creditsPerRun in inputSnapshot during run creation', async () => {
+      mockManager.create.mockReturnValue(mockRunEntity);
+      mockManager.save.mockResolvedValue(mockRunEntity);
+
+      const dto = {
+        templateId,
+        inputs: { context_doc: { type: 'text' as const, text: 'Test' } },
+      };
+
+      await service.initiateRun(dto, tenantId, userId, UserRole.CUSTOMER_ADMIN);
+
+      expect(mockManager.create).toHaveBeenCalledWith(
+        WorkflowRunEntity,
+        expect.objectContaining({
+          inputSnapshot: expect.objectContaining({
+            creditsPerRun: 1,
+          }),
+        }),
+      );
     });
   });
 

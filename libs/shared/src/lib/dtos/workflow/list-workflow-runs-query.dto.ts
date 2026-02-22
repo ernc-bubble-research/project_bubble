@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsInt, Min, Max, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsInt, Min, Max, IsEnum, IsBoolean } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 
 export enum WorkflowRunStatusFilter {
   QUEUED = 'queued',
@@ -42,4 +42,14 @@ export class ListWorkflowRunsQueryDto {
   @IsOptional()
   @IsEnum(WorkflowRunStatusFilter)
   status?: WorkflowRunStatusFilter;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Exclude test runs from results (default: false)',
+    default: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  excludeTestRuns?: boolean;
 }

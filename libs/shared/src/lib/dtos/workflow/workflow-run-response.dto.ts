@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { PerFileResult } from '../../types/workflow-job.interface';
 
 export class WorkflowRunResponseDto {
@@ -46,4 +46,25 @@ export class WorkflowRunResponseDto {
 
   @ApiProperty()
   createdAt!: Date;
+
+  @ApiPropertyOptional({ example: '2026-02-22T14:00:00.000Z', nullable: true })
+  startedAt?: Date | null;
+
+  @ApiPropertyOptional({ example: '2026-02-22T14:05:00.000Z', nullable: true })
+  completedAt?: Date | null;
+
+  @ApiPropertyOptional({ example: 300000, nullable: true, description: 'Duration in milliseconds' })
+  durationMs?: number | null;
+
+  @ApiPropertyOptional({ example: 'LLM provider timeout', nullable: true })
+  errorMessage?: string | null;
+
+  @ApiPropertyOptional({ example: 3, description: 'Maximum retry attempts per file' })
+  maxRetryCount?: number;
+
+  @ApiPropertyOptional({ example: 1, description: 'Credits charged per file' })
+  creditsPerRun?: number;
+
+  @ApiPropertyOptional({ example: 'My Analysis Workflow', description: 'Workflow template name from inputSnapshot' })
+  templateName?: string;
 }

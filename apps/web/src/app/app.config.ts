@@ -83,6 +83,8 @@ import {
   Undo2,
   RotateCcw,
   FlaskConical,
+  ListChecks,
+  Download,
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
@@ -163,6 +165,8 @@ export const appConfig: ApplicationConfig = {
         Undo2,
         RotateCcw,
         FlaskConical,
+        ListChecks,
+        Download,
       }),
     },
   ],

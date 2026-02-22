@@ -29,6 +29,7 @@ export class AppLayoutComponent {
   navItems: NavItem[] = [
     { label: 'Data Vault', icon: 'database', route: '/app/data-vault' },
     { label: 'Workflows', icon: 'git-branch', route: '/app/workflows' },
+    { label: 'Executions', icon: 'list-checks', route: '/app/executions' },
     { label: 'Access Log', icon: 'shield', route: '/app/access-log' },
   ];
 

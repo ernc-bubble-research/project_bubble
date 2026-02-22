@@ -134,6 +134,20 @@ export const appRoutes: Route[] = [
           ),
       },
       {
+        path: 'executions',
+        loadComponent: () =>
+          import('./app/executions/execution-list.component').then(
+            (m) => m.ExecutionListComponent
+          ),
+      },
+      {
+        path: 'executions/:id',
+        loadComponent: () =>
+          import('./app/executions/execution-detail.component').then(
+            (m) => m.ExecutionDetailComponent
+          ),
+      },
+      {
         path: 'access-log',
         loadComponent: () =>
           import('./tenant/access-log/access-log.component').then(

@@ -1,0 +1,93 @@
+<div class="executions-page">
+  <div class="page-header">
+    <lucide-icon name="list-checks" [size]="24"></lucide-icon>
+    <h1>Executions</h1>
+  </div>
+  <p class="page-description">
+    View your workflow execution history, track status, and download outputs.
+  </p>
+
+  <div class="toolbar">
+    <div class="filter-group">
+      <label for="status-filter">Status:</label>
+      <select
+        id="status-filter"
+        [value]="statusFilter()"
+        (change)="onStatusFilterChange($any($event.target).value)"
+        data-testid="status-filter"
+      >
+        @for (opt of statusOptions; track opt.value) {
+          <option [value]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-state" data-testid="execution-list-loading">
+      <lucide-icon name="loader-2" [size]="24" class="spinner"></lucide-icon>
+      <span>Loading executions...</span>
+    </div>
+  } @else if (runs().length === 0) {
+    <div class="empty-state" data-testid="execution-list-empty">
+      <lucide-icon name="list-checks" [size]="48" class="empty-icon"></lucide-icon>
+      <p>No executions yet. Start by running a workflow from the catalog.</p>
+    </div>
+  } @else {
+    <div class="table-container" data-testid="execution-list-table">
+      <table class="executions-table">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Workflow</th>
+            <th>Created</th>
+            <th>Files</th>
+            <th>Credits</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (run of runs(); track run.id) {
+            <tr data-testid="execution-row">
+              <td>
+                <span class="badge" [class]="getStatusClass(run.status)" data-testid="status-badge">
+                  {{ getStatusLabel(run.status) }}
+                </span>
+              </td>
+              <td class="workflow-name">{{ run.templateName ?? '—' }}</td>
+              <td>{{ formatDate(run.createdAt) }}</td>
+              <td>{{ getFilesDisplay(run) }}</td>
+              <td>{{ run.creditsConsumed }}</td>
+              <td>
+                <button class="btn-view" (click)="viewRun(run.id)" data-testid="view-btn">
+                  <lucide-icon name="eye" [size]="16"></lucide-icon>
+                  View
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination" data-testid="pagination">
+      <button
+        class="btn-page"
+        [disabled]="page() <= 1"
+        (click)="onPageChange(page() - 1)"
+        data-testid="prev-page"
+      >
+        Previous
+      </button>
+      <span class="page-info">Page {{ page() }} of {{ totalPages() }}</span>
+      <button
+        class="btn-page"
+        [disabled]="page() >= totalPages()"
+        (click)="onPageChange(page() + 1)"
+        data-testid="next-page"
+      >
+        Next
+      </button>
+    </div>
+  }
+</div>

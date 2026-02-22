@@ -12,6 +12,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   ParseIntPipe,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -40,6 +41,8 @@ import { WorkflowRunsService } from './workflow-runs.service';
 @UseGuards(JwtAuthGuard, TenantStatusGuard, RolesGuard)
 @Roles(UserRole.BUBBLE_ADMIN, UserRole.CUSTOMER_ADMIN, UserRole.CREATOR)
 export class WorkflowRunsController {
+  private readonly logger = new Logger(WorkflowRunsController.name);
+
   constructor(private readonly workflowRunsService: WorkflowRunsService) {}
 
   @Post()
@@ -75,6 +78,7 @@ export class WorkflowRunsController {
       page: query.page,
       limit: query.limit,
       status: query.status,
+      excludeTestRuns: query.excludeTestRuns,
     });
   }
 
@@ -143,7 +147,13 @@ export class WorkflowRunsController {
     });
 
     const fileStream = createReadStream(asset.storagePath);
-    fileStream.on('error', () => {
+    fileStream.on('error', (err) => {
+      this.logger.error({
+        message: 'Failed to stream output file',
+        runId: id,
+        fileIndex,
+        error: err.message,
+      });
       if (!res.headersSent) {
         res.status(500).json({ message: 'Failed to read output file' });
       }

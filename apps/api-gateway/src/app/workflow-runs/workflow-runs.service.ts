@@ -106,6 +106,7 @@ export class WorkflowRunsService {
       versionNumber: version.versionNumber,
       definition: version.definition,
       userInputs: dto.inputs,
+      creditsPerRun: template.creditsPerRun ?? 1,
     };
 
     // 8. Credit-check-and-create transaction (AC5 — FOR UPDATE lock on tenant row)
@@ -373,7 +374,7 @@ export class WorkflowRunsService {
 
   async findAllByTenant(
     tenantId: string,
-    options: { page?: number; limit?: number; status?: string },
+    options: { page?: number; limit?: number; status?: string; excludeTestRuns?: boolean },
   ): Promise<{ data: WorkflowRunResponseDto[]; total: number; page: number; limit: number }> {
     const page = options.page ?? 1;
     const limit = options.limit ?? 20;
@@ -389,6 +390,10 @@ export class WorkflowRunsService {
 
       if (options.status) {
         qb.andWhere('run.status = :status', { status: options.status });
+      }
+
+      if (options.excludeTestRuns) {
+        qb.andWhere('run.isTestRun = :isTestRun', { isTestRun: false });
       }
 
       const [entities, total] = await qb.getManyAndCount();
@@ -801,9 +806,19 @@ export class WorkflowRunsService {
     dto.totalJobs = entity.totalJobs;
     dto.completedJobs = entity.completedJobs;
     dto.failedJobs = entity.failedJobs;
-    dto.perFileResults = entity.perFileResults;
-    dto.outputAssetIds = entity.outputAssetIds;
+    dto.perFileResults = entity.perFileResults ?? undefined;
+    dto.outputAssetIds = entity.outputAssetIds ?? undefined;
     dto.createdAt = entity.createdAt;
+    dto.startedAt = entity.startedAt ?? undefined;
+    dto.completedAt = entity.completedAt ?? undefined;
+    dto.durationMs = entity.durationMs ?? undefined;
+    dto.errorMessage = entity.errorMessage ?? undefined;
+    dto.maxRetryCount = entity.maxRetryCount;
+
+    const snapshot = entity.inputSnapshot as Record<string, unknown>;
+    dto.templateName = (snapshot?.templateName as string) ?? undefined;
+    dto.creditsPerRun = (snapshot?.creditsPerRun as number) ?? undefined;
+
     return dto;
   }
 }

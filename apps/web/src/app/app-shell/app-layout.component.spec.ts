@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Settings,
   Shield,
+  ListChecks,
 } from 'lucide-angular';
 
 @Component({ standalone: true, template: '' })
@@ -63,6 +64,7 @@ describe('AppLayoutComponent [P2]', () => {
             ChevronDown,
             Settings,
             Shield,
+            ListChecks,
           }),
         },
       ],
@@ -74,12 +76,12 @@ describe('AppLayoutComponent [P2]', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('[3.1-2-UNIT-023] should render 3 nav items', () => {
+  it('[3.1-2-UNIT-023] should render 4 nav items', () => {
     const fixture = TestBed.createComponent(AppLayoutComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const navItems = compiled.querySelectorAll('.nav-item');
-    expect(navItems.length).toBe(3);
+    expect(navItems.length).toBe(4);
   });
 
   it('[3.1-2-UNIT-024] should render avatar dropdown when user is loaded', () => {
