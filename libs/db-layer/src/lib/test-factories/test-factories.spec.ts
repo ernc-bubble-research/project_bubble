@@ -33,6 +33,12 @@ import {
   SEED_DRAFT_TEMPLATE_ID,
   SEED_DRAFT_VERSION_ID,
   SEED_CHAIN_ID,
+  SEED_RUN_COMPLETED_ID,
+  SEED_RUN_COMPLETED_WITH_ERRORS_ID,
+  SEED_RUN_FAILED_ID,
+  SEED_OUTPUT_ASSET_1_ID,
+  SEED_OUTPUT_ASSET_2_ID,
+  SEED_LLM_MODEL_UUID,
 } from './seed-constants';
 import { TenantStatus, PlanTier } from '../entities/tenant.entity';
 import { UserRole, UserStatus } from '../entities/user.entity';
@@ -360,6 +366,12 @@ describe('Seed constants', () => {
     expect(SEED_DRAFT_TEMPLATE_ID).toBe('33333333-0000-0000-0000-000000000010');
     expect(SEED_DRAFT_VERSION_ID).toBe('33333333-0000-0000-0000-000000000011');
     expect(SEED_CHAIN_ID).toBe('33333333-0000-0000-0000-000000000003');
+    expect(SEED_RUN_COMPLETED_ID).toBe('44444444-0000-0000-0000-000000000001');
+    expect(SEED_RUN_COMPLETED_WITH_ERRORS_ID).toBe('44444444-0000-0000-0000-000000000002');
+    expect(SEED_RUN_FAILED_ID).toBe('44444444-0000-0000-0000-000000000003');
+    expect(SEED_OUTPUT_ASSET_1_ID).toBe('44444444-0000-0000-0000-000000000010');
+    expect(SEED_OUTPUT_ASSET_2_ID).toBe('44444444-0000-0000-0000-000000000011');
+    expect(SEED_LLM_MODEL_UUID).toBe('55555555-0000-0000-0000-000000000001');
   });
 });
 
@@ -495,7 +507,7 @@ describe('Barrel export', () => {
     expect(barrel.buildRunWithMixedFileResults).toBeInstanceOf(Function);
     expect(barrel.buildRunAtMaxRetry).toBeInstanceOf(Function);
 
-    // Seed constants (all 17)
+    // Seed constants (all 23)
     expect(barrel.SEED_SYSTEM_TENANT_ID).toBeDefined();
     expect(barrel.SEED_ADMIN_USER_ID).toBeDefined();
     expect(barrel.SEED_ADMIN_EMAIL).toBeDefined();
@@ -513,5 +525,11 @@ describe('Barrel export', () => {
     expect(barrel.SEED_DRAFT_TEMPLATE_ID).toBeDefined();
     expect(barrel.SEED_DRAFT_VERSION_ID).toBeDefined();
     expect(barrel.SEED_CHAIN_ID).toBeDefined();
+    expect(barrel.SEED_RUN_COMPLETED_ID).toBeDefined();
+    expect(barrel.SEED_RUN_COMPLETED_WITH_ERRORS_ID).toBeDefined();
+    expect(barrel.SEED_RUN_FAILED_ID).toBeDefined();
+    expect(barrel.SEED_OUTPUT_ASSET_1_ID).toBeDefined();
+    expect(barrel.SEED_OUTPUT_ASSET_2_ID).toBeDefined();
+    expect(barrel.SEED_LLM_MODEL_UUID).toBeDefined();
   });
 });

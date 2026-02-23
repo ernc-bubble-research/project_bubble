@@ -19,6 +19,12 @@ import {
   SEED_DRAFT_TEMPLATE_ID,
   SEED_DRAFT_VERSION_ID,
   SEED_CHAIN_ID,
+  SEED_RUN_COMPLETED_ID,
+  SEED_RUN_COMPLETED_WITH_ERRORS_ID,
+  SEED_RUN_FAILED_ID,
+  SEED_OUTPUT_ASSET_1_ID,
+  SEED_OUTPUT_ASSET_2_ID,
+  SEED_LLM_MODEL_UUID,
 } from '../../../libs/db-layer/src/lib/test-factories/seed-constants';
 
 const TEST_DB = process.env['POSTGRES_DB'] || 'project_bubble_test';
@@ -125,7 +131,7 @@ async function globalSetup(): Promise<void> {
     const tenantAPassword = process.env['SEED_TENANT_A_PASSWORD'] || SEED_TENANT_A_PASSWORD;
     const tenantAHash = await bcrypt.hash(tenantAPassword, 10);
 
-    await tenantRepo.save({ id: SEED_TENANT_A_ID, name: 'Tenant Alpha' });
+    await tenantRepo.save({ id: SEED_TENANT_A_ID, name: 'Tenant Alpha', purchasedCredits: 100 });
     await userRepo.save({
       id: SEED_TENANT_A_USER_ID,
       email: tenantAEmail,
@@ -190,7 +196,7 @@ async function globalSetup(): Promise<void> {
       definition: {
         metadata: { name: 'E2E Seed Template', description: 'Seeded', version: 1, tags: [] },
         inputs: [{ name: 'subject', label: 'Subject', role: 'subject', source: ['text'], required: true }],
-        execution: { processing: 'parallel', model: 'mock-model', temperature: 0.7, max_output_tokens: 4096 },
+        execution: { processing: 'parallel', model: SEED_LLM_MODEL_UUID, temperature: 0.7, max_output_tokens: 4096 },
         knowledge: { enabled: false },
         prompt: 'Analyze {subject}',
         output: { format: 'markdown', filename_template: 'output-{subject}', sections: [{ name: 'analysis', label: 'Analysis', required: true }] },
@@ -219,7 +225,7 @@ async function globalSetup(): Promise<void> {
       definition: {
         metadata: { name: 'E2E Draft Template', description: 'Draft for edit tests', version: 1, tags: [] },
         inputs: [{ name: 'subject', label: 'Subject', role: 'subject', source: ['text'], required: true }],
-        execution: { processing: 'parallel', model: 'mock-model', temperature: 0.7, max_output_tokens: 4096 },
+        execution: { processing: 'parallel', model: SEED_LLM_MODEL_UUID, temperature: 0.7, max_output_tokens: 4096 },
         knowledge: { enabled: false },
         prompt: 'Analyze {subject}',
         output: { format: 'markdown', filename_template: 'output-{subject}', sections: [{ name: 'analysis', label: 'Analysis', required: true }] },
@@ -251,6 +257,7 @@ async function globalSetup(): Promise<void> {
     // ── Step 6: Seed LLM model (Story 3E — wizard execution step) ────
     const llmModelRepo = testDs.getRepository(LlmModelEntity);
     await llmModelRepo.save({
+      id: SEED_LLM_MODEL_UUID,
       providerKey: 'mock',
       modelId: 'mock-model',
       displayName: 'Mock LLM (Testing)',
@@ -268,6 +275,112 @@ async function globalSetup(): Promise<void> {
       isActive: true,
     });
     console.log('[E2E] LLM provider config seeded — mock');
+
+    // ── Step 8: Seed workflow runs for Epic 4 E2E (Story 4E) ────────
+    const runRepo = testDs.getRepository(WorkflowRunEntity);
+
+    // Run 1: COMPLETED — 2 files, both succeeded
+    await runRepo.save({
+      id: SEED_RUN_COMPLETED_ID,
+      tenantId: SEED_TENANT_A_ID,
+      versionId: SEED_PUBLISHED_VERSION_ID,
+      status: 'completed',
+      startedBy: SEED_TENANT_A_USER_ID,
+      inputSnapshot: { templateName: 'E2E Seed Template' },
+      outputAssetIds: [SEED_OUTPUT_ASSET_1_ID, SEED_OUTPUT_ASSET_2_ID],
+      creditsConsumed: 2,
+      creditsFromPurchased: 2,
+      creditsFromMonthly: 0,
+      totalJobs: 2,
+      completedJobs: 2,
+      failedJobs: 0,
+      startedAt: new Date('2026-02-20T10:00:00Z'),
+      completedAt: new Date('2026-02-20T10:01:00Z'),
+      durationMs: 60000,
+      perFileResults: [
+        { index: 0, fileName: 'doc1.txt', status: 'completed', outputAssetId: SEED_OUTPUT_ASSET_1_ID, tokenUsage: { inputTokens: 100, outputTokens: 200, totalTokens: 300 } },
+        { index: 1, fileName: 'doc2.txt', status: 'completed', outputAssetId: SEED_OUTPUT_ASSET_2_ID, tokenUsage: { inputTokens: 150, outputTokens: 250, totalTokens: 400 } },
+      ],
+    });
+
+    // Run 2: COMPLETED_WITH_ERRORS — 2 files, 1 succeeded + 1 failed
+    await runRepo.save({
+      id: SEED_RUN_COMPLETED_WITH_ERRORS_ID,
+      tenantId: SEED_TENANT_A_ID,
+      versionId: SEED_PUBLISHED_VERSION_ID,
+      status: 'completed_with_errors',
+      startedBy: SEED_TENANT_A_USER_ID,
+      inputSnapshot: { templateName: 'E2E Seed Template' },
+      creditsConsumed: 1,
+      creditsFromPurchased: 1,
+      creditsFromMonthly: 0,
+      totalJobs: 2,
+      completedJobs: 1,
+      failedJobs: 1,
+      startedAt: new Date('2026-02-20T11:00:00Z'),
+      completedAt: new Date('2026-02-20T11:01:00Z'),
+      durationMs: 60000,
+      perFileResults: [
+        { index: 0, fileName: 'report1.pdf', status: 'completed', tokenUsage: { inputTokens: 200, outputTokens: 300, totalTokens: 500 } },
+        { index: 1, fileName: 'report2.pdf', status: 'failed', errorMessage: 'Mock LLM error: timeout' },
+      ],
+    });
+
+    // Run 3: FAILED — all files failed
+    await runRepo.save({
+      id: SEED_RUN_FAILED_ID,
+      tenantId: SEED_TENANT_A_ID,
+      versionId: SEED_PUBLISHED_VERSION_ID,
+      status: 'failed',
+      startedBy: SEED_TENANT_A_USER_ID,
+      inputSnapshot: { templateName: 'E2E Seed Template' },
+      errorMessage: 'All files failed processing',
+      creditsConsumed: 0,
+      creditsFromPurchased: 0,
+      creditsFromMonthly: 0,
+      totalJobs: 1,
+      completedJobs: 0,
+      failedJobs: 1,
+      startedAt: new Date('2026-02-20T12:00:00Z'),
+      completedAt: new Date('2026-02-20T12:00:30Z'),
+      durationMs: 30000,
+      perFileResults: [
+        { index: 0, fileName: 'broken.txt', status: 'failed', errorMessage: 'Mock LLM error: invalid input' },
+      ],
+    });
+
+    console.log('[E2E] Workflow runs seeded — 3 runs (completed/errors/failed) for Tenant A');
+
+    // ── Step 9: Seed output assets linked to completed run (Story 4E) ──
+    const assetRepo = testDs.getRepository(AssetEntity);
+
+    await assetRepo.save({
+      id: SEED_OUTPUT_ASSET_1_ID,
+      tenantId: SEED_TENANT_A_ID,
+      originalName: 'output-doc1.md',
+      storagePath: `uploads/${SEED_TENANT_A_ID}/output-doc1.md`,
+      mimeType: 'text/markdown',
+      fileSize: 1024,
+      sha256Hash: 'e2e_seed_output_hash_1'.padEnd(64, '0'),
+      sourceType: 'workflow_output',
+      workflowRunId: SEED_RUN_COMPLETED_ID,
+      uploadedBy: SEED_TENANT_A_USER_ID,
+    });
+
+    await assetRepo.save({
+      id: SEED_OUTPUT_ASSET_2_ID,
+      tenantId: SEED_TENANT_A_ID,
+      originalName: 'output-doc2.md',
+      storagePath: `uploads/${SEED_TENANT_A_ID}/output-doc2.md`,
+      mimeType: 'text/markdown',
+      fileSize: 2048,
+      sha256Hash: 'e2e_seed_output_hash_2'.padEnd(64, '0'),
+      sourceType: 'workflow_output',
+      workflowRunId: SEED_RUN_COMPLETED_ID,
+      uploadedBy: SEED_TENANT_A_USER_ID,
+    });
+
+    console.log('[E2E] Output assets seeded — 2 assets linked to completed run');
 
     await testDs.destroy();
     console.log('[E2E] Global setup complete');
