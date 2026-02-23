@@ -35,6 +35,14 @@ test.describe('Epic 4 — Execution Detail Page [P0]', () => {
     await expect(page.getByTestId('error-banner')).toContainText(/failed/i);
   });
 
+  test('[4EH-E2E-003a] non-existent execution UUID shows not-found state', async ({ page }) => {
+    // Navigate to a non-existent execution UUID
+    await page.goto('/app/executions/00000000-0000-0000-0000-999999999999');
+
+    // The API returns 404 → component should show graceful not-found state
+    await expect(page.getByTestId('detail-not-found')).toBeVisible({ timeout: 15_000 });
+  });
+
   test('[4E-E2E-003c] download button present for completed files', async ({ page }) => {
     await page.goto(`/app/executions/${SEED_RUN_COMPLETED_ID}`);
 

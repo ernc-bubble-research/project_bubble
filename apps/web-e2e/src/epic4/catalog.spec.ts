@@ -43,6 +43,30 @@ test.describe('Epic 4 — Workflow Catalog & Run Initiation [P0]', () => {
     await expect(page.getByTestId('submit-run')).toBeVisible();
   });
 
+  test('[4EH-E2E-002a] run form disables submit when required inputs are empty', async ({ page }) => {
+    // Navigate directly to the run form for the seeded published template
+    await page.goto(`/app/workflows/run/${SEED_PUBLISHED_TEMPLATE_ID}`);
+
+    // Wait for form to load
+    await expect(page.getByTestId('run-form-loading')).not.toBeVisible({ timeout: 15_000 });
+
+    // Submit button should be present but disabled (required inputs not filled)
+    const submitBtn = page.getByTestId('submit-run');
+    await expect(submitBtn).toBeVisible();
+    await expect(submitBtn).toBeDisabled();
+
+    // Should NOT navigate away — still on run form
+    await expect(page).toHaveURL(/\/app\/workflows\/run\//);
+  });
+
+  test('[4EH-E2E-003b] malformed template ID in run URL shows error', async ({ page }) => {
+    // Navigate to run form with a non-UUID template ID
+    await page.goto('/app/workflows/run/not-a-uuid');
+
+    // The API will fail (404 or 400) → component shows error state
+    await expect(page.getByTestId('run-form-error')).toBeVisible({ timeout: 15_000 });
+  });
+
   test('[4E-E2E-001d] Tenant B can see published template in catalog', async ({ tenantBPage }) => {
     await tenantBPage.goto('/app/workflows');
 

@@ -51,11 +51,20 @@ test.describe('Data Vault — File Upload & Operations', () => {
     // Bulk actions should appear
     await expect(page.getByTestId('bulk-actions')).toBeVisible();
 
-    // Set up one-time dialog handler BEFORE triggering archive
+    // Set up one-time dialog handler and wait for archive API response (DELETE /api/app/assets/:id)
+    const archiveResponsePromise = page.waitForResponse(
+      (resp) =>
+        resp.url().includes('/api/app/assets/') &&
+        resp.request().method() === 'DELETE' &&
+        resp.ok(),
+    );
     page.once('dialog', (dialog) => dialog.accept());
 
     // Click archive
     await page.getByTestId('archive-selected-btn').click();
+
+    // Wait for archive API to respond before checking DOM
+    await archiveResponsePromise;
 
     // File should be removed from list
     await expect(page.locator('[data-testid^="file-item-"]')).toHaveCount(0, {

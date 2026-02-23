@@ -42,3 +42,13 @@ test.describe('[P0] Authenticated Navigation', () => {
     await expect(page.getByRole('heading', { name: '404' })).toBeVisible();
   });
 });
+
+test.describe('[P1] Route Error Handling', () => {
+  test('[4EH-E2E-003c] non-existent top-level route shows 404 page', async ({ page }) => {
+    // Navigate to a route that doesn't exist at the top level
+    await page.goto('/completely-invalid-route');
+
+    // Root wildcard route should render NotFoundComponent with 404 heading
+    await expect(page.getByRole('heading', { name: '404' })).toBeVisible({ timeout: 10_000 });
+  });
+});

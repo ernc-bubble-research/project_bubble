@@ -30,7 +30,7 @@
           <span class="form-error">Email is required</span>
         }
         @if (loginForm.get('email')?.touched && loginForm.get('email')?.hasError('email')) {
-          <span class="form-error">Please enter a valid email</span>
+          <span class="form-error" data-testid="login-email-error">Please enter a valid email</span>
         }
       </div>
 

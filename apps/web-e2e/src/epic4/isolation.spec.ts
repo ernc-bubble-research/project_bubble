@@ -28,6 +28,28 @@ test.describe('Epic 4 — Tenant Isolation & Access Log [P0]', () => {
     expect([403, 404]).toContain(response.status());
   });
 
+  test('[4EH-E2E-004a] Tenant B navigating to Tenant A execution detail shows not-found', async ({ tenantBPage }) => {
+    // Navigate directly to Tenant A's completed run via browser URL
+    await tenantBPage.goto(`/app/executions/${SEED_RUN_COMPLETED_ID}`);
+
+    // The component loads the run via API → 404 (RLS blocks cross-tenant access)
+    // Should show graceful not-found state, NOT Tenant A's data
+    await expect(tenantBPage.getByTestId('detail-not-found')).toBeVisible({ timeout: 15_000 });
+
+    // Verify Tenant A's data is NOT visible
+    await expect(tenantBPage.getByTestId('detail-status-badge')).not.toBeVisible();
+  });
+
+  test('[4EH-E2E-004b] Tenant B navigating to non-existent execution shows not-found', async ({ tenantBPage }) => {
+    // Navigate to a UUID that doesn't exist for any tenant.
+    // Intentionally redundant with [4EH-E2E-003a] (Tenant A context) — this verifies the same
+    // not-found behavior under Tenant B auth to confirm no cross-tenant information leak.
+    await tenantBPage.goto('/app/executions/00000000-0000-0000-0000-999999999999');
+
+    // Should show not-found state (not a cross-tenant leak)
+    await expect(tenantBPage.getByTestId('detail-not-found')).toBeVisible({ timeout: 15_000 });
+  });
+
   test.describe('Access Log', () => {
     test.use({ storageState: 'playwright/.auth/tenant-a.json' });
 
