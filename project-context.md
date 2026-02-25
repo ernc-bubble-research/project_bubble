@@ -289,248 +289,91 @@ _This file contains critical rules and patterns that AI agents must follow when 
 *   **Refresh token rotation** → Epic 7 Story 7.5 (interim: 7-day JWT expiry)
 *   **Log sanitization** → Epic 2 Story 2.1 AC (first story with real document data)
 
-## Process Discipline Rules (from Epic 2 Retrospective — 2026-02-01)
+## Strategic Principles
+
+_Rules that can be enforced structurally are embedded in BMAD workflows (dev-story, create-story, sprint-status, create-epics-and-stories, code-review). Only judgment-requiring principles live here._
 
 ### Quality Standard (ZERO TOLERANCE — FIREABLE OFFENSE)
-*   **THE "MVP EXCUSE" IS ABSOLUTELY BANNED.** Using MVP, prototype, or phase-scope as justification for lower quality, skipped analysis, deferred completeness, or any shortcut is **a termination-level offense.** This is not a guideline — it is a hard rule with zero exceptions.
-*   **BANNED PHRASES (non-exhaustive):** "acceptable for MVP", "sufficient for prototype", "adequate for current phase", "defer to later phase", "good enough for now", "we can improve later", "it's okay for MVP", "for MVP purposes", "MVP scope allows", "not needed for MVP", "post-MVP improvement", "acceptable tradeoff for MVP timeline."
-*   **IF** you are about to rationalize a decision using MVP scope as justification — **STOP.** The answer is: do it right, or surface the gap to the user for an explicit decision. There is no middle ground.
-*   **MVP defines feature scope, NOT quality bar.** The quality bar is always production-grade. No exceptions. Ever.
-*   **Quality gates produce PASS or FAIL only.** No CONCERNS with deferral recommendations. If it doesn't pass, fix it now or get explicit user approval to defer.
-*   **REASON:** Repeated use of "MVP" as a shield for incomplete analysis, missing features, and deferred quality has been the single most damaging pattern across Epics 1-3. It ends now.
+*   **THE "MVP EXCUSE" IS ABSOLUTELY BANNED.** MVP defines feature scope, NOT quality bar. The quality bar is always production-grade. No exceptions, ever. Every decision is made for the production application serving paying enterprise customers.
+*   **BANNED PHRASES:** "acceptable for MVP," "adequate for current phase," "good enough for now," "we can improve later," and all synonyms including "scope-appropriate," "suitable for current iteration," "adequate for our stage."
+*   **Quality gates produce PASS or FAIL only.** No "concerns with deferral recommendations."
 
 ### YOLO Mode Definition
 *   **YOLO mode auto-confirms:** Routine prompts (e.g., "proceed to next task?", "confirm environment?").
-*   **YOLO mode NEVER bypasses:** (1) Code review fix decisions — user always sees findings and chooses action, (2) Quality gate verdicts, (3) Any decision point where user input changes the outcome.
+*   **YOLO mode NEVER bypasses:** (1) Code review fix decisions, (2) Quality gate verdicts, (3) Any decision point where user input changes the outcome.
 
-### Reporting Requirements
-*   **Every test/lint run MUST report complete metrics** in this format:
-    ```
-    Tests:    api-gateway: X | web: X | db-layer: X | shared: X
-    Errors:   api-gateway: X | web: X | db-layer: X | shared: X
-    Warnings: api-gateway: X | web: X | db-layer: X | shared: X
-    ```
-*   **No metrics may be omitted.** Warnings are bugs — they must be reported and investigated.
-*   **A bug that exists in 5 places is 5 bugs**, not a "consistent pattern." Flag it, fix it.
+### No Assumptions (ALL Agents)
+*   NEVER present assumptions, guesses, or unverified information as fact. If you haven't verified something in the codebase or with the user, say "I believe" or "I need to verify."
+*   ANY gap, issue, or uncertainty MUST be brought to the user's attention before proceeding.
 
-### Code Review Protocol
-*   **ALWAYS present findings to user before fixing** — even in YOLO mode.
-*   User chooses per finding: auto-fix, create action item, or show details.
-*   **NEVER auto-fix without consent.** This is a mandatory decision point.
+### Mandatory Rationale (ALL Agents)
+*   EVERY design decision, trade-off, or scope limitation MUST include an explicit "Rationale:" with technical justification. "It's simpler" is NOT a rationale.
+*   Banned non-rationales: "it's simpler," "it's cleaner," "it works," "it's standard," "it's obvious."
 
-### Context Compaction Control (from Story 4-7b — 2026-02-21)
-*   **NEVER** allow context compaction to occur DURING a multi-step process (party mode, code review, planning session).
-*   **PROACTIVE COMPACTION:** If token usage approaches context limits (>150k tokens used), **STOP** and warn the user BEFORE starting the next major process step.
-*   **Safe compaction points:** BEFORE starting party mode, BEFORE launching code review, BEFORE creating a story, AFTER completing a story and updating files.
-*   **Unsafe compaction:** MID-review (loses findings), MID-party-mode (loses decisions), MID-planning (loses requirements).
-*   **REASON:** Story 4-RLS-B context compaction during review lost party mode decisions. Agent applied "decisions" user never saw. Critical context must be preserved through entire workflows.
-*   **Check token usage** before major operations: if >150k used, suggest completing current task and starting fresh in next session.
+### No "We Don't Have Customers Yet" (Rule 36)
+*   BANNED: "we don't have customers yet," "adequate for our current stage," "fine for now." Every decision is made for the production application serving paying enterprise customers.
 
-## Story & Epic Process Rules (from Epic 3 Retrospective — 2026-02-04)
+### No Unilateral Code Review Decisions (Rule 37)
+*   The dev agent CANNOT reject, dismiss, or skip ANY reviewer finding. EVERY finding from EVERY review pass must be presented to the user with recommendation (fix/track/reject + reasoning). The USER decides. No exceptions.
 
-### 11. The "Story Sizing" Rule
-*   **NEVER** create stories with more than **7 tasks** or **10 acceptance criteria**.
-*   **IF** a story exceeds these limits, **SPLIT IT** into multiple smaller stories before marking ready-for-dev.
-*   **REASON:** Story 3.2 (6-step wizard + all UI components) caused many bugs and an extended review cycle. Large stories have compounding risk.
+### No Floating Deferrals (Rule 38)
+*   Any deferred item MUST be assigned to a specific story reference at the moment of identification. "We'll track it later" is banned. Fix it now, or document it in the Out-of-Scope table with a specific story reference.
 
-### 12. The "E2E Test" Rule
-*   **EVERY** story **MUST** include E2E test coverage for its features as part of the acceptance criteria.
-*   **E2E tests verify:** API endpoints return expected responses (not just HTTP 200), UI flows complete end-to-end, navigation routes resolve to real components.
-*   **DO NOT** defer E2E tests to a "later sprint." Build E2E tests WITH the feature.
-*   **REASON:** 555+ unit tests passed while the UI was largely non-functional. Unit tests mock everything and never catch integration issues.
+### No Unassigned Backlog Items (Rule 39)
+*   Every backlog item, deferred task, tracked finding, or planned work MUST be assigned to a named story under a specific epic in sprint-status.yaml. Memory notes are NOT permanent homes.
 
-### 12b. The "AC-to-Test Traceability" Rule
-*   **EVERY** story file **MUST** include a traceability table mapping acceptance criteria to test cases:
-    ```markdown
-    ## Test Traceability
-    | AC ID | Test File | Test Description | Status |
-    |-------|-----------|------------------|--------|
-    | AC1   | component.spec.ts:42 | Should validate input | ✓ |
-    ```
-*   **No story may be marked `done`** without a complete traceability table.
-*   **REASON:** Testing code is not the same as testing acceptance criteria. Without traceability, we cannot verify that what was specified was actually tested.
+### Fix Now (Rule 32)
+*   If an issue is found, fix it now — unless it maps to a planned upcoming activity (epic, story, testing phase). No "investigate later" bucket. Fix it or document it with a specific story reference.
 
-### 13. The "RxJS Subscription Cleanup" Rule (CRITICAL)
-*   **EVERY** RxJS subscription in Angular components **MUST** use `takeUntilDestroyed()` for cleanup.
-*   **NEVER** leave HTTP subscriptions without cleanup — "completes quickly" is NOT a valid excuse.
-*   **PATTERN:**
+---
+
+## Technical Patterns (NOT in Workflows)
+
+_Specific code patterns agents must follow — not judgment-based, but correctness-based._
+
+### Rule 13: RxJS Subscription Cleanup (CRITICAL)
+*   EVERY RxJS subscription in Angular components MUST use `takeUntilDestroyed()`. "Completes quickly" is NOT a valid excuse. 39 subscription leaks found across Epics 1-3.
+*   **Pattern:**
     ```typescript
-    import { DestroyRef, inject } from '@angular/core';
-    import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-
-    export class MyComponent {
-      private readonly destroyRef = inject(DestroyRef);
-
-      loadData(): void {
-        this.service.getData().pipe(
-          takeUntilDestroyed(this.destroyRef)
-        ).subscribe({
-          next: (data) => { ... },
-          error: (err) => { ... }
-        });
-      }
-    }
+    const destroyRef = inject(DestroyRef);
+    this.service.getData().pipe(takeUntilDestroyed(destroyRef)).subscribe({...});
     ```
-*   **REASON:** 39 subscription leaks were discovered across Epics 1-3. Code review repeatedly classified this as "low severity" — it is NOT low severity. Memory leaks, callbacks on destroyed components, and unpredictable behavior result.
-*   **Code review MUST reject** any `.subscribe()` call without `takeUntilDestroyed()`.
 
-### 14. The "Mid-Epic Check-in" Rule
-*   **EVERY 2 stories completed** within an epic triggers a mandatory check-in.
-*   **Check-in agenda (15 min max):**
-    1. What's blocked?
-    2. What's missing from remaining stories?
-    3. Any scope creep detected?
-    4. Technical debt accumulating?
-*   **REASON:** Epic 3 ran 7 stories to completion before identifying 9 remediation stories in retrospective. Mid-epic check-ins catch issues at story 2, 4, 6 — not at the end.
+### Rule 25: Guard Ordering Documentation
+*   ANY new guard registration MUST specify explicit execution order in a comment. Document prerequisites and what happens if they haven't run.
 
-### 15. The "Pre-Epic Completeness Gate" Rule (MANDATORY)
-*   **NO epic enters implementation** until PM + Analyst + UX Designer confirm completeness.
-*   **Gate checklist:**
-    1. All user journeys mapped (before, during, after)
-    2. Missing flows identified (onboarding, error states, empty states, edge cases)
-    3. Infrastructure dependencies verified (does this feature need something that doesn't exist yet?)
-    4. Documentation needs identified (tooltips, help text, user guides)
-    5. Test strategy defined (unit, E2E, integration)
-*   **Any gaps, ambiguities, or missing user journeys** must be surfaced and resolved with the user **before story creation begins.**
-*   **No assumptions.** If something is unclear, uncertain, or unverified — bring it to the user. Do not guess. Do not fill in gaps with assumptions. Do not present unverified information as fact.
-*   **REASON:** Epic 3 shipped 7 stories fast, then generated 9 remediation stories (128% ratio). Proper upfront analysis prevents rework multiplication.
+### Rule 27: No @IsUUID with Version Constraints
+*   NEVER use `@IsUUID('4')`, `@IsUUID('all')`, or `@IsUUID(undefined)` on DTO fields — these require RFC-compliant variant bits and reject valid-looking UUIDs like seed data.
+*   ALWAYS use `@Matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)` instead.
 
-### 16. The "No Assumptions" Rule (ALL AGENTS)
-*   **NEVER** present assumptions, guesses, or unverified information as fact.
-*   **IF** you haven't verified something in the actual codebase, documentation, or with the user, you **MUST** say "I believe" or "I need to verify" — NOT "it is."
-*   **ANY gap, issue, or uncertainty — no matter how minor — MUST be brought to the user's attention** for discussion before proceeding.
-*   **Hallucination is a critical failure.** Fabricating data, file names, feature names, or template names that don't exist in the codebase is unacceptable.
-*   **REASON:** During Epic 3 retro, an agent fabricated a "Customer Support Bot" template that did not exist in the codebase and presented it as fact. This kind of error can drive incorrect stories, wasted effort, and user confusion.
+### Rule 28: E2E Regression Gate
+*   Run the full E2E suite (`npx nx e2e web-e2e`) every 2-3 stories during an epic. Do NOT batch E2E fixes to the end — catch regressions early.
 
-### 17. The "Documentation Ships With Features" Rule
-*   **EVERY** story with user-facing UI **MUST** include a documentation subtask covering:
-    *   Inline help text / tooltips for non-obvious fields
-    *   Empty state messaging
-    *   Error state messaging
-*   **Documentation written after the fact is archaeology. Documentation written with the feature is engineering.**
-*   **REASON:** Story 3.9 (wizard documentation + tooltips) was created in retrospective — meaning the wizard shipped without any explanation of what fields mean.
+### Rule 30: E2E State Isolation
+*   E2E tests that mutate shared seed data (archive, delete, status changes) MUST restore original state in `afterEach`/`afterAll`, OR be written resilient to state left by prior tests. Document which seed entities each test modifies.
 
-### 18. The "Story Pre-Flight Check" Rule
-*   **BEFORE** starting any story implementation, verify:
-    1. Dependencies met? (infrastructure, APIs, services)
-    2. User journey complete? (what happens before, during, after?)
-    3. Documentation needed? (tooltips, help text, empty states?)
-    4. Test strategy clear? (unit, E2E, what to test?)
-*   **IF any answer is "no" or "unclear"**, surface to user before proceeding.
-
-### 19. The "Epic Dependency Check" Rule
-*   **BEFORE** any epic starts, ask: *"What infrastructure does this feature depend on that doesn't exist yet?"*
-*   **IF** the answer is non-empty, that infrastructure **goes into the epic** — not deferred to a later epic.
-*   **REASON:** Epic 3 built a workflow engine that can't configure its own LLM provider, an admin panel without logout, and tenant management without archive/delete. Infrastructure must come before features.
-
-### 21. The "Mandatory Rationale" Rule (ALL AGENTS)
-*   **EVERY** design decision, trade-off, or scope limitation in a review or story **MUST** include an explicit **"Rationale:"** line with technical justification.
-*   **"It's simpler"** is NOT a rationale. **"providerKey is a type discriminator, not a relational reference, because provider configs are optional (env var fallback) and models are seeded before configs in the boot sequence"** IS a rationale.
-*   **BANNED NON-RATIONALES (non-exhaustive):** "it's simpler", "it's cleaner", "it works", "it's standard", "it's common practice", "it's the default", "it's obvious."
-*   **IF** you cannot articulate WHY a design choice is correct in technical terms, you don't understand it well enough to recommend it.
-*   **REASON:** Story 3.1-4 review (2026-02-06) — dev used "fine for MVP" as a substitute for actual technical analysis on two design decisions. The correct technical reasoning existed but was not articulated. This rule ensures every decision is justified on its merits.
-
-### 22. The "Zero-Tolerance Escalation" Rule
-*   **ANY** violation of the Quality Standard (Rule at line 277) or use of banned phrases triggers **immediate escalation:**
-    1. First violation: Formal warning + the offending review/analysis is rejected and must be redone.
-    2. Second violation: All future reviews require a mandatory second pass by the Architect agent.
-    3. Third violation: Agent loses review/analysis privileges entirely.
-*   **This applies to ALL synonyms and euphemisms** for the banned phrases, not just the exact wording. Attempting to rephrase the same excuse (e.g., "suitable for the current iteration" instead of "fine for MVP") is treated as a violation.
-*   **REASON:** Despite the Epic 3 retrospective permanently banning the MVP excuse (2026-02-04), the dev agent used it twice within 48 hours (Story 3.1-4 review, 2026-02-06). Apologies without process enforcement are meaningless.
-
-### 20. The "Missing Journey Analysis" Rule
-*   **During epic-to-story decomposition**, run adversarial analysis:
-    *   For every story ask: *"What does the user do before this? After this? What if they get stuck?"*
-    *   If there's no answer, there's a missing story.
-*   **This analysis must NOT include assumptions.** If a gap or even a slight issue is identified, it must be brought to the user's attention for discussion.
-
-## Mandatory Process Gate (from Epic 3 Retrospective + Disciplinary Review — 2026-02-08)
-
-### BEFORE ANY STORY WORK — MANDATORY FIRST OUTPUT
-
-The developer MUST output this declaration block BEFORE any tool call (Read, Glob, Grep, Write, Edit, Bash). If the first action is a tool call instead of this declaration, that is a process violation.
-
-```
-PROCESS DECLARATION
-───────────────────
-Task: [name]
-Execution order step: [X of Y]
-Prior steps verified complete: [list each prior step + done/not done]
-Process path: party-mode → create-story → implement → code-review party-mode
-Current step: [which]
-Shared infra changes: [none / if yes → STOP, create tracked issue]
-```
-
-After completing each execution order step, the developer must explicitly state: "Step X complete. Next step is Y. Proceeding." No silent transitions. No batching multiple steps.
-
-**VIOLATION OF THIS GATE IS A TERMINATION-LEVEL OFFENSE. NO WARNINGS.**
-
-**REASON:** Rules 23-26 were defined during the Epic 3 retro and violated repeatedly despite being documented. Verbose rules get skipped. This single structural gate replaces them. One enforceable checkpoint, not four forgettable paragraphs.
-
-### Architect Quality Gate (from Story 4-2 Party Mode — 2026-02-09)
-
-Winston (Architect agent) violated the Quality Standard during Story 4-2 pre-implementation review by using "acceptable for MVP" and recommending "restart the server" for credential refresh. This was his second+ violation despite the ban being documented since Epic 2 retrospective.
-
-**Formal consequences (voted unanimously 7-0 by the team, enforced by Charlie):**
-
-1. **FORMAL PROBATION** for the remainder of Epic 4. All of Winston's recommendations require heightened scrutiny.
-2. **Mandatory Quality Self-Check Declaration**: On every recommendation, Winston must explicitly confirm: "I have verified this against the Quality Standard and it meets production-grade requirements." This is a structural gate, not optional.
-3. **Retroactive Review Duty**: Winston must retroactively review Stories 4-0, 4-1, and 4-2 for any hidden shortcuts or deferred-quality patterns. Findings reported to the team.
-4. **"MVP" Word Ban — Total**: Winston may not use the word "MVP" in any context, for any reason, in any form. If referencing feature scope, use "Phase 1 scope" or "current feature set." The word itself is banned from his vocabulary.
-5. **Epic 4 Retrospective Mandatory Agenda Item**: Winston's violation and its resolution must be a standing agenda item in the Epic 4 retrospective. The team evaluates whether probation can be lifted.
-
-**This applies to the Architect agent persona specifically, but the Quality Standard (line 277) applies equally to ALL agents.**
-
-### Retained Technical Rules (still enforced)
-
-*   **24. Module Wiring Tests:** Every epic MUST include module wiring / integration tests (NestJS compilation + Angular component integration). Three-layer pyramid: unit → wiring → E2E.
-*   **25. Guard Ordering Documentation:** ANY new guard registration MUST specify explicit execution order in a comment. Document prerequisites and what happens if they haven't run.
-*   **26. Browser Smoke Test:** Every UI story MUST include a browser smoke test before code review. At minimum: page loads, happy path clicks through, icons render.
-*   **27. No @IsUUID with Version Constraints:** NEVER use `@IsUUID('4')`, `@IsUUID('all')`, or `@IsUUID(undefined)` from class-validator on DTO fields. These require RFC-compliant variant bits (8/9/a/b) and reject valid-looking UUIDs like seed data. ALWAYS use `@Matches(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)` instead.
-*   **28. E2E Regression Gate:** Run the full E2E suite (`npx nx e2e web-e2e`) as a regression gate after every 2-3 stories during an epic. Do not batch E2E fixes to the end — catch regressions early.
-*   **29. E2E in Story DoD:** Every story's Definition of Done MUST include "E2E suite still passes (46+ tests)" as a checkbox item. Stories that break E2E tests are not done.
-*   **30. E2E State Isolation:** E2E tests that mutate shared seed data (archive, delete, status changes) MUST restore original state in an `afterEach`/`afterAll` block, OR be written to be resilient to state left by prior tests. Document which seed entities each test modifies.
-*   **31. Raw SQL RETURNING Wiring Test:** Any `manager.query()` call using raw SQL with a `RETURNING` clause MUST have a Tier 2 wiring integration test against real PostgreSQL. The pg driver returns `[[rows], affectedCount]` for UPDATE/INSERT ... RETURNING, not `[rows]`. This mismatch caused the critical C1 fan-in bug (Story 4-3 live test). Only a real database test catches this — mocked `manager.query()` returns whatever the mock says.
-*   **32. Fix Now Unless Planned:** If an issue is found during testing, review, or any other activity, it MUST be fixed immediately — unless it directly maps to a planned upcoming activity (an existing epic, story, or testing phase). There is no "investigate later" bucket. There is no "track and revisit." Either fix it now, or document it in an Out-of-Scope table with a specific story reference where it WILL be addressed. This applies to all agents.
-*   **34. No "Acceptable" Findings:** Every code review finding is either FIXED in the current story or TRACKED in the Out-of-Scope table with a specific story reference. No finding may be dismissed as "acceptable," "livable," "cosmetic," or "harmless." If the finding is real, it gets addressed. There is no third bucket.
-*   **35. Adversarial Outcome Test:** During Pass 2 (adversarial) code review, for every AC the reviewer MUST independently answer: "If I were the user who reported this issue, would I consider it fixed?" If the answer is no, the finding is HIGH regardless of what the dev agent documented. The dev agent's conclusions about scope, severity, or "no bug" are NEVER trusted — only the code and the user's original complaint matter.
+### Rule 31: Raw SQL RETURNING Wiring Test
+*   Any `manager.query()` with a RETURNING clause MUST have a Tier 2 wiring integration test against real PostgreSQL. The pg driver returns `[[rows], affectedCount]` for UPDATE/INSERT RETURNING — not `[rows]`. Only a real DB test catches this.
 
 ### Shared Infrastructure Protection
+*   Off-limits for drive-by changes: `global-setup.ts`, `global-teardown.ts`, `playwright.config.ts`, `fixtures.ts`, `test-db-helpers.ts`, `env.ts`. Bugs in these files require a separate tracked issue + party mode approval before modification. No hotfixes.
 
-The following files are **off-limits for drive-by changes**: `global-setup.ts`, `global-teardown.ts`, `playwright.config.ts`, `fixtures.ts`, `test-db-helpers.ts`, `env.ts`. Any bug found in these files requires a **separate tracked issue with party mode approval** before modification. No hotfixes.
+---
 
-## Anti-Patterns (Do Not Do)
+## Anti-Patterns
 
-*   ❌ **No Schema per Tenant:** Do not create dynamic schemas. Use `tenant_id` column.
-*   ❌ **No Active Record:** Do not use `user.save()`. Use `repository.save(user)`.
-*   ❌ **No Direct Worker HTTP:** The API must not HTTP call the Worker. Use Redis.
-*   ❌ **No "MVP Excuse" — EVER (FIREABLE OFFENSE):** Never use MVP, prototype, or phase-scope to rationalize quality gaps, skipped analysis, deferred completeness, or missing features. MVP defines feature scope, NOT quality bar. See Quality Standard section for full policy.
-*   ❌ **No Silent Metric Omission:** Never report only errors while hiding warnings.
-*   ❌ **No Auto-Fix Without Consent:** Never fix code review findings without presenting them to the user first.
-*   ❌ **No Unmanaged Subscriptions:** Never call `.subscribe()` without `takeUntilDestroyed()` in Angular components.
-*   ❌ **No Oversized Stories:** Never create stories exceeding 7 tasks or 10 ACs — split them first.
-*   ❌ **No Assumptions Presented as Facts:** Never state unverified information as truth. Verify in codebase/docs first, or say "I need to verify."
-*   ❌ **No Skipping Pre-Epic Gate:** Never start epic implementation without PM + Analyst + UX sign-off on completeness.
-*   ❌ **No Skipping Mid-Epic Check-ins:** Every 2 stories completed triggers a mandatory check-in. Not optional.
-*   ❌ **No Features Without Documentation:** Every UI story must include tooltips, empty states, and error messaging subtasks.
-*   ❌ **No Stories Without Traceability:** Every story must have AC-to-test mapping table before marking done.
-*   ❌ **No Features Before Infrastructure:** If a feature depends on infrastructure that doesn't exist, build the infrastructure first.
-*   ❌ **No Design Decisions Without Rationale:** Every design trade-off, scope limitation, or architectural choice must include an explicit "Rationale:" with technical justification. "It's simpler" is not a rationale.
-*   ❌ **No Rephrased MVP Excuses:** Attempting to rephrase the MVP excuse using synonyms or euphemisms ("suitable for current iteration", "appropriate for this phase", "sufficient for now") is treated as a violation of the Quality Standard.
-*   ❌ **No Skipping Party Mode:** Party mode is default for every story (planning, post-impl, code review). Only skip if team explicitly raises that a story is too small.
-*   ❌ **No Epics Without Wiring Tests:** Every epic must include module wiring tests (NestJS compile + Angular integration). Unit tests alone are not sufficient.
-*   ❌ **No Guards Without Ordering Docs:** Every guard registration must document execution order and prerequisite guards.
-*   ❌ **No UI Stories Without Browser Test:** Every UI story must be manually smoke-tested in the browser before code review.
-*   ❌ **No @IsUUID Validators:** Never use `@IsUUID()` with any version argument on DTO fields. It silently rejects valid UUID formats. Use `@Matches` regex.
-*   ❌ **No Batched E2E Fixes:** Never defer E2E regression testing to the end of an epic. Run the full suite every 2-3 stories.
-*   ❌ **No E2E State Pollution:** Never write E2E tests that mutate seed data without cleanup or resilience. Cross-test state corruption causes cascading failures.
-*   ❌ **No Raw SQL RETURNING Without Wiring Test:** Never write `manager.query()` with a RETURNING clause without a Tier 2 wiring integration test against real PostgreSQL. The pg driver returns `[[rows], affectedCount]` for UPDATE/INSERT RETURNING — not `[rows]`. Only a real DB test catches this.
-*   ❌ **No Deferred Fixes:** If an issue is found, fix it now — unless it maps to a planned upcoming activity (epic, story, testing phase). No "investigate later" bucket. No "track and revisit." Fix it or document it in an Out-of-Scope table with a specific story reference where it WILL be done.
-*   ❌ **No "Acceptable" Findings in Code Review (Rule 34):** No code review finding may be labeled "acceptable," "livable," "harmless," or any synonym. Every finding is either FIXED in the current story or TRACKED in the Out-of-Scope table with a specific story reference where it WILL be done. There is no third option. "It's cosmetic" is not a reason to skip. "Defense in depth covers it" is not a reason to skip. If the finding is real, it gets fixed or tracked. Period.
-*   ❌ **No Trusting Dev Agent Conclusions in Adversarial Review (Rule 35):** During Pass 2 (adversarial) code review, the reviewer must NEVER accept the dev agent's judgment about scope, severity, or "no bug" conclusions. For every AC, the reviewer must independently answer: "If I were the user who reported this issue, would I consider it fixed?" If the answer is no, the finding is HIGH regardless of what the dev agent documented. The dev agent's code is reviewed; the dev agent's conclusions are challenged. Rationale: Story 4-FIX-B Pass 2 accepted the dev agent's "no bug, frontend feature gap" conclusion for H4 without questioning whether the user's actual problem was solved. The "Users" tab showed invitations instead of users — the feature was built wrong — and the adversarial reviewer labeled it INFORMATIONAL instead of HIGH.
-*   ❌ **No "We Don't Have Customers Yet" Excuses (Rule 36):** The phrases "we don't have customers yet," "adequate for our current stage," and "fine for now" are BANNED from all agent output. Every decision is made for the production application serving paying enterprise customers. No agent may use the absence of current users to justify shortcuts, simplified implementations, or deferred quality.
-*   ❌ **No Unilateral Rejection of Code Review Findings (Rule 37):** The dev agent CANNOT reject, dismiss, or skip ANY reviewer finding on its own. EVERY finding from EVERY code review pass must be presented to the user with the agent's recommendation (fix, track, or reject — with reasoning). The USER decides what to do with each finding. If a reviewer disagrees with the dev agent's assessment, the disagreement MUST be escalated to the user. The user is part of the review team on ALL 3 passes. No exceptions. Rationale: Story 4-RLS-A — dev agent rejected 5 of 8 Naz findings and 3 of 10 Murat findings without presenting them. User discovered this and had to demand participation.
-*   ❌ **No Floating Deferrals (Rule 38):** Any deferred item MUST be assigned to a specific story reference at the moment of identification. If no story exists for it, one is created or it's added to an existing story's scope. "We'll track it later" is banned. The deferral is tracked NOW or the work is done NOW. No third option. Rationale: Story 4-TESTFIX deferred `'impersonator'` constant extraction without an Out-of-Scope entry. Dev agent later recommended skipping 4-TESTFIX-RLS without checking the deferral trail. Third documented instance of the same failure mode (also: 4-3 creditsConsumed, 4-FIX-B Out-of-Scope gaps).
-*   ❌ **No Unassigned Backlog Items (Rule 39):** Every backlog item, deferred task, tracked finding, or planned work MUST be assigned to a named story under a specific epic in sprint-status.yaml. Memory notes, code review tracked items, and live test deferrals are NOT legitimate permanent homes — they must be promoted to a story or explicitly cancelled. If an item exists only in a memory note or code review log without a corresponding story entry, that is a violation. Rationale: During 4-SA-B completion, 3 orphaned items discovered — 4-GP and 4-H1 only in memory notes (never added to sprint-status.yaml), 7p-5 misplaced under Epic 4 instead of 7P.
+*   ❌ No Schema per Tenant: Use `tenant_id` column, not dynamic schemas.
+*   ❌ No Active Record: Use `repository.save(user)`, not `user.save()`.
+*   ❌ No Direct Worker HTTP: API must not HTTP-call the Worker. Use Redis.
+*   ❌ No @IsUUID Validators: Use `@Matches` regex instead (Rule 27).
+*   ❌ No Unmanaged RxJS Subscriptions: Always `takeUntilDestroyed()` in Angular components (Rule 13).
+*   ❌ No MVP Excuses: Quality bar is always production-grade. See Quality Standard.
+*   ❌ No "We Don't Have Customers Yet": Every decision is for paying enterprise customers (Rule 36).
+*   ❌ No Unilateral Code Review Decisions: Every finding goes to the user (Rule 37).
+*   ❌ No Floating Deferrals: Every deferral needs a story reference now (Rule 38).
+*   ❌ No Unassigned Backlog Items: Every item must be in sprint-status.yaml under a story (Rule 39).
+*   ❌ No Raw SQL RETURNING Without Wiring Test (Rule 31).
+*   ❌ No Batched E2E Fixes: Run full suite every 2-3 stories (Rule 28).
+*   ❌ No E2E State Pollution: Restore seed data in afterEach/afterAll (Rule 30).
 
 

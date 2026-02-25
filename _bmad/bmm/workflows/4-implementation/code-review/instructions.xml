@@ -24,6 +24,42 @@
   <critical>Check KNOWN VIOLATION PATTERNS first: (1) tenantId missing in WHERE clauses (Rule 2c), (2) Story file not updated, (3) Undocumented deferrals, (4) N+1 query patterns. These have historically been missed — they are priority #1.</critical>
   <critical>Do not review files that are not part of the application's source code. Always exclude the _bmad/ and _bmad-output/ folders from the review. Always exclude IDE and CLI configuration folders like .cursor/ and .windsurf/ and .claude/</critical>
 
+  <critical>PASS 1 VERIFIABLE CHECKLIST REQUIREMENT:
+    Pass 1 (Amelia's self-review) must produce a VERIFIABLE CHECKLIST, not prose claims.
+    For Rule 2c specifically: list EVERY findOne, find, update, delete, and manager.query() call in changed files.
+    For each call, state: (a) file:line, (b) entity type, (c) whether tenantId is in WHERE, (d) if not, why (documented exception or bug).
+    This list is what Pass 2 verifies against. If Pass 1 listed 3 calls and Pass 2 finds 8, the discrepancy is a CRITICAL finding.</critical>
+
+  <critical>DEV AGENT SILENCE DURING PASS 2 AND PASS 3:
+    During Pass 2 (Naz) and Pass 3 (Murat) party mode presentations, the dev agent (Amelia) is NOT ALLOWED TO:
+    - Comment on, defend, explain, or contextualize any finding
+    - Attach verdicts (FIX/TRACK/REJECT) to findings she did not generate
+    - Summarize or re-present findings that were already presented by the reviewer
+    The reviewer presents findings directly to the team. The user decides each finding's fate.
+    Amelia may speak ONLY when directly addressed by the user, and ONLY to say "Understood. I will fix [list]."</critical>
+
+  <critical>TRACKED ITEM ENFORCEMENT:
+    Every finding marked TRACKED must include a specific story ID in sprint-status.yaml.
+    "Track to future story" or "track to 4-test-gaps" without an immediate file write to sprint-status.yaml is NOT tracking.
+    The write must happen in the SAME turn as the tracking decision. No exceptions.</critical>
+
+  <critical>MANDATORY FINDING FORMAT: Every finding must use this exact structure. Free-form prose verdicts are NOT acceptable.
+
+    Finding [N]: [one-line description]
+      Severity: CRITICAL | HIGH | MEDIUM | LOW
+      File:Line: [exact reference, e.g., src/foo/bar.service.ts:142]
+      Description: [specific description of the problem and why it matters]
+      Resolution: FIX | DEFERRED_TO: [specific-story-id]
+
+    Rules:
+    - Resolution must be exactly "FIX" or "DEFERRED_TO: [specific-story-id]"
+    - "DEFERRED_TO" with no story-id = INVALID — assign a story-id or create a new backlog entry FIRST
+    - ALL CRITICAL and HIGH findings: Resolution must be FIX. No exceptions. No deferrals.
+    - MEDIUM findings: FIX by default. DEFERRED_TO only with explicit user approval in the same session.
+    - LOW findings: FIX or DEFERRED_TO both valid.
+    - BANNED resolutions: "acceptable," "livable," "acknowledged," "fine for now," "future cleanup," "out of scope," or any synonym.
+      These do not exist. Every finding is FIX or DEFERRED_TO a named story. Period.</critical>
+
   <!-- Context Management Checkpoint (Rule 41) -->
   <step n="0" goal="Pre-flight context check">
     <critical>NEVER allow context compaction DURING review. Compact BEFORE starting if needed.</critical>

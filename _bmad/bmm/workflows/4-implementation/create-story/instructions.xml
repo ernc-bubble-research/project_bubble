@@ -315,6 +315,14 @@
     <template-output
       file="{default_output_file}">project_context_reference</template-output>
 
+    <!-- STORY SIZING GATE (Rule 11) — check BEFORE setting ready-for-dev -->
+    <critical>STORY SIZING GATE: Count tasks and ACs in the generated story BEFORE marking it ready-for-dev.
+        Maximum allowed: 7 tasks (top-level) | 10 acceptance criteria
+        If EITHER limit is exceeded: STOP. Split the story into multiple smaller stories first.
+        Do NOT mark an oversized story as ready-for-dev. Split → mark each part ready-for-dev separately.
+        An oversized story that reaches dev is a process violation — catch it here.</critical>
+    <action>Count tasks and ACs in the generated story. If tasks &gt; 7 OR ACs &gt; 10, restructure as multiple smaller stories before proceeding.</action>
+
     <!-- Final status update -->
     <template-output file="{default_output_file}">
     story_completion_status</template-output>

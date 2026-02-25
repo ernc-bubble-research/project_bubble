@@ -111,6 +111,26 @@ Review the complete epic and story breakdown to ensure EVERY FR is covered:
 - Foundation stories only setup what's needed
 - No big upfront technical work
 
+### 4b. Pre-Epic Completeness Gate (Rule 15 — MANDATORY)
+
+For each epic, confirm ALL 5 gates pass before marking it ready for story creation:
+
+1. **All user journeys mapped?** (before, during, after the feature — not just the happy path)
+2. **Missing flows identified?** (onboarding, error states, empty states, edge cases — list explicitly)
+3. **Infrastructure dependencies verified?** (does this epic depend on something that doesn't exist yet?)
+4. **Documentation needs identified?** (tooltips, help text, user guides — where are they needed?)
+5. **Test strategy defined?** (unit, E2E, integration — what gets tested and how?)
+
+Any gap, ambiguity, or missing user journey MUST be surfaced to the user and resolved BEFORE story creation is approved. Do NOT assume gaps are acceptable. Do NOT fill gaps with assumptions.
+
+### 4c. Epic Infrastructure Dependency Check (Rule 19)
+
+For every epic, explicitly ask: **"What infrastructure does this epic depend on that doesn't exist yet?"**
+
+- If non-empty: that infrastructure MUST go INTO this epic's stories as early stories — not deferred to later.
+- If infrastructure is already planned in an earlier epic: verify that epic will be complete before this one begins.
+- Infrastructure MUST come BEFORE features that depend on it. No epic may build on infrastructure planned for a later epic.
+
 ### 5. Dependency Validation (CRITICAL)
 
 **Epic Independence Check:**

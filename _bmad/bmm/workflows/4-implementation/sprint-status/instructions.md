@@ -86,6 +86,7 @@ Enter corrections (e.g., "1=in-progress, 2=backlog") or "skip" to continue witho
 - IF `generated` timestamp is more than 7 days old: warn "sprint-status.yaml may be stale"
 - IF any story key doesn't match an epic pattern (e.g., story "5-1-..." but no "epic-5"): warn "orphaned story detected"
 - IF any epic has status in-progress but has no associated stories: warn "in-progress epic has no stories"
+- IF any in-progress epic has 2 or more stories with status "done": flag mid-epic check-in as due (Rule 14). Display: "⏰ Mid-Epic Check-in Due for Epic [N] — [X] stories complete. Agenda: (1) What's blocked? (2) What's missing from remaining stories? (3) Any scope creep? (4) Technical debt accumulating? Run this check-in before starting the next story."
   </step>
 
 <step n="3" goal="Select next action recommendation">

@@ -200,6 +200,33 @@
         Story Status: {{current_status}}
         First incomplete task: {{first_task_description}}
       </output>
+
+      <!-- WINSTON ARCHITECTURAL REVIEW GATE (fresh starts only — skipped on review continuation) -->
+      <critical>ARCHITECTURAL REVIEW GATE: Winston (Architect) must review this story's design BEFORE first implementation begins. This gate cannot be bypassed for new stories.</critical>
+      <action>Check if story file contains "Winston Architectural Review" section OR a "winston_reviewed" marker in story metadata OR a "Winston: ✅" line in Dev Notes</action>
+      <check if="architectural review marker NOT found in story">
+        <ask>⚠️ No Winston architectural review marker found for this story.
+
+          Has Winston (Architect) reviewed this story's design via party mode?
+          - Yes → I'll record the confirmation and proceed
+          - No → HALT. Launch Winston via party mode to review the story design before proceeding.</ask>
+        <check if="user confirms yes (reviewed)">
+          <action>Add to story Dev Agent Record: "Winston architectural review confirmed by {user_name} before implementation start — {{date}}"</action>
+          <action>Continue to step 4</action>
+        </check>
+        <check if="user says no (not yet reviewed)">
+          <action>HALT: "Winston's architectural review is required before implementation starts. Launch Winston (Architect) via party mode, get his review and approval, then resume implementation."</action>
+        </check>
+      </check>
+
+      <!-- STORY PRE-FLIGHT CHECK (Rule 18 — fresh starts only) -->
+      <critical>STORY PRE-FLIGHT CHECK: Before writing any code, verify ALL 4 gates:
+          1. Dependencies met? List every infrastructure piece this story requires. Does it exist and work today?
+          2. User journey complete? What does the user do BEFORE this story? AFTER? What if they get stuck or hit an error?
+          3. Documentation needed? If this story has user-facing UI, documentation subtasks (tooltips, empty states, error states) MUST already be in the task list before implementation begins.
+          4. Test strategy clear? Identify: (a) what needs unit tests, (b) what needs integration/wiring tests, (c) which E2E flows to cover.
+          If ANY gate fails or is "unclear" — surface to user BEFORE proceeding with implementation.</critical>
+      <action>Verify all 4 pre-flight gates above. Surface any gaps to user before writing any code.</action>
     </check>
   </step>
 
@@ -283,6 +310,11 @@
     <action>Validate implementation meets ALL story acceptance criteria; enforce quantitative thresholds explicitly</action>
     <action if="regression tests fail">STOP and fix before continuing - identify breaking changes immediately</action>
     <action if="new tests fail">STOP and fix before continuing - ensure implementation correctness</action>
+    <critical>MANDATORY TEST REPORTING FORMAT: After every test/lint run, report metrics in this exact format — every project, no omissions:
+        Tests:    api-gateway: X | web: X | db-layer: X | shared: X
+        Errors:   api-gateway: X | web: X | db-layer: X | shared: X
+        Warnings: api-gateway: X | web: X | db-layer: X | shared: X
+        Warnings are bugs — report and investigate every one. A warning in 5 places = 5 bugs, not "a consistent pattern." NEVER omit any project's metrics from the report.</critical>
   </step>
 
   <step n="8" goal="Validate and mark task complete ONLY when fully done">
@@ -309,9 +341,12 @@
       <action>Add to Dev Agent Record → Completion Notes: "✅ Resolved review finding [{{severity}}]: {{description}}"</action>
     </check>
 
-    <!-- ONLY MARK COMPLETE IF ALL VALIDATION PASS -->
+    <!-- PER-TASK VERIFICATION GATE (no batch operations — each task verified individually) -->
+    <critical>NEVER use replace_all or batch operations on task checkboxes. Each task is verified and checked INDIVIDUALLY via a separate Edit call.</critical>
     <check if="ALL validation gates pass AND tests ACTUALLY exist and pass">
-      <action>ONLY THEN mark the task (and subtasks) checkbox with [x]</action>
+      <action>For THIS specific task, cite the implementation evidence: file path and line number(s) where the task's functionality is implemented</action>
+      <action>For THIS specific task, cite the test evidence: file path and line number(s) where the test covering this task exists</action>
+      <action>ONLY THEN mark THIS SINGLE task checkbox with [x] using an individual Edit tool call — NOT replace_all, NOT batch</action>
       <action>Update File List section with ALL new, modified, or deleted files (paths relative to repo root)</action>
       <action>Add completion notes to Dev Agent Record summarizing what was ACTUALLY implemented and tested</action>
     </check>
@@ -324,6 +359,15 @@
     <check if="review_continuation == true and {{resolved_review_items}} is not empty">
       <action>Count total resolved review items in this session</action>
       <action>Add Change Log entry: "Addressed code review findings - {{resolved_count}} items resolved (Date: {{date}})"</action>
+    </check>
+
+    <!-- TRACKED ITEM ENFORCEMENT GATE -->
+    <critical>Any item marked "TRACKED" or "deferred" during implementation MUST be written to sprint-status.yaml with a specific story ID in the SAME turn. Saying "tracked" in conversation text without a file write is NOT tracking — it is forgetting.</critical>
+    <action>Check if any findings or items were deferred/tracked during this task's implementation</action>
+    <check if="deferred or tracked items exist">
+      <action>For EACH tracked item: write it to sprint-status.yaml under the target story ID immediately via Edit tool</action>
+      <action>If no target story ID exists, create a new backlog entry in sprint-status.yaml with a descriptive key</action>
+      <action>Verify the write succeeded — the tracked item must exist in the file, not just in conversation</action>
     </check>
 
     <action>Save the story file</action>
@@ -349,7 +393,11 @@
       - Implementation satisfies every Acceptance Criterion
       - Unit tests for core functionality added/updated
       - Integration tests for component interactions added when required
-      - End-to-end tests for critical flows added when story demands them
+      - E2E test coverage included for ALL story features — mandatory, not "when story demands them" (Rule 12)
+      - AC-to-test traceability table present and complete in story file (Rule 12b)
+      - For UI stories: documentation subtasks complete — tooltips, empty states, error states (Rule 17)
+      - Module wiring tests present for any service/module wiring changes (Rule 24)
+      - Browser smoke test passed: page loads, happy path works, icons render — UI stories only (Rule 26)
       - All tests pass (no regressions, new tests successful)
       - Code quality checks pass (linting, static analysis if configured)
       - File List includes every new/modified/deleted file (relative paths)
@@ -416,7 +464,24 @@
       - Optional: Run TEA `*automate` to expand guardrail tests
     </action>
 
-    <output>💡 **Tip:** For best results, run `code-review` using a **different** LLM than the one that implemented this story.</output>
+    <!-- MANDATORY 3-PASS CODE REVIEW LAUNCH SEQUENCE -->
+    <critical>Code review is a MANDATORY 3-pass process. The dev agent (Amelia) runs Pass 1 ONLY. Pass 2 and Pass 3 MUST be launched VIA PARTY MODE by the user. The dev agent has NO alternative path.</critical>
+    <output>**Pass 1 complete. Implementation ready for review.**
+
+      **Next steps — MANDATORY 3-PASS CODE REVIEW:**
+      1. Run Pass 1 (self-review): `[CR]` menu item or `code-review` workflow — I do this now.
+      2. After Pass 1, launch Pass 2 (Naz) VIA PARTY MODE — I have NO role in Pass 2. Naz presents findings directly to the team.
+      3. After Pass 2, launch Pass 3 (Murat) VIA PARTY MODE — I have NO role in Pass 3. Murat presents findings directly to the team.
+
+      **I will NOT:**
+      - Present, summarize, or filter Pass 2 or Pass 3 findings
+      - Launch Pass 2 or Pass 3 as Task agents
+      - Attach verdicts (FIX/TRACK/REJECT) to findings I did not generate
+      - Speak during Pass 2 or Pass 3 presentations unless directly asked by the user
+
+      Story is NOT done until all 3 passes complete.
+    </output>
+
     <check if="{sprint_status} file exists">
       <action>Suggest checking {sprint_status} to see project progress</action>
     </check>

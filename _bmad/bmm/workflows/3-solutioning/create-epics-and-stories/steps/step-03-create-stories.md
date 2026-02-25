@@ -170,6 +170,18 @@ For each story in the epic:
 - Include edge cases and error conditions
 - Reference specific requirements when applicable
 
+**🔍 MISSING JOURNEY ANALYSIS — run adversarially for EVERY story (Rule 20):**
+
+Before writing ACs, answer all three questions:
+
+1. "What does the user do BEFORE this story?" → Is there a missing prerequisite story?
+2. "What does the user do AFTER this story?" → Is there a missing follow-up story?
+3. "What if the user gets stuck or encounters an error?" → Is there a missing error/recovery story?
+
+If any question has no answer, there is likely a gap in the epic. Surface the gap to the user before writing ACs. Do NOT assume a gap is intentional. Do NOT fill gaps with assumptions — bring them to the user.
+
+**🚫 STORY SIZING LIMIT (Rule 11):** Each story may have at most 7 tasks and 10 acceptance criteria. If a story would exceed this, split it into smaller stories before presenting to the user.
+
 #### D. Collaborative Review
 
 After writing each story:
