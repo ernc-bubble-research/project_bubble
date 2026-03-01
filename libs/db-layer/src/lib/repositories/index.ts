@@ -1,2 +1,2 @@
 // Barrel export for custom repositories
-// Add repository exports here as they are created
+export * from './tenant-aware.repository';
