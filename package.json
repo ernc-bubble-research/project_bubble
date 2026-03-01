@@ -8,6 +8,8 @@
     "lint": "npx nx run-many --target=lint --all",
     "e2e": "npx nx e2e web-e2e",
     "e2e:ui": "npx nx e2e web-e2e -- --ui",
+    "lint:tenant-id": "node scripts/check-tenant-id.js",
+    "lint:tenant-id:test": "npx jest --config scripts/jest.config.js",
     "postinstall": "node scripts/postinstall.mjs"
   },
   "private": true,
